@@ -1,0 +1,27 @@
+<?php
+declare(strict_types=1);
+namespace App;
+
+final class Settings
+{
+    private static ?array $cache = null;
+
+    public static function get(string $key, string $default = ''): string
+    {
+        if (self::$cache === null) {
+            self::$cache = [];
+            foreach (Db::all('SELECT k, v FROM settings') as $r) { self::$cache[$r['k']] = $r['v']; }
+        }
+        return self::$cache[$key] ?? $default;
+    }
+
+    public static function set(string $key, string $val): void
+    {
+        if (Db::isPgsql()) {
+            Db::run('INSERT INTO settings (k, v) VALUES (?, ?) ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v', [$key, $val]);
+        } else {
+            Db::run('INSERT INTO settings (k, v) VALUES (?, ?) ON DUPLICATE KEY UPDATE v = ?', [$key, $val, $val]);
+        }
+        if (self::$cache !== null) { self::$cache[$key] = $val; }
+    }
+}

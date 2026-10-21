@@ -1,0 +1,4 @@
+database
+*.md
+.env*
+node_modules
