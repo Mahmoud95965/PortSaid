@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hashPassword, createSessionToken } from '@/lib/auth';
+import { saveLocalUser } from '@/lib/local-db';
 import { User } from '@/lib/types';
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, email, phone, password, user_type_id, governorate_id, institution_id, gender } = body;
+    const { name, email, phone, password, user_type_id, governorate_id, institution_id, gender, user_type, institution, governorate } = body;
 
     if (!name || !password || (!email && !phone)) {
       return NextResponse.json({ ok: false, error: { message: 'الاسم وكلمة المرور ورقم الهاتف أو البريد حقول مطلوبة' } }, { status: 422 });
@@ -23,9 +24,20 @@ export async function POST(req: Request) {
       role: 'user',
       points: 20, // ترحيب
       gender: gender || 'male',
+      type: user_type || 'visitor',
+      institution: institution || null,
+      gov: governorate || 'بورسعيد',
       staff: false,
     };
 
+    // Save locally
+    saveLocalUser({
+      ...newUser,
+      password_hash: hashed,
+      created_at: new Date().toISOString()
+    });
+
+    // Save to Supabase if configured
     const supabase = getSupabaseAdmin();
     if (supabase) {
       const { error } = await supabase.from('users').insert([{
