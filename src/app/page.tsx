@@ -46,6 +46,33 @@ export default function HomePage() {
   const [activeCouponPlace, setActiveCouponPlace] = useState<Place | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showGuideModal, setShowGuideModal] = useState<boolean>(false);
+  const [hasSeenGuide, setHasSeenGuide] = useState<boolean>(true);
+
+  // التحقق التلقائي من ظهور الأسهم والدليل للمستخدم الجديد فقط
+  useEffect(() => {
+    if (user?.id) {
+      const tourKey = `ps_guide_seen_${user.id}`;
+      const seen = localStorage.getItem(tourKey) === 'true';
+      setHasSeenGuide(seen);
+
+      // إذا كان المستخدم جديداً ولم يشاهد جولة الأسهم من قبل، تظهر له تلقائياً بعد لحظات من تسجيل الدخول
+      if (!seen) {
+        const timer = setTimeout(() => {
+          setShowGuideModal(true);
+        }, 800);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user?.id]);
+
+  const handleCloseGuide = () => {
+    setShowGuideModal(false);
+    if (user?.id) {
+      const tourKey = `ps_guide_seen_${user.id}`;
+      localStorage.setItem(tourKey, 'true');
+      setHasSeenGuide(true);
+    }
+  };
 
   // جلب الأماكن الحقيقية من Supabase
   useEffect(() => {
@@ -283,6 +310,7 @@ export default function HomePage() {
               <FeatureExplainerCards
                 onOpenGuideModal={() => setShowGuideModal(true)}
                 onNavigate={handleNavigate}
+                hasSeenGuide={hasSeenGuide}
               />
             </motion.div>
           )}
@@ -407,10 +435,10 @@ export default function HomePage() {
       {/* Interactive Site Guide & Roadmap Modal */}
       <SiteGuideModal
         isOpen={showGuideModal}
-        onClose={() => setShowGuideModal(false)}
+        onClose={handleCloseGuide}
         onNavigateToView={(view) => {
           handleNavigate(view);
-          setShowGuideModal(false);
+          handleCloseGuide();
         }}
       />
 

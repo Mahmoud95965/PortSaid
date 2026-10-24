@@ -31,6 +31,7 @@ import {
 interface FeatureExplainerCardsProps {
   onOpenGuideModal?: () => void;
   onNavigate?: (view: string, arg?: string | null) => void;
+  hasSeenGuide?: boolean;
 }
 
 interface StepCard {
@@ -383,9 +384,15 @@ const STEPS_DATA: StepCard[] = [
 export const FeatureExplainerCards: React.FC<FeatureExplainerCardsProps> = ({
   onOpenGuideModal,
   onNavigate,
+  hasSeenGuide = false,
 }) => {
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'roadmap' | 'all'>('roadmap');
+  const [isExpanded, setIsExpanded] = useState<boolean>(!hasSeenGuide);
+
+  React.useEffect(() => {
+    setIsExpanded(!hasSeenGuide);
+  }, [hasSeenGuide]);
 
   const toggleExpand = (id: string) => {
     setExpandedCardId((prev) => (prev === id ? null : id));
@@ -396,6 +403,60 @@ export const FeatureExplainerCards: React.FC<FeatureExplainerCardsProps> = ({
       onNavigate(targetView, targetArg);
     }
   };
+
+  // إذا كان المستخدم قد اطلع على الدليل مسبقاً، يظهر له شريط أنيق مدمج بدلاً من ملء الصفحة بالأسهم
+  if (!isExpanded) {
+    return (
+      <section className="w-full py-2 sm:py-3">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-3xl p-4 sm:p-5 bg-gradient-to-r from-teal2-900/30 via-ocean-900/40 to-teal2-900/30 border border-teal2-500/30 text-ocean-900 dark:text-white flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg backdrop-blur-sm"
+        >
+          <div className="flex items-center gap-3.5 text-right w-full md:w-auto">
+            <div className="w-11 h-11 rounded-2xl bg-teal2-500/20 text-teal2-400 grid place-items-center shrink-0 border border-teal2-400/30 shadow-inner">
+              <Compass className="w-6 h-6 text-teal2-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-black text-sm sm:text-base text-ocean-900 dark:text-white">
+                  خريطة ومسار الموقع بالأسهم والشرح
+                </h4>
+                <span className="px-2 py-0.5 rounded-full bg-teal2-500/20 text-teal2-300 text-[10px] font-bold">
+                  تم الاطلاع
+                </span>
+              </div>
+              <p className="text-xs text-ocean-700/80 dark:text-white/70 font-medium mt-0.5">
+                يمكنك إعادة فتح بطاقات الشرح ومسار الأسهم المتحركة أو تشغيل الجولة التفاعلية في أي وقت.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 justify-end">
+            <button
+              onClick={() => setIsExpanded(true)}
+              type="button"
+              className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-sand-200/90 dark:bg-[#152332] hover:bg-sand-300 dark:hover:bg-[#1f344a] text-ocean-900 dark:text-white text-xs font-bold transition flex items-center justify-center gap-1.5"
+            >
+              <span>عرض خريطة الأسهم</span>
+              <ChevronDown className="w-4 h-4 text-teal2-500" />
+            </button>
+
+            {onOpenGuideModal && (
+              <button
+                onClick={onOpenGuideModal}
+                type="button"
+                className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-ocean-950 text-xs font-black shadow-md hover:shadow-lg transition flex items-center justify-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-ocean-950" />
+                <span>الجولة التفاعلية</span>
+              </button>
+            )}
+          </div>
+        </motion.div>
+      </section>
+    );
+  }
 
   return (
     <section className="w-full py-6 sm:py-10 space-y-6 sm:space-y-8 relative">
@@ -441,6 +502,16 @@ export const FeatureExplainerCards: React.FC<FeatureExplainerCardsProps> = ({
               📋 تفاصيل كل بطاقة
             </button>
           </div>
+
+          <button
+            onClick={() => setIsExpanded(false)}
+            type="button"
+            className="px-3.5 py-2 rounded-2xl bg-sand-200/80 dark:bg-[#152332] hover:bg-sand-300 text-ocean-900 dark:text-white text-xs font-bold transition flex items-center gap-1.5"
+            title="تصغير قسم الأسهم"
+          >
+            <span>إخفاء الأسهم</span>
+            <ChevronUp className="w-3.5 h-3.5" />
+          </button>
 
           {onOpenGuideModal && (
             <motion.button
