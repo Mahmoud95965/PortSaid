@@ -1,33 +1,28 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
   Send,
   Sparkles,
   RotateCcw,
-  Star,
   Compass,
   MapPin,
-  Utensils,
-  Bus,
-  Bed,
-  Store,
-  ChevronDown,
-  ChevronUp,
   Copy,
   Check,
+  ChevronDown,
+  ChevronUp,
   Navigation,
-  ExternalLink,
+  AlertCircle,
   Info,
-  Map as MapIcon,
-  Cpu,
   Maximize2,
+  Map as MapIcon,
+  Star,
 } from 'lucide-react';
 import { isPointInPortSaid, identifyPortSaidDistrict } from '@/lib/geoUtils';
 
-interface SuggestedPlace {
+export interface SuggestedPlace {
   id: string;
   n: string;
   cat: string;
@@ -38,15 +33,16 @@ interface SuggestedPlace {
   distanceKm?: number;
 }
 
-interface ChatMessage {
+export interface ChatMessage {
   id: string;
   role: 'bot' | 'me';
   text: string;
   timestamp: string;
   suggestedPlaces?: SuggestedPlace[];
+  isError?: boolean;
 }
 
-interface AssistantChatProps {
+export interface AssistantChatProps {
   onOpenPoints?: () => void;
   onNavigate?: (view: string, arg?: string | null) => void;
 }
@@ -57,47 +53,51 @@ interface QuickPrompt {
   icon: string;
 }
 
-const QUICK_PROMPTS: QuickPrompt[] = [
-  { label: 'مخطط الخروجات AI', text: 'خطط لي خروجة لشخصين لمدة 5 ساعات بميزانية 500 جنيه تشمل كافيه ومطعم', icon: '🧭' },
-  { label: 'أقرب مكان لموقعي', text: '📍 إيه أقرب مطعم سمك وكافيه لموقعي الحالي؟', icon: '📍' },
-  { label: 'النقاط والكوبونات', text: '⭐ إزاي أستفيد من النقط والكوبونات وأوفر فلوس؟', icon: '⭐' },
-  { label: 'أكل وسمك', text: '🐟 أحسن مطعم سمك وسي فود وسوق السمك فين؟', icon: '🐟' },
-  { label: 'خريطة بورسعيد', text: '🗺️ افتح خريطة بورسعيد التفاعلية واعرض الأماكن', icon: '🗺️' },
-  { label: 'مواصلات الجامعة', text: '🚌 إزاي أروح كليات جامعة بورسعيد بالمينى باص؟', icon: '🚌' },
-  { label: 'خروجة وفسح', text: '🏛️ رتب لي يوم خروجة وفسحة في بورسعيد وبورفؤاد', icon: '🏛️' },
-  { label: 'سكن الطلبة', text: '🏠 إيه أحسن مناطق لسكن الطلاب والمغتربين؟', icon: '🏠' },
-  { label: 'كاساتا وحلويات', text: '🍨 إيه أشهر حلويات بورسعيد وفين ألاقي كاساتا سيلفر؟', icon: '🍨' },
-  { label: 'انضمام التجار', text: '🏬 إزاي أسجل متجري أو مطعمي كشريك في Hubs؟', icon: '🏬' },
+// قائمة الاقتراحات السريعة المقسمة (4 أساسية + 3 إضافية)
+const PRIMARY_PROMPTS: QuickPrompt[] = [
+  { label: 'خروجة لشخصين 500 ج.م', text: 'خطط لي خروجة لشخصين لمدة 5 ساعات بميزانية 500 جنيه تشمل كافيه ومطعم سمك', icon: '🧭' },
+  { label: 'أقرب سمك لموقعي', text: 'إيه أقرب مطعم سمك وسي فود لموقعي الحالي وفيه خصومات؟', icon: '📍' },
+  { label: 'كافيهات ممشى القناة', text: 'رشح لي أحسن كافيهات على ممشى القناة لمشاهدة السفن في بورسعيد', icon: '☕' },
+  { label: 'النقاط والكوبونات', text: 'إزاي أستفيد من نقاط الزيارة وأحصل على كوبونات خصم للمطاعم؟', icon: '⭐' },
+];
+
+const SECONDARY_PROMPTS: QuickPrompt[] = [
+  { label: 'فسحة وجبال الملح', text: 'عايز برنامج زيارة للمعدية وجبال الملح في بورفؤاد مع مكان حلويات', icon: '🚢' },
+  { label: 'مواصلات كليات الجامعة', text: 'إزاي أروح كليات جامعة بورسعيد بالمينى باص من السكن والمعدية؟', icon: '🚌' },
+  { label: 'كاساتا وحلويات سيلفر', text: 'إيه أشهر حلويات بورسعيد وفين ألاقي كاساتا سيلفر الأصلية؟', icon: '🍨' },
 ];
 
 export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNavigate }) => {
   const [open, setOpen] = useState(false);
-  const [hasOpenedBefore, setHasOpenedBefore] = useState(false);
   const [showTooltip, setShowTooltip] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // حالة تحديد الموقع الجغرافي للمستخدم
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; district?: string } | null>(null);
   const [locatingUser, setLocatingUser] = useState(false);
-  const [locationNotice, setLocationNotice] = useState<string | null>(null);
+  const [locationNotice, setLocationNotice] = useState<{ type: 'success' | 'warn' | 'error'; message: string } | null>(null);
+
+  // حالة المزود الذكي
   const [aiProvider, setAiProvider] = useState<{ enabled: boolean; provider?: string; model?: string } | null>(null);
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome-1',
       role: 'bot',
-      text: 'أهلاً بيك يا غالي في Port Said Hub! 👋 أنا "مساعد بورسعيد الذكي".\n\nأنا متصل بالكامل بخريطة بورسعيد التفاعلية وأقدر أساعدك في:\n• تحديد موقعك بالـ GPS واقتراح أقرب الأماكن والمطاعم ليك 📍\n• عرض أي مكان بالضغط عليه فوراً على الخريطة 🗺️\n• كسب النقاط واستبدالها بكوبونات خصم حقيقية 10%-20% ⭐\n• خطوط المينى باص وسكن الطلبة 🚌\n\nاضغط على "📍 موقعي" أو اسألني أي سؤال 👇',
+      text: 'أهلاً بيك في Port Said Hub! 👋 أنا مساعدك البورسعيدي الذكي.\n\nجاهز لمساعدتك في:\n• اقتراح أفضل المطاعم والكافيهات والمعالم 🌊\n• تحديد موقعك بالـ GPS وحساب المسافة لأقرب الأماكن 📍\n• معلومات الخروجات والمواصلات ونقاط الخصم ⭐\n\nاضغط على أي سؤال سريع بالأسفل أو اكتب استفسارك مباشرة 👇',
       timestamp: 'الآن',
     },
   ]);
 
   const [input, setInput] = useState('');
-  const [showQuick, setShowQuick] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [showMorePrompts, setShowMorePrompts] = useState(false);
+
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // التمرير التلقائي لأسفل
+  // التمرير التلقائي لأسفل عند وصول رسالة جديدة
   useEffect(() => {
     if (chatBodyRef.current) {
       chatBodyRef.current.scrollTo({
@@ -110,46 +110,77 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
   // التركيز على حقل الإدخال عند فتح النافذة
   useEffect(() => {
     if (open) {
-      setHasOpenedBefore(true);
       setShowTooltip(false);
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         inputRef.current?.focus();
-      }, 300);
+      }, 250);
+      return () => clearTimeout(timer);
     }
   }, [open]);
 
-  // إخفاء تلميح الزر العائم بعد 8.5 ثوانٍ
+  // إخفاء تلميح الزر العائم تلقائياً بعد 5 ثوانٍ
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       setShowTooltip(false);
-    }, 8500);
-    return () => clearTimeout(t);
+    }, 5000);
+    return () => clearTimeout(timer);
   }, []);
 
-  const handleResetChat = () => {
+  // إلغاء أي طلب معلق عند تفكيك المكون
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  // بدء محادثة جديدة
+  const handleResetChat = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setLoading(false);
     setMessages([
       {
         id: 'new-' + Date.now(),
         role: 'bot',
-        text: 'بدأنا محادثة جديدة! 🌊 اسألني عن أي مكان أو شارك موقعك لأرشح لك الأقرب على الخريطة.',
+        text: 'بدأنا محادثة جديدة! 🌊 اسألني عن أي مكان في بورسعيد أو اضغط على «📍» لمشاركة موقعك وحساب الأقرب إليك.',
         timestamp: 'الآن',
       },
     ]);
-    setShowQuick(true);
-  };
+  }, []);
 
-  const handleCopyText = (id: string, text: string) => {
+  // نسخ نص الرسالة بطريقة آمنة
+  const handleCopyText = useCallback(async (id: string, text: string) => {
     try {
-      navigator.clipboard.writeText(text);
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
       setCopiedId(id);
       setTimeout(() => setCopiedId(null), 2000);
-    } catch (e) {}
-  };
+    } catch (e) {
+      console.warn('Failed to copy text:', e);
+    }
+  }, []);
 
-  // وظيفة تحديد ومشاركة موقع المستخدم بالـ GPS
-  const handleGetLocation = () => {
+  // تحديد الموقع الجغرافي بالـ GPS
+  const handleGetLocation = useCallback(() => {
     if (!navigator.geolocation) {
-      setLocationNotice('تحديد الموقع الجغرافي غير مدعوم في متصفحك.');
+      setLocationNotice({
+        type: 'error',
+        message: 'خاصية تحديد الموقع الجغرافي غير مدعومة في متصفحك.',
+      });
       return;
     }
 
@@ -166,9 +197,11 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
         if (inside) {
           const district = identifyPortSaidDistrict(lat, lng);
           setUserLocation({ lat, lng, district });
-          setLocationNotice(`تم تحديد موقعك بنجاح في ${district} 📍`);
+          setLocationNotice({
+            type: 'success',
+            message: `تم تحديد موقعك في: ${district}`,
+          });
 
-          // إضافة رسالة تأكيد لطيفة من البوت
           const now = new Date();
           const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
           setMessages((prev) => [
@@ -176,51 +209,46 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
             {
               id: 'loc-' + Date.now(),
               role: 'bot',
-              text: `📍 تم تحديد موقعك في "${district}" بنجاح!\nاسألني الآن: "إيه أقرب مطعم سمك ليا؟" أو "أقرب كافيه أو معلم سياحي؟" وسأقيس لك المسافة بالضبط.`,
+              text: `📍 تم تحديد موقعك في **${district}** بنجاح!\nاسألني الآن: "إيه أقرب مطعم سمك ليا؟" أو "أقرب كافيه على الخريطة؟" وسأقيس لك المسافة الواقعية فوراً.`,
               timestamp: timeStr,
             },
           ]);
         } else {
-          setLocationNotice(`موقعك الحالي (${lat.toFixed(2)}, ${lng.toFixed(2)}) يقع خارج حدود بورسعيد.`);
+          setLocationNotice({
+            type: 'warn',
+            message: 'موقعك الحالي يقع خارج النطاق الإداري لمحافظة بورسعيد.',
+          });
         }
       },
       (err) => {
         setLocatingUser(false);
         if (err.code === 1) {
-          setLocationNotice('يرجى السماح بصلاحية الموقع في المتصفح لمشاركة مكانك.');
+          setLocationNotice({
+            type: 'error',
+            message: 'يرجى السماح بصلاحية الموقع في المتصفح لمشاركة مكانك.',
+          });
         } else {
-          setLocationNotice('تعذر تحديد الموقع، يرجى التأكد من تشغيل الـ GPS.');
+          setLocationNotice({
+            type: 'error',
+            message: 'تعذر تحديد موقعك الحالي. تأكد من تفعيل الـ GPS.',
+          });
         }
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
-  };
+  }, []);
 
-  const handleSend = async (userText?: string) => {
-    const textToSend = userText || input.trim();
+  // إرسال الرسالة إلى /api/assistant واستقبال الرد داخل النافذة
+  const handleSend = useCallback(async (userText?: string) => {
+    const textToSend = (userText || input).trim();
     if (!textToSend || loading) return;
 
-    // بمجرد إرسال الرسالة، الدخول فوراً على الصفحة المناسبة
-    if (onNavigate) {
-      setInput('');
-      setOpen(false);
-      if (textToSend.includes('خطط') || textToSend.includes('خروجة') || textToSend.includes('رحلة') || textToSend.includes('مخطط')) {
-        onNavigate('ai', `tab=planner&q=${encodeURIComponent(textToSend)}`);
-      } else if (textToSend.includes('افتح خريطة') || textToSend.includes('الخريطة التفاعلية') || textToSend.includes('عرض الخريطة')) {
-        onNavigate('map');
-      } else {
-        onNavigate('ai', `tab=chat&q=${encodeURIComponent(textToSend)}`);
-      }
-      return;
-    }
-
     setInput('');
-    setShowQuick(false);
 
     const now = new Date();
     const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
 
-    // رسالة المستخدم
+    // إضافة رسالة المستخدم إلى المحادثة
     const userMsg: ChatMessage = {
       id: 'usr-' + Date.now(),
       role: 'me',
@@ -231,21 +259,52 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
 
+    // إلغاء أي طلب سابق قيد التشغيل
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
-      const historyTurns = messages.map((m) => ({
+      const historyTurns = messages.slice(-6).map((m) => ({
         role: m.role,
         text: m.text,
       }));
 
+      // استرجاع مفاتيح OpenRouter المخزنة إن وجدت لتعزيز دقة الرد
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (typeof window !== 'undefined') {
+        const storedKey = localStorage.getItem('portsaid_openrouter_key');
+        const storedModel = localStorage.getItem('portsaid_openrouter_model');
+        if (storedKey && storedKey.trim().length > 5) {
+          headers['x-openrouter-key'] = storedKey.trim();
+        }
+        if (storedModel && storedModel.trim() && storedModel !== 'built-in') {
+          headers['x-openrouter-model'] = storedModel.trim();
+        }
+      }
+
       const res = await fetch('/api/assistant', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
+        signal: controller.signal,
         body: JSON.stringify({
           message: textToSend,
           history: historyTurns,
           userLocation: userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null,
         }),
       });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || `خطأ من الخادم (${res.status})`);
+      }
+
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('استجابة غير صالحة من خادم المساعد.');
+      }
 
       const data = await res.json();
 
@@ -258,7 +317,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
           });
         }
 
-        const botReply = data.reply || 'أنا معاك يا بطل! اسألني عن أي حاجة في بورسعيد.';
+        const botReply = data.reply || 'أنا معك يا غالي! اسألني عن أي مكان أو استفسار في بورسعيد.';
         const suggestedPlaces: SuggestedPlace[] = data.suggestedPlaces || [];
 
         setMessages((prev) => [
@@ -272,47 +331,51 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
           },
         ]);
       } else {
-        throw new Error(data.error || 'Response error');
+        throw new Error(data.error || 'تعذر معالجة الرسالة');
       }
-    } catch (e) {
+    } catch (err: any) {
+      if (err.name === 'AbortError') return;
+
       setMessages((prev) => [
         ...prev,
         {
           id: 'bot-err-' + Date.now(),
           role: 'bot',
-          text: 'عفواً حدث بطء مؤقت في الاتصال. لكن تقدر تسألني عن أي حاجة وسأجيبك فوراً.',
+          text: `عفواً، حدث تعذر مؤقت في الاتصال: ${err.message || 'يرجى المحاولة مرة أخرى'}. يمكنك إعادة السؤال أو المحاولة بعد قليل.`,
           timestamp: timeStr,
+          isError: true,
         },
       ]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [input, loading, messages, userLocation]);
 
   return (
     <>
-      {/* Floating Action Button (FAB) using Official App Icon */}
-      <div className="fixed left-3 sm:left-5 bottom-3 sm:bottom-5 z-50 flex items-center gap-3">
-        {/* Floating Speech Tooltip */}
+      {/* 1. Floating Action Button (FAB) */}
+      <div className="fixed left-4 sm:left-6 bottom-4 sm:bottom-6 z-40 flex items-center gap-2.5" dir="rtl">
+        {/* Floating Tooltip Pill */}
         <AnimatePresence>
           {showTooltip && !open && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.8, x: -15 }}
+              initial={{ opacity: 0, scale: 0.85, x: -10 }}
               animate={{ opacity: 1, scale: 1, x: 0 }}
-              exit={{ opacity: 0, scale: 0.8, x: -15 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              exit={{ opacity: 0, scale: 0.85, x: -10 }}
+              transition={{ duration: 0.2 }}
               onClick={() => setOpen(true)}
-              className="cursor-pointer hidden min-[400px]:flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white shadow-2xl border border-sand-300 dark:border-teal2-500/40 text-xs font-black select-none hover:scale-105 transition"
+              className="cursor-pointer hidden min-[420px]:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-[#0c1622] text-ocean-950 dark:text-white shadow-xl border border-slate-200 dark:border-slate-800 text-xs font-bold select-none hover:border-teal2-500 transition"
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-              <span>مساعد بورسعيد والخريطة 👋 جاهز لخدمتك!</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>مساعد بورسعيد الذكي 👋</span>
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowTooltip(false);
                 }}
-                className="text-ocean-700/60 dark:text-white/50 hover:text-ocean-900 p-0.5"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-0.5"
+                title="إغلاق التلميح"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -320,132 +383,90 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
           )}
         </AnimatePresence>
 
-        {/* Floating App Icon Button with Multi-layer Animated Rings */}
+        {/* Clean FAB Button */}
         <motion.button
           onClick={() => setOpen(!open)}
           type="button"
-          aria-label="مساعد بورسعيد الذكي"
-          title="مساعد بورسعيد الذكي - اضغط للتحدث"
-          animate={{ y: [0, -6, 0] }}
-          transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
-          whileHover={{ scale: 1.12, rotate: 4 }}
-          whileTap={{ scale: 0.92 }}
-          className="relative group w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-[#f8f4ea] via-[#ffe3a8] to-[#ffb938] p-1 shadow-2xl shadow-ocean-900/40 border-2 border-white/80 grid place-items-center touch-manipulation cursor-pointer"
+          aria-label="فتح مساعد بورسعيد الذكي"
+          title="مساعد بورسعيد الذكي"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="relative w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-white dark:bg-[#0c1622] p-2 shadow-xl border border-slate-200 dark:border-slate-800 grid place-items-center cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-teal2-500"
         >
-          {/* Animated Glowing Wave Rings */}
-          <span className="absolute -inset-1 rounded-full bg-amber-400/40 blur-md group-hover:bg-teal2-400/50 transition-colors pointer-events-none" />
-          <span className="absolute -inset-2 rounded-full border-2 border-amber-400/40 animate-ping opacity-30 pointer-events-none" />
-
-          {/* Official App Logo Icon */}
-          <div className="relative z-10 w-full h-full rounded-full bg-white dark:bg-[#071322] flex items-center justify-center p-2 overflow-hidden shadow-inner border border-amber-300/50">
-            <img
-              src="/assets/logo/icon-192.png"
-              alt="Port Said Hub"
-              className="w-full h-full object-contain filter drop-shadow-sm group-hover:scale-110 transition-transform duration-300"
-            />
-          </div>
-
-          {/* Active Online Indicator Dot */}
-          <span className="absolute top-0 right-0 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white shadow-md flex items-center justify-center">
-            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-          </span>
+          <img
+            src="/assets/logo/icon-192.png"
+            alt="Port Said Hub"
+            className="w-full h-full object-contain filter drop-shadow-xs"
+          />
+          {/* Status Indicator */}
+          <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-[#0c1622] shadow-xs" />
         </motion.button>
       </div>
 
-      {/* Main Chat Window Panel */}
+      {/* 2. Main Chat Panel */}
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.85, y: 35 }}
+            initial={{ opacity: 0, scale: 0.92, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.85, y: 35 }}
-            transition={{ type: 'spring', stiffness: 350, damping: 26 }}
-            className="fixed left-2 sm:left-4 bottom-20 sm:bottom-24 z-50 w-[min(27rem,calc(100vw-1rem))] h-[min(40rem,calc(100vh-6.5rem))] flex flex-col rounded-3xl overflow-hidden shadow-2xl bg-white dark:bg-[#0b1624] border border-sand-300 dark:border-[#1d2d3e] backdrop-blur-xl"
+            exit={{ opacity: 0, scale: 0.92, y: 20 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            dir="rtl"
+            className="fixed left-3 sm:left-6 bottom-18 sm:bottom-22 z-50 w-[calc(100vw-1.5rem)] sm:w-[410px] h-[min(580px,calc(100dvh-5.5rem))] flex flex-col rounded-3xl overflow-hidden shadow-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e]"
           >
-            {/* Header: App Brand, Live Status, Controls */}
-            <div className="bg-gradient-to-r from-ocean-950 via-ocean-900 to-teal2-800 text-white p-3.5 sm:p-4 flex items-center justify-between gap-2 border-b border-white/10 relative overflow-hidden shadow-md">
-              {/* Subtle background glow */}
-              <div className="absolute top-0 right-0 w-40 h-40 bg-teal2-400/10 rounded-full blur-2xl pointer-events-none" />
-
-              {/* Bot Info with Official App Icon */}
-              <div className="flex items-center gap-2.5 min-w-0 relative z-10">
-                <motion.div
-                  className="w-11 h-11 shrink-0 rounded-2xl bg-gradient-to-b from-[#f8f4ea] to-[#ffe3a8] p-1.5 border-2 border-white/70 shadow-lg flex items-center justify-center relative overflow-hidden"
-                  whileHover={{ rotate: [0, -10, 10, 0] }}
-                  transition={{ duration: 0.6 }}
-                >
-                  <img
-                    src="/assets/logo/icon-192.png"
-                    alt="Port Said Hub"
-                    className="w-full h-full object-contain"
-                  />
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white" />
-                </motion.div>
-
-                <div className="min-w-0 leading-tight">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <h3 className="font-black text-sm sm:text-base text-white truncate tracking-tight">
-                      مساعد بورسعيد الذكي
-                    </h3>
-                    <Sparkles className="w-3.5 h-3.5 text-sand-400 animate-spin" style={{ animationDuration: '8s' }} />
+            {/* Header */}
+            <div className="p-3.5 px-4 bg-slate-50 dark:bg-[#101e2e] border-b border-slate-200 dark:border-[#1d2d3e] flex items-center justify-between gap-2 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-600 to-indigo-600 p-0.5 shrink-0">
+                  <div className="w-full h-full rounded-[10px] bg-white dark:bg-[#071322] flex items-center justify-center p-1">
+                    <img src="/assets/logo/icon-192.png" alt="" className="w-full h-full object-contain" />
                   </div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-[11px] text-teal2-200 font-bold truncate">
+                </div>
+                <div className="min-w-0 text-right">
+                  <h3 className="font-bold text-xs sm:text-sm text-ocean-950 dark:text-white truncate">
+                    مساعد بورسعيد الذكي
+                  </h3>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                       {aiProvider?.provider === 'openrouter'
-                        ? 'مدعوم بـ OpenRouter ⚡'
-                        : 'متصل 24/7 • مرتبط بالخريطة 🗺️'}
+                        ? `متصل • ${aiProvider.model?.split('/')[1] || 'OpenRouter'}`
+                        : 'متصل • المساعد المحلي 🧭'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Header Action Buttons */}
-              <div className="flex items-center gap-1.5 relative z-10 shrink-0">
+              {/* Header Controls */}
+              <div className="flex items-center gap-1.5 shrink-0">
                 {onNavigate && (
                   <button
                     onClick={() => {
-                      onNavigate('ai', 'tab=chat');
+                      onNavigate('ai');
                       setOpen(false);
                     }}
-                    title="فتح في مركز الذكاء الاصطناعي (Gemini)"
                     type="button"
-                    className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-500/25 via-indigo-500/25 to-amber-500/25 hover:bg-white/25 text-white flex items-center gap-1 text-[11px] font-black border border-white/20 transition"
+                    title="فتح استوديو الذكاء الاصطناعي الكامل"
+                    className="p-1.5 rounded-xl text-slate-500 hover:text-ocean-950 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 transition"
                   >
-                    <Maximize2 className="w-3.5 h-3.5 text-sand-300" />
-                    <span className="hidden sm:inline">مركز الذكاء الاصطناعي</span>
-                  </button>
-                )}
-
-                {onNavigate && (
-                  <button
-                    onClick={() => {
-                      onNavigate('map');
-                      setOpen(false);
-                    }}
-                    title="فتح خريطة بورسعيد"
-                    type="button"
-                    className="px-2.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-sand-200 hover:text-white flex items-center gap-1 text-[11px] font-bold transition"
-                  >
-                    <Compass className="w-3.5 h-3.5 text-sand-300" />
-                    <span className="hidden sm:inline">الخريطة</span>
+                    <Maximize2 className="w-3.5 h-3.5" />
                   </button>
                 )}
 
                 <button
                   onClick={handleResetChat}
-                  title="بدء محادثة جديدة"
                   type="button"
-                  className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 text-white/90 grid place-items-center transition text-xs"
+                  title="محادثة جديدة"
+                  className="p-1.5 rounded-xl text-slate-500 hover:text-ocean-950 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 transition"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                 </button>
 
                 <button
                   onClick={() => setOpen(false)}
-                  title="إغلاق المحادثة"
                   type="button"
-                  className="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 text-white grid place-items-center transition"
+                  title="إغلاق"
+                  className="p-1.5 rounded-xl text-slate-500 hover:text-ocean-950 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 transition"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -459,354 +480,254 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  className="px-3.5 py-2 bg-teal2-500/15 dark:bg-teal2-950/60 border-b border-teal2-500/30 text-teal2-800 dark:text-teal2-300 text-xs font-bold flex items-center justify-between gap-2"
+                  className={`px-3.5 py-1.5 text-[11px] font-bold flex items-center justify-between gap-2 border-b shrink-0 ${
+                    locationNotice.type === 'success'
+                      ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20'
+                      : locationNotice.type === 'warn'
+                      ? 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/20'
+                      : 'bg-rose-500/10 text-rose-800 dark:text-rose-300 border-rose-500/20'
+                  }`}
                 >
                   <span className="flex items-center gap-1.5 truncate">
-                    <Info className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{locationNotice}</span>
+                    <Info className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{locationNotice.message}</span>
                   </span>
-                  <button onClick={() => setLocationNotice(null)} type="button">
-                    <X className="w-3.5 h-3.5" />
+                  <button
+                    onClick={() => setLocationNotice(null)}
+                    type="button"
+                    className="p-0.5 hover:opacity-75"
+                  >
+                    <X className="w-3 h-3" />
                   </button>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Chat Messages Body */}
+            {/* Messages Body */}
             <div
               ref={chatBodyRef}
-              className="flex-1 min-h-0 overflow-y-auto p-3.5 sm:p-4 flex flex-col gap-3.5 bg-sand-50/60 dark:bg-[#07111c]/70 text-xs sm:text-sm"
+              className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-3 scrollbar-thin bg-slate-50/50 dark:bg-[#08121e]/60"
             >
               {messages.map((m) => {
                 const isBot = m.role === 'bot';
-                const mentionsPoints = isBot && (m.text.includes('نقط') || m.text.includes('كوبون') || m.text.includes('خصم'));
-                const mentionsFish = isBot && (m.text.includes('سمك') || m.text.includes('كاستن') || m.text.includes('الجندي') || m.text.includes('أكل'));
-                const mentionsBus = isBot && (m.text.includes('مواصلات') || m.text.includes('مينى باص') || m.text.includes('خط'));
-                const mentionsHousing = isBot && (m.text.includes('سكن') || m.text.includes('شقق') || m.text.includes('مغترب'));
-                const mentionsTour = isBot && (m.text.includes('فسح') || m.text.includes('خروج') || m.text.includes('معالم') || m.text.includes('جبال الملح'));
-                const mentionsSweets = isBot && (m.text.includes('كاساتا') || m.text.includes('حلويات') || m.text.includes('سيلفر'));
 
                 return (
-                  <motion.div
+                  <div
                     key={m.id}
-                    initial={{ opacity: 0, y: 12, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ type: 'spring', stiffness: 380, damping: 25 }}
-                    className={`flex items-start gap-2 max-w-[92%] ${isBot ? 'self-start' : 'self-end flex-row-reverse'}`}
+                    className={`flex items-start gap-2 ${isBot ? 'self-start' : 'self-end flex-row-reverse'}`}
                   >
-                    {/* Bot Avatar */}
                     {isBot && (
-                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-b from-[#f8f4ea] to-[#ffe3a8] border border-amber-300 shadow-sm shrink-0 grid place-items-center p-1 mt-0.5">
-                        <img src="/assets/logo/icon-192.png" alt="Bot" className="w-full h-full object-contain" />
+                      <div className="w-6 h-6 rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 grid place-items-center text-xs shrink-0 mt-0.5">
+                        ⚓
                       </div>
                     )}
 
-                    {/* Message Bubble */}
                     <div
-                      className={`relative group p-3.5 sm:p-4 rounded-3xl leading-relaxed font-semibold text-xs sm:text-sm shadow-md transition-all ${
+                      className={`max-w-[86%] p-3 rounded-2xl text-xs sm:text-[13px] leading-relaxed shadow-xs text-right ${
                         isBot
-                          ? 'bg-white dark:bg-[#132030] text-ocean-950 dark:text-white rounded-tr-sm border border-sand-200/90 dark:border-[#1d2d3e]'
-                          : 'bg-gradient-to-r from-ocean-900 via-ocean-800 to-teal2-700 text-white rounded-tl-sm'
+                          ? m.isError
+                            ? 'bg-rose-50 dark:bg-rose-950/30 text-rose-900 dark:text-rose-200 border border-rose-200 dark:border-rose-900/40'
+                            : 'bg-white dark:bg-[#132030] text-ocean-950 dark:text-white rounded-tr-sm border border-slate-200/90 dark:border-[#1d2d3e]'
+                          : 'bg-ocean-900 text-white rounded-tl-sm'
                       }`}
                     >
-                      {/* Message Text with Line Breaks */}
-                      <div className="whitespace-pre-line leading-relaxed">{m.text}</div>
+                      <div className="whitespace-pre-line font-medium leading-relaxed">{m.text}</div>
 
-                      {/* Bot Suggested Places Map Pills (Deep Linking to Map) */}
+                      {/* Suggested Places Cards */}
                       {isBot && m.suggestedPlaces && m.suggestedPlaces.length > 0 && (
-                        <div className="mt-3 pt-2.5 border-t border-sand-200/80 dark:border-white/10 flex flex-col gap-2">
-                          <div className="text-[11px] font-black text-teal2-700 dark:text-teal2-300 flex items-center gap-1.5">
-                            <Compass className="w-3.5 h-3.5 text-teal2-500 animate-pulse" />
-                            <span>اضغط لمعاينة المكان على الخريطة التفاعلية:</span>
-                          </div>
-                          <div className="flex flex-wrap gap-1.5">
+                        <div className="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-800 space-y-1.5">
+                          <span className="text-[10px] font-bold text-teal2-700 dark:text-teal2-300 block">
+                            الأماكن المقترحة على الخريطة:
+                          </span>
+                          <div className="flex flex-col gap-1.5">
                             {m.suggestedPlaces.map((pl) => (
-                              <motion.button
+                              <div
                                 key={pl.id}
-                                whileHover={{ scale: 1.04 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => {
-                                  if (onNavigate) {
-                                    onNavigate('map', pl.id);
-                                    setOpen(false);
-                                  }
-                                }}
-                                type="button"
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-ocean-900 to-teal2-800 text-white font-black text-[11px] shadow hover:shadow-md transition"
+                                className="p-2 rounded-xl bg-slate-50 dark:bg-[#172638] border border-slate-200/80 dark:border-[#20344c] flex items-center justify-between gap-2 text-xs"
                               >
-                                <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                <span>{pl.n}</span>
-                                {typeof pl.distanceKm === 'number' && (
-                                  <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-sand-200 text-[10px]">
-                                    {pl.distanceKm} كم
-                                  </span>
-                                )}
-                              </motion.button>
+                                <div className="min-w-0">
+                                  <p className="font-bold text-ocean-950 dark:text-white truncate">
+                                    {pl.n}
+                                  </p>
+                                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                                    {pl.a} {pl.disc ? `• خصم ${pl.disc}%` : ''}
+                                  </p>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {typeof pl.distanceKm === 'number' && (
+                                    <span className="px-1.5 py-0.5 rounded-md bg-white dark:bg-slate-800 text-[10px] font-bold text-teal2-700 dark:text-teal2-300 border border-slate-200 dark:border-slate-700">
+                                      {pl.distanceKm} كم
+                                    </span>
+                                  )}
+
+                                  {onNavigate && (
+                                    <button
+                                      onClick={() => {
+                                        onNavigate('map', pl.id);
+                                        setOpen(false);
+                                      }}
+                                      type="button"
+                                      title="عرض على الخريطة"
+                                      className="p-1 rounded-lg bg-teal2-600 text-white hover:bg-teal2-500 transition"
+                                    >
+                                      <MapIcon className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
                             ))}
                           </div>
                         </div>
                       )}
 
-                      {/* Interactive Category Action Pills */}
-                      {isBot && (
-                        <div className="mt-3 pt-2.5 border-t border-sand-200/60 dark:border-white/10 flex flex-wrap gap-1.5">
-                          {mentionsPoints && onOpenPoints && (
-                            <button
-                              onClick={() => {
-                                onOpenPoints();
-                                setOpen(false);
-                              }}
-                              type="button"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-ocean-950 font-black text-[11px] shadow hover:opacity-95 transition"
-                            >
-                              <Star className="w-3.5 h-3.5 fill-current" />
-                              <span>رصيد النقاط والكوبونات 👈</span>
-                            </button>
-                          )}
-
-                          {onNavigate && (
-                            <button
-                              onClick={() => {
-                                onNavigate('map');
-                                setOpen(false);
-                              }}
-                              type="button"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sand-100 dark:bg-sand-900/50 text-ocean-900 dark:text-sand-200 font-bold text-[11px] border border-sand-300/50 hover:bg-sand-200 transition"
-                            >
-                              <Compass className="w-3.5 h-3.5 text-teal2-600" />
-                              <span>فتح الخريطة 🗺️</span>
-                            </button>
-                          )}
-
-                          {mentionsFish && onNavigate && (
-                            <button
-                              onClick={() => {
-                                onNavigate('list', 'food');
-                                setOpen(false);
-                              }}
-                              type="button"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal2-100 dark:bg-teal2-950/70 text-teal2-800 dark:text-teal2-300 font-bold text-[11px] border border-teal2-300/40 hover:bg-teal2-200 transition"
-                            >
-                              <Utensils className="w-3.5 h-3.5 text-teal2-600" />
-                              <span>مطاعم الأسماك 🐟</span>
-                            </button>
-                          )}
-
-                          {mentionsBus && onNavigate && (
-                            <button
-                              onClick={() => {
-                                onNavigate('bus');
-                                setOpen(false);
-                              }}
-                              type="button"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-ocean-100 dark:bg-ocean-950/70 text-ocean-900 dark:text-ocean-200 font-bold text-[11px] border border-ocean-300/40 hover:bg-ocean-200 transition"
-                            >
-                              <Bus className="w-3.5 h-3.5 text-ocean-700" />
-                              <span>شبكة المواصلات 🚌</span>
-                            </button>
-                          )}
-
-                          {mentionsHousing && onNavigate && (
-                            <button
-                              onClick={() => {
-                                onNavigate('housing');
-                                setOpen(false);
-                              }}
-                              type="button"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-100 dark:bg-purple-950/70 text-purple-900 dark:text-purple-200 font-bold text-[11px] border border-purple-300/40 hover:bg-purple-200 transition"
-                            >
-                              <Bed className="w-3.5 h-3.5 text-purple-600" />
-                              <span>دليل سكن الطلبة 🏠</span>
-                            </button>
-                          )}
-
-                          {mentionsSweets && onNavigate && (
-                            <button
-                              onClick={() => {
-                                onNavigate('list', 'sweets');
-                                setOpen(false);
-                              }}
-                              type="button"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-100 dark:bg-rose-950/70 text-rose-900 dark:text-rose-200 font-bold text-[11px] border border-rose-300/40 hover:bg-rose-200 transition"
-                            >
-                              <span>كاساتا وحلويات 🍨</span>
-                            </button>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Footer Info: Timestamp & Copy Button */}
-                      <div className="mt-2 flex items-center justify-between text-[10px] text-ocean-700/60 dark:text-white/50 pt-1">
+                      {/* Footer: Timestamp & Copy */}
+                      <div className="mt-1.5 flex items-center justify-between text-[10px] opacity-60 pt-1">
                         <span>{m.timestamp}</span>
 
-                        {isBot && (
+                        {isBot && !m.isError && (
                           <button
                             onClick={() => handleCopyText(m.id, m.text)}
                             type="button"
-                            className="inline-flex items-center gap-1 opacity-70 hover:opacity-100 transition px-1.5 py-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10"
+                            className="inline-flex items-center gap-1 hover:opacity-100 transition px-1 rounded hover:bg-black/5 dark:hover:bg-white/10"
                             title="نسخ الإجابة"
                           >
                             {copiedId === m.id ? (
-                              <span className="text-emerald-500 flex items-center gap-1 font-bold">
-                                <Check className="w-3 h-3" /> تم النسخ
+                              <span className="text-emerald-500 flex items-center gap-0.5 font-bold">
+                                <Check className="w-2.5 h-2.5" /> تم النسخ
                               </span>
                             ) : (
-                              <span className="flex items-center gap-1">
-                                <Copy className="w-3 h-3" /> نسخ
+                              <span className="flex items-center gap-0.5">
+                                <Copy className="w-2.5 h-2.5" /> نسخ
                               </span>
                             )}
                           </button>
                         )}
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 );
               })}
 
-              {/* Animated Typing Indicator */}
+              {/* Typing Indicator */}
               {loading && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2 self-start"
-                >
-                  <div className="w-7 h-7 rounded-xl bg-gradient-to-b from-[#f8f4ea] to-[#ffe3a8] border border-amber-300 grid place-items-center p-1">
-                    <img src="/assets/logo/icon-192.png" alt="" className="w-full h-full object-contain" />
-                  </div>
-                  <div className="p-3 rounded-2xl bg-white dark:bg-[#132030] border border-sand-200 dark:border-[#1d2d3e] text-xs font-bold text-ocean-800 dark:text-white/80 flex items-center gap-2 shadow-sm">
-                    <span className="text-[11px]">مساعد بورسعيد بيبحث لك</span>
-                    <span className="inline-flex gap-1 items-center">
-                      <span className="w-1.5 h-1.5 rounded-full bg-teal2-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-1.5 h-1.5 rounded-full bg-teal2-500 animate-bounce" style={{ animationDelay: '180ms' }} />
-                      <span className="w-1.5 h-1.5 rounded-full bg-teal2-500 animate-bounce" style={{ animationDelay: '360ms' }} />
-                    </span>
-                  </div>
-                </motion.div>
+                <div className="flex items-center gap-2 self-start text-xs font-bold text-slate-500 dark:text-slate-400 p-2 rounded-xl bg-white dark:bg-[#132030] border border-slate-200 dark:border-[#1d2d3e] w-fit shadow-xs">
+                  <Sparkles className="w-3.5 h-3.5 text-teal2-500 animate-spin" />
+                  <span>المساعد يكتب الآن...</span>
+                </div>
               )}
             </div>
 
-            {/* Quick Prompts Toggle */}
-            <button
-              onClick={() => setShowQuick(!showQuick)}
-              type="button"
-              className="flex items-center justify-between px-4 py-2 text-xs font-black bg-sand-100/80 dark:bg-[#111e2d] text-ocean-900 dark:text-sand-300 border-t border-sand-200/90 dark:border-[#1d2d3e] transition hover:bg-sand-200"
-            >
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>أسئلة ومقترحات سريعة جاهزة</span>
-              </span>
-              <div className="flex items-center gap-1 text-[11px] text-ocean-700/70 dark:text-white/60">
-                <span>{showQuick ? 'إخفاء' : 'عرض'}</span>
-                {showQuick ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
-              </div>
-            </button>
+            {/* Quick Prompts Container */}
+            <div className="px-3 py-2 bg-slate-50/90 dark:bg-[#101e2e]/90 border-t border-slate-200 dark:border-[#1d2d3e] flex flex-col gap-1.5 shrink-0">
+              <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+                {PRIMARY_PROMPTS.map((p, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSend(p.text)}
+                    className="shrink-0 px-2.5 py-1 rounded-full bg-white dark:bg-[#162536] text-[11px] font-bold text-ocean-950 dark:text-white border border-slate-200 dark:border-[#22354a] hover:border-teal2-400 hover:bg-teal2-50 dark:hover:bg-teal2-900/30 transition shadow-2xs flex items-center gap-1"
+                  >
+                    <span>{p.icon}</span>
+                    <span>{p.label}</span>
+                  </button>
+                ))}
 
-            {/* Quick Prompt Chips Carousel */}
-            <AnimatePresence>
-              {showQuick && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="overflow-hidden bg-white dark:bg-[#0c1622] border-t border-sand-200/80 dark:border-[#1d2d3e]"
-                >
-                  <div className="flex gap-2 overflow-x-auto p-2.5 scrollbar-none">
-                    {QUICK_PROMPTS.map((prompt, i) => (
-                      <motion.button
-                        key={i}
-                        type="button"
-                        onClick={() => handleSend(prompt.text)}
-                        className="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold bg-sand-50 dark:bg-[#162536] text-ocean-900 dark:text-white border border-sand-200/90 dark:border-[#22354a] hover:bg-teal2-100 dark:hover:bg-teal2-900/50 hover:border-teal2-400 transition whitespace-nowrap shadow-sm flex items-center gap-1.5"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <span>{prompt.icon}</span>
-                        <span>{prompt.label}</span>
-                      </motion.button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* User Active Location Indicator Badge */}
-            {userLocation && (
-              <div className="px-3 py-1.5 bg-emerald-500/10 dark:bg-emerald-950/40 border-t border-emerald-500/20 flex items-center justify-between text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-emerald-600 animate-bounce" />
-                  <span>
-                    موقعك محدد: <strong>{userLocation.district || 'بورسعيد'}</strong> ({userLocation.lat.toFixed(3)}, {userLocation.lng.toFixed(3)})
-                  </span>
-                </span>
                 <button
-                  onClick={() => setUserLocation(null)}
                   type="button"
-                  title="إلغاء تحديد الموقع"
-                  className="text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 p-0.5"
+                  onClick={() => setShowMorePrompts(!showMorePrompts)}
+                  className="shrink-0 px-2 py-1 rounded-full text-[11px] font-bold text-slate-500 hover:text-ocean-950 dark:text-slate-400 dark:hover:text-white transition flex items-center gap-0.5"
                 >
-                  <X className="w-3 h-3" />
+                  <span>{showMorePrompts ? 'أقل' : 'المزيد'}</span>
+                  {showMorePrompts ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                 </button>
               </div>
-            )}
 
-            {/* Input Bar with GPS Button */}
-            <div className="p-3 border-t border-sand-200/90 dark:border-[#1d2d3e] flex items-center gap-2 bg-white dark:bg-[#0b1624]">
-              {/* GPS Geolocation Button */}
-              <motion.button
+              {/* Secondary Prompts (Collapsible) */}
+              <AnimatePresence>
+                {showMorePrompts && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="flex gap-1.5 overflow-x-auto scrollbar-none pt-1 border-t border-slate-200/60 dark:border-slate-800"
+                  >
+                    {SECONDARY_PROMPTS.map((p, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSend(p.text)}
+                        className="shrink-0 px-2.5 py-1 rounded-full bg-white dark:bg-[#162536] text-[11px] font-bold text-ocean-950 dark:text-white border border-slate-200 dark:border-[#22354a] hover:border-teal2-400 transition shadow-2xs flex items-center gap-1"
+                      >
+                        <span>{p.icon}</span>
+                        <span>{p.label}</span>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Input Bar */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSend();
+              }}
+              className="p-2.5 bg-white dark:bg-[#0c1622] border-t border-slate-200 dark:border-[#1d2d3e] flex items-center gap-2 shrink-0"
+            >
+              {/* GPS Location Button */}
+              <button
+                type="button"
                 onClick={handleGetLocation}
                 disabled={locatingUser}
-                type="button"
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.92 }}
-                title="تحديد ومشاركة موقعك الحالي بالـ GPS"
-                className={`w-10 h-10 shrink-0 rounded-2xl grid place-items-center transition border ${
+                title={userLocation ? `موقعك محدد في: ${userLocation.district || 'بورسعيد'}` : 'تحديد موقعي بالـ GPS'}
+                className={`p-2.5 rounded-2xl transition shrink-0 ${
                   userLocation
-                    ? 'bg-emerald-500 text-white border-emerald-600 shadow-md shadow-emerald-500/30'
-                    : 'bg-sand-100 dark:bg-[#162536] text-ocean-800 dark:text-sand-300 border-sand-300 dark:border-[#22354a] hover:bg-sand-200'
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                    : 'bg-slate-100 dark:bg-[#152332] text-slate-700 dark:text-slate-300 hover:bg-slate-200 border border-slate-200 dark:border-[#1d2d3e]'
                 }`}
               >
-                <Navigation className={`w-4 h-4 ${locatingUser ? 'animate-spin' : ''}`} />
-              </motion.button>
+                <Navigation className={`w-4 h-4 ${locatingUser ? 'animate-spin text-teal2-600' : ''}`} />
+              </button>
 
+              {/* Text Input */}
               <div className="flex-1 relative flex items-center">
                 <input
                   ref={inputRef}
                   type="text"
-                  placeholder="اسأل عن أي مكان أو أقرب مطعم لموقعك..."
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSend();
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      if (e.nativeEvent.isComposing) return;
+                      e.preventDefault();
+                      handleSend();
+                    }
                   }}
-                  className="w-full rounded-2xl border border-sand-300 dark:border-[#22354a] bg-sand-50 dark:bg-[#132030] pr-4 pl-9 py-2.5 text-xs sm:text-sm text-ocean-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal2-500 font-medium placeholder:text-ocean-700/50 dark:placeholder:text-white/40 shadow-inner"
+                  placeholder="اسأل عن أي مكان أو مطعم في بورسعيد..."
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-[#121f2f] text-ocean-950 dark:text-white border border-slate-300 dark:border-[#1d2d3e] focus:border-teal2-500 outline-none text-xs font-semibold placeholder:text-slate-400"
                 />
                 {input.trim() && (
                   <button
-                    onClick={() => setInput('')}
                     type="button"
-                    className="absolute left-2.5 w-5 h-5 rounded-full bg-sand-200 dark:bg-[#203042] text-ocean-700 dark:text-white/70 grid place-items-center text-xs"
+                    onClick={() => setInput('')}
+                    className="absolute left-2.5 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white"
                   >
                     <X className="w-3 h-3" />
                   </button>
                 )}
               </div>
 
-              <motion.button
-                onClick={() => handleSend()}
+              {/* Send Button */}
+              <button
+                type="submit"
                 disabled={!input.trim() || loading}
-                type="button"
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.92 }}
-                className={`w-11 h-11 shrink-0 rounded-2xl grid place-items-center transition shadow-lg ${
-                  input.trim() && !loading
-                    ? 'bg-gradient-to-r from-teal2-600 to-ocean-800 text-white shadow-teal2-600/30'
-                    : 'bg-sand-200 dark:bg-[#1c2d40] text-ocean-700/40 dark:text-white/30 cursor-not-allowed'
-                }`}
+                className="p-2.5 rounded-2xl bg-gradient-to-r from-ocean-900 via-indigo-900 to-teal2-700 text-white disabled:opacity-40 hover:opacity-90 transition shrink-0 shadow-sm"
               >
                 <Send className="w-4 h-4" />
-              </motion.button>
-            </div>
+              </button>
+            </form>
           </motion.div>
         )}
       </AnimatePresence>
