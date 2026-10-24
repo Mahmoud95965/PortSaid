@@ -120,6 +120,12 @@ export const MapView: React.FC<MapViewProps> = ({
         // استيراد ديناميكي للمكتبة لتجنب مشاكل Server-Side Rendering
         const maplibregl = await import('maplibre-gl');
 
+        // تعيين مسار Web Worker الثابت لتفادي خطأ MIME type 'text/html' في Next.js
+        if (typeof window !== 'undefined') {
+          const workerUrl = `${window.location.origin}/maplibre-gl-worker.mjs`;
+          maplibregl.setWorkerUrl(workerUrl);
+        }
+
         if (isCancelled || !mapContainerRef.current) return;
 
         map = new maplibregl.Map({
