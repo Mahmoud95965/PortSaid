@@ -17,8 +17,6 @@ import { TransportView } from '@/components/TransportView';
 import { HousingView } from '@/components/HousingView';
 import { ExploreView } from '@/components/ExploreView';
 import { MapView } from '@/components/MapView';
-import { GeminiChatView } from '@/components/GeminiChatView';
-import { PlannerStudio } from '@/components/SmartPlanner/PlannerStudio';
 import { FeedbackView } from '@/components/FeedbackView';
 import { PartnerView } from '@/components/PartnerView';
 import { AccountView } from '@/components/AccountView';
@@ -128,13 +126,24 @@ export default function HomePage() {
 
   const handleNavigate = (view: string, arg?: string | null) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (view === 'planner' || view === 'ai') {
-      router.push(arg ? `/ai?q=${encodeURIComponent(arg)}` : '/ai');
+    if (view === 'planner') {
+      const q = arg && !arg.includes('=') ? `q=${encodeURIComponent(arg)}` : arg;
+      router.push(q ? `/ai?tab=planner&${q}` : '/ai?tab=planner');
       return;
     }
     if (view === 'chat') {
-      setTargetChatInitialPrompt(arg || null);
-      setCurrentView('chat');
+      const q = arg && !arg.includes('=') ? `q=${encodeURIComponent(arg)}` : arg;
+      router.push(q ? `/ai?tab=chat&${q}` : '/ai?tab=chat');
+      return;
+    }
+    if (view === 'ai') {
+      if (arg?.startsWith('tab=')) {
+        router.push(`/ai?${arg}`);
+      } else if (arg) {
+        router.push(`/ai?q=${encodeURIComponent(arg)}`);
+      } else {
+        router.push('/ai');
+      }
       return;
     }
     if (view === 'map') {
@@ -403,26 +412,6 @@ export default function HomePage() {
                 onBack={() => handleNavigate('home')}
                 onSelectPlace={(id) => handleNavigate('place', id)}
                 onOpenCouponModal={handleRequestCoupon}
-              />
-            </motion.div>
-          )}
-
-          {currentView === 'planner' && (
-            <motion.div key="planner-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
-              <PlannerStudio
-                onViewPlaceDetails={(id) => handleNavigate('place', id)}
-                onBackToHome={() => handleNavigate('home')}
-              />
-            </motion.div>
-          )}
-
-          {currentView === 'chat' && (
-            <motion.div key="chat-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
-              <GeminiChatView
-                initialPrompt={targetChatInitialPrompt}
-                onNavigate={handleNavigate}
-                onOpenPoints={() => handleNavigate('points')}
-                onBack={() => handleNavigate('home')}
               />
             </motion.div>
           )}

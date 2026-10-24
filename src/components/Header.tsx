@@ -54,9 +54,8 @@ export const Header: React.FC<HeaderProps> = ({
 
   const navLinks = [
     { key: 'home', label: 'الرئيسية', icon: Home },
-    { key: 'ai', label: 'مخطط الرحلات 🧭', icon: Compass },
+    { key: 'ai', label: 'الذكاء الاصطناعي ✦', icon: Sparkles },
     { key: 'map', label: 'الخريطة', icon: MapPin },
-    { key: 'chat', label: 'مساعد Gemini', icon: Sparkles },
     { key: 'bus', label: 'المواصلات', icon: Bus },
     { key: 'housing', label: 'السكن', icon: Bed },
     { key: 'explore', label: 'استكشف', icon: Compass },
@@ -379,11 +378,11 @@ export const Header: React.FC<HeaderProps> = ({
                         className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-teal2-500/10 via-ocean-900/10 to-indigo-500/10 text-ocean-900 dark:text-white font-bold text-sm hover:bg-sand-100 dark:hover:bg-[#22334a] transition border border-teal2-500/20"
                       >
                         <span className="flex items-center gap-2.5">
-                          <Compass className="w-4 h-4 text-teal2-600 dark:text-teal2-400" />
-                          <span>مخطط الرحلات والخروجات</span>
+                          <Sparkles className="w-4 h-4 text-teal2-600 dark:text-teal2-400" />
+                          <span>مركز الذكاء الاصطناعي (مخطط + Gemini)</span>
                         </span>
                         <span className="text-[10px] font-black bg-teal2-500/20 text-teal2-700 dark:text-teal2-300 px-2 py-0.5 rounded-full">
-                          AI Studio
+                          AI Hub ✦
                         </span>
                       </button>
                     </motion.div>

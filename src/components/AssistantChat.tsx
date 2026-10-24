@@ -205,11 +205,11 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
       setInput('');
       setOpen(false);
       if (textToSend.includes('خطط') || textToSend.includes('خروجة') || textToSend.includes('رحلة') || textToSend.includes('مخطط')) {
-        onNavigate('ai', textToSend);
+        onNavigate('ai', `tab=planner&q=${encodeURIComponent(textToSend)}`);
       } else if (textToSend.includes('افتح خريطة') || textToSend.includes('الخريطة التفاعلية') || textToSend.includes('عرض الخريطة')) {
         onNavigate('map');
       } else {
-        onNavigate('chat', textToSend);
+        onNavigate('ai', `tab=chat&q=${encodeURIComponent(textToSend)}`);
       }
       return;
     }
@@ -405,15 +405,15 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
                 {onNavigate && (
                   <button
                     onClick={() => {
-                      onNavigate('chat');
+                      onNavigate('ai', 'tab=chat');
                       setOpen(false);
                     }}
-                    title="فتح في شاشة Gemini الكاملة"
+                    title="فتح في مركز الذكاء الاصطناعي (Gemini)"
                     type="button"
                     className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-500/25 via-indigo-500/25 to-amber-500/25 hover:bg-white/25 text-white flex items-center gap-1 text-[11px] font-black border border-white/20 transition"
                   >
                     <Maximize2 className="w-3.5 h-3.5 text-sand-300" />
-                    <span className="hidden sm:inline">شاشة Gemini</span>
+                    <span className="hidden sm:inline">مركز الذكاء الاصطناعي</span>
                   </button>
                 )}
 

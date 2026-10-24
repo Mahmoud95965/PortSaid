@@ -14,6 +14,11 @@ async function testSmartPlanner() {
   assert.strictEqual(redirectRes.status, 307, '/smart-planner should redirect with status 307');
   console.log('✓ /smart-planner route cleanly redirects to /ai with HTTP 307');
 
+  const chatRedirectRes = await fetch(`${BASE_URL}/chat`, { redirect: 'manual' });
+  assert.strictEqual(chatRedirectRes.status, 307, '/chat should redirect with status 307');
+  assert.ok(chatRedirectRes.headers.get('location')?.includes('/ai?tab=chat'), '/chat redirect must point to /ai?tab=chat');
+  console.log('✓ /chat route cleanly redirects to /ai?tab=chat with HTTP 307');
+
   console.log('\n--- 2. Testing Natural Language Plan Generation (/api/planner) ---');
   const query = 'خطط لي خروجة لشخصين لمدة 5 ساعات بميزانية 500 جنيه، تشمل أماكن للزيارة وكافيه ومطعم';
 
