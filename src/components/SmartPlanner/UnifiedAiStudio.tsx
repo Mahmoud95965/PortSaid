@@ -29,17 +29,18 @@ import {
   ArrowUp,
   ArrowDown,
   RotateCcw,
-  Sliders,
   ChevronDown,
   ChevronUp,
   ExternalLink,
   Car,
   Footprints,
   Check,
-  AlertCircle,
-  Tag,
-  Maximize2,
-  Info,
+  Brain,
+  Settings,
+  Cpu,
+  Key,
+  X,
+  Layers,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -58,6 +59,7 @@ interface ChatMessage {
   role: 'bot' | 'me';
   text: string;
   timestamp: string;
+  thinkingProcess?: string[];
   isPlanUpdate?: boolean;
   planSummary?: {
     title: string;
@@ -77,6 +79,16 @@ interface UnifiedAiStudioProps {
 
 const CHAT_STORAGE_KEY = 'portsaid_unified_ai_chat_v1';
 const SAVED_TRIPS_STORAGE = 'portsaid_hub_saved_itineraries_v1';
+const OPENROUTER_KEY_STORAGE = 'portsaid_openrouter_key';
+const OPENROUTER_MODEL_STORAGE = 'portsaid_openrouter_model';
+
+const POPULAR_MODELS = [
+  { id: 'built-in', name: 'محرك التفكير لبورسعيد (مدمج فائق السرعة)', tag: 'Built-in ⚡' },
+  { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1 (تفكير متعمق)', tag: 'Reasoning 🧠' },
+  { id: 'google/gemini-2.0-flash-thinking-exp:free', name: 'Gemini 2.0 Flash Thinking (مجاني)', tag: 'Thinking 💡' },
+  { id: 'google/gemini-2.0-flash-001', name: 'Gemini 2.0 Flash (سريع ودقيق)', tag: 'Recommended ⭐' },
+  { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', tag: 'High Intelligence 🎯' },
+];
 
 const QUICK_PROMPTS = [
   {
@@ -121,16 +133,17 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
   const [showSavedModal, setShowSavedModal] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
 
-  // إعدادات التخطيط المتقدمة
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [budgetEgp, setBudgetEgp] = useState<number>(500);
-  const [durationHours, setDurationHours] = useState<number>(5);
-  const [partySize, setPartySize] = useState<number>(2);
+  // إعدادات المسار
   const [transportMode, setTransportMode] = useState<'driving' | 'walking'>('driving');
   const [startPoint, setStartPoint] = useState<{ name: string; lat: number; lon: number } | null>(null);
   const [endPoint, setEndPoint] = useState<{ name: string; lat: number; lon: number } | null>(null);
   const [isRoundTrip, setIsRoundTrip] = useState(true);
   const [pickingPointFor, setPickingPointFor] = useState<'start' | 'end' | null>(null);
+
+  // إعدادات الموديل و OpenRouter
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [customKey, setCustomKey] = useState('');
+  const [selectedModel, setSelectedModel] = useState('built-in');
 
   // 2. حالة الشات والمحادثة المدمجة
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -138,15 +151,22 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
       id: 'welcome-1',
       role: 'bot',
       text:
-        'أهلاً بيك يا غالي في مركز الذكاء الاصطناعي الموحد لـ Port Said Hub! 🌊\n\n' +
-        'أنا مساعدك ومخطط رحلاتك البورسعيدي الذكي في مكان واحد:\n' +
-        '• اطلب أي خروجة بميزانيتك ووقتك ➔ هتظهر لك المحطات ومسار الشوارع الحقيقي على الخريطة المجاورة فوراً 🧭\n' +
-        '• تقدر تعدّل الخطة بالكلام في أي وقت (مثلاً: "شيل المطعم"، "زود كافيه"، "غير الميزانية لـ 700") 💬\n' +
-        '• اسألني عن أي مطعم أو مكان أو خطوط المواصلات ➔ هجاوبك وأعرضه لك على الخريطة 🗺️\n' +
-        'اضغط على "📍 موقعي" أو جرب المقترحات السريعة بالأسفل 👇',
+        'أهلاً بك في مركز الذكاء الاصطناعي والتخطيط الذكي لـ Port Said Hub 🌊\n\n' +
+        'أنا مساعدك ومخطط رحلاتك المتصل بالخريطة الحية ومسارات شوارع بورسعيد:\n' +
+        '• اطلب أي خروجة بميزانيتك ووقتك ➔ هصمم لك الخطة والمسار الفعلي فوراً 🧭\n' +
+        '• الموديل يفكر ويحلل خطوات المسار والميزانية جغرافياً بدقة 🧠\n' +
+        '• عدّل أي محطة بالكلام المباشر أو اسأل عن أي مكان ومواصلاته 🗺️',
+      thinkingProcess: [
+        '⚡ تهيئة محرك التحليل الجغرافي لبورسعيد وبورفؤاد.',
+        '🗺️ تحميل قاعدة بيانات الأماكن المعتمدة وحساب المسافات.',
+        '🟢 جاهز لاستقبال طلبات التخطيط والاستفسارات الحية.',
+      ],
       timestamp: 'الآن',
     },
   ]);
+  const [expandedThinking, setExpandedThinking] = useState<Record<string, boolean>>({
+    'welcome-1': false,
+  });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; district?: string } | null>(null);
@@ -159,16 +179,17 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // التمرير التلقائي لأسفل في الشات
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading]);
-
-  // تحميل الرحلات المحفوظة وسجل الشات
+  // تحميل الإعدادات والرحلات المحفوظة وسجل الشات
   useEffect(() => {
     try {
       const storedTrips = localStorage.getItem(SAVED_TRIPS_STORAGE);
       if (storedTrips) setSavedTrips(JSON.parse(storedTrips));
+
+      const storedKey = localStorage.getItem(OPENROUTER_KEY_STORAGE);
+      if (storedKey) setCustomKey(storedKey);
+
+      const storedModel = localStorage.getItem(OPENROUTER_MODEL_STORAGE);
+      if (storedModel) setSelectedModel(storedModel);
 
       const storedChat = localStorage.getItem(CHAT_STORAGE_KEY);
       if (storedChat) {
@@ -179,6 +200,11 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
       }
     } catch (e) {}
   }, []);
+
+  // التمرير التلقائي لأسفل في الشات
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
 
   // حفظ سجل الشات تلقائياً
   useEffect(() => {
@@ -196,17 +222,18 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
         const decoded = JSON.parse(decodeURIComponent(escape(atob(initialPlanData))));
         if (decoded && decoded.stops) {
           setCurrentPlan(decoded);
-          setBudgetEgp(decoded.budgetEgp || 500);
-          setPartySize(decoded.partySize || 2);
-          setDurationHours(decoded.totalDurationHours || 5);
-          // إضافة رسالة في الشات
           const now = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
           setMessages((prev) => [
             ...prev,
             {
               id: 'shared-' + Date.now(),
               role: 'bot',
-              text: `تم فتح خطة الرحلة المشتركة بنجاح: "${decoded.title}". تفاصيل المحطات ومسار الشوارع معروضة مباشرة في الخريطة على يسارك 🧭`,
+              text: `تم فتح خطة الرحلة المشتركة: "${decoded.title}". تفاصيل المحطات ومسار الشوارع معروضة مباشرة في الخريطة على يسارك 🧭`,
+              thinkingProcess: [
+                '📥 استيراد خطة الرحلة المشتركة والتحقق من سلامة البيانات.',
+                `📍 عدد المحطات: ${decoded.stops.length} محطات بتكلفة ${decoded.totalCost} ج.م.`,
+                '🛣️ عرض المسار الواقعي على الخريطة التفاعلية.',
+              ],
               timestamp: now,
               isPlanUpdate: true,
               planSummary: {
@@ -246,7 +273,6 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
           if (isRoundTrip) setEndPoint({ name: `موقعي الحالي (${district})`, lat, lon: lng });
           setLocationNotice(`تم تحديد موقعك في: ${district}`);
 
-          // إضافة رسالة تأكيد في الشات
           const now = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
           setMessages((prev) => [
             ...prev,
@@ -254,6 +280,11 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               id: 'loc-' + Date.now(),
               role: 'bot',
               text: `📍 تم تحديد موقعك الحالي بنجاح في ${district}! يمكنك الآن طلب خروجة تنطلق من مكانك مباشرة أو السؤال عن أقرب الأماكن إليك.`,
+              thinkingProcess: [
+                `📡 استقبال إحداثيات الـ GPS: (${lat.toFixed(4)}, ${lng.toFixed(4)}).`,
+                `🏛️ التحقق من النطاق الإداري: الموقع يقع داخل حدود ${district}.`,
+                '🎯 تعيين الموقع كنقطة انطلاق افتراضية لحساب المسافات ومسارات الشوارع.',
+              ],
               timestamp: now,
             },
           ]);
@@ -269,6 +300,19 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
     );
   };
 
+  const getAiHeaders = () => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const savedKey = typeof window !== 'undefined' ? localStorage.getItem(OPENROUTER_KEY_STORAGE) : null;
+    const savedModel = typeof window !== 'undefined' ? localStorage.getItem(OPENROUTER_MODEL_STORAGE) : null;
+    if (savedKey && savedKey.trim().length > 8) {
+      headers['x-openrouter-key'] = savedKey.trim();
+    }
+    if (savedModel && savedModel !== 'built-in') {
+      headers['x-openrouter-model'] = savedModel.trim();
+    }
+    return headers;
+  };
+
   // إرسال ومعالجة الرسالة في المكان الموحد
   const handleProcessUserMessage = async (rawText?: string) => {
     const textToSend = (rawText || input).trim();
@@ -277,7 +321,6 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
     setInput('');
     const now = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
 
-    // إضافة رسالة المستخدم
     const userMsg: ChatMessage = {
       id: 'usr-' + Date.now(),
       role: 'me',
@@ -322,7 +365,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
         // 1. تعديل الخطة الحالية عبر الـ Planner API
         const res = await fetch('/api/planner', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAiHeaders(),
           body: JSON.stringify({
             action: 'refine',
             refineInstruction: textToSend,
@@ -334,14 +377,20 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
         if (data.ok && data.plan) {
           setCurrentPlan(data.plan);
           setActiveStopIndex(0);
-          confetti({ particleCount: 30, spread: 60, origin: { y: 0.8 } });
+          confetti({ particleCount: 35, spread: 65, origin: { y: 0.8 } });
 
+          const newBotId = 'bot-' + Date.now();
           setMessages((prev) => [
             ...prev,
             {
-              id: 'bot-' + Date.now(),
+              id: newBotId,
               role: 'bot',
-              text: `تمام يا غالي! عدلت لك الخطة حسب طلبك: "${textToSend}". تم تحديث مسار الشوارع والتكلفة الإجمالية أصبحت (${data.plan.totalCost} ج.م من أصل ${data.plan.budgetEgp} ج.م) والجدول والخريطة اتحدثوا على يسارك مباشرة 🧭`,
+              text: `تمام يا غالي! تم تعديل الخطة بناءً على طلبك: "${textToSend}". تم تحديث مسار الشوارع والتكلفة الإجمالية أصبحت (${data.plan.totalCost} ج.م من أصل ${data.plan.budgetEgp} ج.م) والجدول والخريطة اتحدثوا على يسارك مباشرة 🧭`,
+              thinkingProcess: data.thinkingProcess || [
+                `🔄 تطبيق تعديل المستخدم: "${textToSend}".`,
+                '🛣️ إعادة حساب مسارات الشوارع الواقعية والمسافات.',
+                '💰 تحديث الميزانية والإجماليات.',
+              ],
               timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
               isPlanUpdate: true,
               planSummary: {
@@ -352,6 +401,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               },
             },
           ]);
+          setExpandedThinking((prev) => ({ ...prev, [newBotId]: true }));
         } else {
           throw new Error(data.error || 'تعذر تعديل الخطة');
         }
@@ -359,15 +409,12 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
         // 2. تخطيط رحلة جديدة بالذكاء الاصطناعي
         const res = await fetch('/api/planner', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAiHeaders(),
           body: JSON.stringify({
             action: 'generate',
             prompt: textToSend,
             startPoint: startPoint || undefined,
             endPoint: isRoundTrip ? (startPoint || undefined) : (endPoint || undefined),
-            budgetEgp,
-            durationHours,
-            partySize,
             transportMode,
           }),
         });
@@ -376,27 +423,29 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
         if (data.ok && data.plan) {
           setCurrentPlan(data.plan);
           setActiveStopIndex(0);
-          if (data.intent) {
-            if (data.intent.budgetEgp) setBudgetEgp(data.intent.budgetEgp);
-            if (data.intent.durationHours) setDurationHours(data.intent.durationHours);
-            if (data.intent.partySize) setPartySize(data.intent.partySize);
-          }
           confetti({ particleCount: 50, spread: 80, origin: { y: 0.7 } });
 
           const stopsNames = data.plan.stops.map((s: PlanStop) => s.name).join(' ➔ ');
+          const newBotId = 'bot-' + Date.now();
 
           setMessages((prev) => [
             ...prev,
             {
-              id: 'bot-' + Date.now(),
+              id: newBotId,
               role: 'bot',
               text:
-                `صممت لك خطة خروجة بورسعيدية مميزة! 🧭\n\n` +
-                `📌 الخطة: ${data.plan.title}\n` +
-                `💰 التكلفة المقدرة: ${data.plan.totalCost} ج.م (الميزانية المحددة: ${data.plan.budgetEgp} ج.م)\n` +
-                `⏳ المدة: ${data.plan.totalDurationHours} ساعات • ${data.plan.partySize} أفراد • المسافة: ${data.plan.totalDistanceKm} كم\n` +
+                `صممت لك خطة خروجة بورسعيدية متكاملة! 🧭\n\n` +
+                `📌 **${data.plan.title}**\n` +
+                `💰 التكلفة المقدرة: **${data.plan.totalCost} ج.م** (الميزانية المحددة: ${data.plan.budgetEgp} ج.م)\n` +
+                `⏳ المدة: **${data.plan.totalDurationHours} ساعات** • **${data.plan.partySize} أفراد** • المسافة: **${data.plan.totalDistanceKm} كم**\n` +
                 `🛣️ خط السير: ${stopsNames}\n\n` +
-                `الخريطة ومسار الشوارع المعتمد وجدول المواعيد جاهزين على يسارك. تقدر تسألني عن أي تفاصيل أو تقولي أعدل أي محطة! 👇`,
+                `الخريطة ومسار الشوارع الفعلي وجدول المواعيد جاهزين على يسارك. تقدر تسألني عن أي تفاصيل أو تقولي أعدل أي محطة! 👇`,
+              thinkingProcess: data.thinkingProcess || [
+                `🎯 تحليل نية المستخدم: استخراج المعايير والتفضيلات.`,
+                `🗺️ فحص ومطابقة أماكن بورسعيد المعتمدة جغرافياً.`,
+                `🛣️ حساب مسارات الشوارع الواقعية عبر OSRM.`,
+                `💰 التحقق من ملاءمة الميزانية والتوقيت.`,
+              ],
               timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
               isPlanUpdate: true,
               planSummary: {
@@ -407,8 +456,8 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               },
             },
           ]);
+          setExpandedThinking((prev) => ({ ...prev, [newBotId]: true }));
 
-          // في شاشات الموبايل، تحويل العرض تلقائياً إلى الخريطة بعد إنشاء الخطة
           if (window.innerWidth < 1024) {
             setMobileView('canvas');
           }
@@ -424,7 +473,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
 
         const res = await fetch('/api/assistant', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAiHeaders(),
           body: JSON.stringify({
             message: textToSend,
             history: historyTurns,
@@ -434,16 +483,21 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
 
         const data = await res.json();
         if (data.ok) {
+          const newBotId = 'bot-' + Date.now();
           setMessages((prev) => [
             ...prev,
             {
-              id: 'bot-' + Date.now(),
+              id: newBotId,
               role: 'bot',
               text: data.reply,
+              thinkingProcess: data.thinkingProcess || [],
               timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
               suggestedPlaces: data.suggestedPlaces || [],
             },
           ]);
+          if (data.thinkingProcess && data.thinkingProcess.length > 0) {
+            setExpandedThinking((prev) => ({ ...prev, [newBotId]: true }));
+          }
         } else {
           throw new Error(data.error || 'تعذر معالجة الرسالة');
         }
@@ -499,6 +553,11 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
         id: 'bot-' + Date.now(),
         role: 'bot',
         text: `تم حذف محطة "${removedStop?.name || order}" وتحديث المسار. التكلفة أصبحت ${newTotalCost} ج.م من أصل ${currentPlan.budgetEgp} ج.م.`,
+        thinkingProcess: [
+          `🗑️ حذف محطة: "${removedStop?.name}".`,
+          `📊 إعادة تسلسل المحطات المتبقية (${remaining.length} محطات).`,
+          `💰 إعادة حساب التكلفة الإجمالية: ${newTotalCost} ج.م.`,
+        ],
         timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
       },
     ]);
@@ -566,45 +625,70 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
       {
         id: 'welcome-reset-' + Date.now(),
         role: 'bot',
-        text: 'بدأنا جلسة جديدة نظيفة! 🌊 اسألني عن أي مكان في بورسعيد أو اطلب خروجة جديدة بالميزانية والوقت اللي يناسبك.',
+        text: 'بدأنا جلسة جديدة ونظيفة! 🌊 اسألني عن أي مكان في بورسعيد أو اطلب خروجة جديدة بالميزانية والوقت اللي يناسبك.',
         timestamp: 'الآن',
       },
     ]);
     localStorage.removeItem(CHAT_STORAGE_KEY);
   };
 
+  const handleSaveSettings = () => {
+    try {
+      if (customKey.trim()) {
+        localStorage.setItem(OPENROUTER_KEY_STORAGE, customKey.trim());
+      } else {
+        localStorage.removeItem(OPENROUTER_KEY_STORAGE);
+      }
+      localStorage.setItem(OPENROUTER_MODEL_STORAGE, selectedModel);
+      setShowSettingsModal(false);
+      confetti({ particleCount: 20, spread: 40 });
+    } catch (e) {}
+  };
+
+  const toggleThinking = (id: string) => {
+    setExpandedThinking((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
   const isCurrentSaved = currentPlan ? savedTrips.some((t) => t.id === currentPlan.id) : false;
+  const activeModelObj = POPULAR_MODELS.find((m) => m.id === selectedModel) || {
+    id: selectedModel,
+    name: selectedModel,
+    tag: 'Custom AI',
+  };
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto pb-10">
-      {/* 1. Unified Studio Top Action Header */}
-      <header className="p-3.5 sm:p-4 rounded-3xl bg-white dark:bg-[#0c1622] border border-sand-300 dark:border-[#1d2d3e] shadow-lg flex flex-col md:flex-row items-center justify-between gap-3">
+    <div className="space-y-4 max-w-7xl mx-auto pb-8">
+      {/* 1. Sleek Minimalist Top Header */}
+      <header className="p-3 sm:p-4 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-md flex flex-col md:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-3 w-full md:w-auto text-right">
-          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-amber-500 text-white grid place-items-center shrink-0 shadow-md">
-            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-sand-300 animate-pulse" />
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-cyan-500 via-teal2-600 to-indigo-600 text-white grid place-items-center shrink-0 shadow-md">
+            <Brain className="w-5 h-5 text-white animate-pulse" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-base sm:text-lg font-black text-ocean-950 dark:text-white leading-tight">
-                استوديو بورسعيد الذكي • الشات والمخطط المدمج
+              <h1 className="text-sm sm:text-base font-black text-ocean-950 dark:text-white leading-tight">
+                مركز الذكاء الاصطناعي ومخطط الرحلات
               </h1>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-teal2-500/15 text-teal2-700 dark:text-teal2-300 border border-teal2-400/30">
-                All-in-One ✦
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal2-500/15 text-teal2-700 dark:text-teal2-300 border border-teal2-400/30">
+                {activeModelObj.tag}
               </span>
             </div>
-            <p className="text-[11px] sm:text-xs text-ocean-700/80 dark:text-white/70 font-medium mt-0.5">
-              تحدث مع المساعد الذكي وتابع الخريطة الحية ومسار الرحلة والميزانية في نفس الشاشة
+            <p className="text-[11px] text-ocean-700/80 dark:text-white/70 font-medium">
+              شات تفاعلي يفكر ويحلل بالذكاء الاصطناعي مع خريطة حية لمسارات بورسعيد
             </p>
           </div>
         </div>
 
-        {/* Action Controls */}
+        {/* Clean Header Action Buttons */}
         <div className="flex items-center gap-2 self-stretch md:self-auto justify-end flex-wrap">
           <button
             onClick={handleLocateUser}
             disabled={locatingUser}
             type="button"
-            className="px-3 py-1.5 rounded-xl bg-sand-100 dark:bg-[#152332] text-ocean-900 dark:text-white hover:bg-sand-200 text-xs font-bold transition flex items-center gap-1.5 border border-sand-200 dark:border-[#1d2d3e]"
+            className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#152332] text-ocean-900 dark:text-white hover:bg-slate-200 text-xs font-bold transition flex items-center gap-1.5 border border-slate-200 dark:border-[#1d2d3e]"
             title="تحديد موقعك الحالي بالـ GPS"
           >
             <MapPin className={`w-3.5 h-3.5 text-rose-500 ${locatingUser ? 'animate-bounce' : ''}`} />
@@ -614,153 +698,36 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
           <button
             onClick={() => setShowSavedModal(true)}
             type="button"
-            className="px-3 py-1.5 rounded-xl bg-sand-100 dark:bg-[#152332] text-ocean-900 dark:text-white hover:bg-sand-200 text-xs font-bold transition flex items-center gap-1.5 border border-sand-200 dark:border-[#1d2d3e]"
+            className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#152332] text-ocean-900 dark:text-white hover:bg-slate-200 text-xs font-bold transition flex items-center gap-1.5 border border-slate-200 dark:border-[#1d2d3e]"
           >
-            <Bookmark className="w-3.5 h-3.5 text-teal2-600" />
+            <Bookmark className="w-3.5 h-3.5 text-amber-500" />
             <span>رحلاتي ({savedTrips.length})</span>
           </button>
 
           <button
-            onClick={() => setShowAdvanced(!showAdvanced)}
+            onClick={() => setShowSettingsModal(true)}
             type="button"
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border ${
-              showAdvanced
-                ? 'bg-ocean-900 text-sand-300 border-ocean-800'
-                : 'bg-sand-100 dark:bg-[#152332] text-ocean-900 dark:text-white hover:bg-sand-200 border-sand-200 dark:border-[#1d2d3e]'
-            }`}
+            className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#152332] text-ocean-900 dark:text-white hover:bg-slate-200 text-xs font-bold transition flex items-center gap-1.5 border border-slate-200 dark:border-[#1d2d3e]"
+            title="إعدادات الموديل ومفتاح AI"
           >
-            <Sliders className="w-3.5 h-3.5" />
-            <span>خيارات التخطيط</span>
+            <Settings className="w-3.5 h-3.5 text-indigo-500" />
+            <span className="hidden sm:inline">الموديل والمفتاح</span>
           </button>
 
           <button
             onClick={handleResetChatAndPlan}
             type="button"
-            className="px-3 py-1.5 rounded-xl bg-sand-100 dark:bg-[#152332] text-ocean-700 dark:text-white/70 hover:bg-sand-200 text-xs font-bold transition flex items-center gap-1"
+            className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-[#152332] text-ocean-700 dark:text-white/70 hover:bg-slate-200 text-xs font-bold transition flex items-center gap-1"
             title="جلسة جديدة"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">جلسة جديدة</span>
+            <span className="hidden sm:inline">جديد</span>
           </button>
         </div>
       </header>
 
-      {/* Advanced Planning Options (Collapsible) */}
-      <AnimatePresence>
-        {showAdvanced && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="overflow-hidden p-4 rounded-3xl bg-white dark:bg-[#0c1622] border border-sand-300 dark:border-[#1d2d3e] shadow-md space-y-3"
-          >
-            <div className="flex items-center justify-between text-xs font-black text-ocean-950 dark:text-white">
-              <span>تخصيص معايير الخطة التلقائية:</span>
-              <span className="text-[11px] text-ocean-700/70 dark:text-white/60">
-                (يمكنك تعديل هذه القيم بالكلام مباشرة في الشات أيضاً)
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-              {/* Budget */}
-              <div className="p-3 rounded-2xl bg-sand-50 dark:bg-[#121f2f] border border-sand-200 dark:border-[#1d2d3e] space-y-1">
-                <div className="flex justify-between font-bold">
-                  <span>الميزانية:</span>
-                  <span className="text-teal2-700 dark:text-teal2-300 font-black">{budgetEgp} ج.م</span>
-                </div>
-                <input
-                  type="range"
-                  min="150"
-                  max="3000"
-                  step="50"
-                  value={budgetEgp}
-                  onChange={(e) => setBudgetEgp(Number(e.target.value))}
-                  className="w-full accent-teal2-600 cursor-pointer"
-                />
-              </div>
-
-              {/* Duration */}
-              <div className="p-3 rounded-2xl bg-sand-50 dark:bg-[#121f2f] border border-sand-200 dark:border-[#1d2d3e] space-y-1">
-                <div className="flex justify-between font-bold">
-                  <span>المدة:</span>
-                  <span className="text-indigo-600 dark:text-indigo-300 font-black">{durationHours} ساعات</span>
-                </div>
-                <input
-                  type="range"
-                  min="2"
-                  max="10"
-                  step="1"
-                  value={durationHours}
-                  onChange={(e) => setDurationHours(Number(e.target.value))}
-                  className="w-full accent-indigo-600 cursor-pointer"
-                />
-              </div>
-
-              {/* Party Size */}
-              <div className="p-3 rounded-2xl bg-sand-50 dark:bg-[#121f2f] border border-sand-200 dark:border-[#1d2d3e] space-y-1">
-                <div className="flex justify-between font-bold">
-                  <span>عدد الأفراد:</span>
-                  <span className="font-black text-ocean-950 dark:text-white">{partySize}</span>
-                </div>
-                <div className="flex gap-1.5 pt-0.5">
-                  {[1, 2, 3, 4, 6].map((num) => (
-                    <button
-                      key={num}
-                      type="button"
-                      onClick={() => setPartySize(num)}
-                      className={`flex-1 py-1 rounded-lg font-bold text-xs transition ${
-                        partySize === num
-                          ? 'bg-ocean-900 text-white dark:bg-teal2-600'
-                          : 'bg-white dark:bg-[#162738] text-ocean-800 dark:text-white/70'
-                      }`}
-                    >
-                      {num}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Transport Mode */}
-              <div className="p-3 rounded-2xl bg-sand-50 dark:bg-[#121f2f] border border-sand-200 dark:border-[#1d2d3e] space-y-1">
-                <div className="flex justify-between font-bold">
-                  <span>وسيلة الانتقال:</span>
-                  <span className="font-black text-ocean-950 dark:text-white">{transportMode === 'driving' ? 'سيارة' : 'مشياً'}</span>
-                </div>
-                <div className="flex gap-1.5 pt-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setTransportMode('driving')}
-                    className={`flex-1 py-1 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition ${
-                      transportMode === 'driving'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white dark:bg-[#162738] text-ocean-800 dark:text-white/70'
-                    }`}
-                  >
-                    <Car className="w-3 h-3" />
-                    <span>سيارة</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTransportMode('walking')}
-                    className={`flex-1 py-1 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition ${
-                      transportMode === 'walking'
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-white dark:bg-[#162738] text-ocean-800 dark:text-white/70'
-                    }`}
-                  >
-                    <Footprints className="w-3 h-3" />
-                    <span>مشياً</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 2. Mobile Responsive Tab Switcher (< 1024px) */}
-      <div className="flex lg:hidden rounded-2xl bg-sand-200/90 dark:bg-[#0c1622] p-1 border border-sand-300 dark:border-[#1d2d3e]">
+      {/* 2. Mobile Tab Switcher */}
+      <div className="flex lg:hidden rounded-2xl bg-slate-200/90 dark:bg-[#0c1622] p-1 border border-slate-300 dark:border-[#1d2d3e]">
         <button
           onClick={() => setMobileView('chat')}
           type="button"
@@ -770,8 +737,8 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               : 'text-ocean-700 dark:text-white/60'
           }`}
         >
-          <Bot className="w-3.5 h-3.5 text-blue-500" />
-          <span>الشات والمحادثة ({messages.length})</span>
+          <Bot className="w-3.5 h-3.5 text-teal2-600" />
+          <span>المحادثة والذكاء ({messages.length})</span>
         </button>
 
         <button
@@ -783,48 +750,38 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               : 'text-ocean-700 dark:text-white/60'
           }`}
         >
-          <Compass className="w-3.5 h-3.5 text-teal2-600" />
-          <span>
-            الخريطة والجدول {currentPlan ? `(${currentPlan.stops.length} محطات • ${currentPlan.totalCost} ج.م)` : '🗺️'}
-          </span>
+          <Compass className="w-3.5 h-3.5 text-indigo-500" />
+          <span>الخريطة والمسار {currentPlan ? `(${currentPlan.stops.length})` : '🗺️'}</span>
         </button>
       </div>
 
-      {/* 3. The Unified Split Workspace (Desktop: Side-by-Side 5:7) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start min-h-[680px]">
-        {/* Right Column: Conversational AI Co-Pilot (Desktop: 5 cols) */}
+      {/* 3. Unified Workspace: Chat (5 cols) + Canvas (7 cols) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start min-h-[640px]">
+        {/* Right Column: Conversational AI Co-Pilot */}
         <div
-          className={`lg:col-span-5 flex flex-col h-[650px] sm:h-[720px] rounded-3xl bg-white dark:bg-[#0c1622] border border-sand-300 dark:border-[#1d2d3e] shadow-xl overflow-hidden relative ${
+          className={`lg:col-span-5 flex flex-col h-[650px] sm:h-[700px] rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-xl overflow-hidden relative ${
             mobileView === 'chat' ? 'flex' : 'hidden lg:flex'
           }`}
         >
-          {/* Chat Header */}
-          <div className="p-3.5 px-4 bg-sand-50 dark:bg-[#101e2e] border-b border-sand-200 dark:border-[#1d2d3e] flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 p-0.5">
-                <div className="w-full h-full rounded-xl bg-white dark:bg-[#071322] flex items-center justify-center p-1">
-                  <img src="/assets/logo/icon-192.png" alt="" className="w-full h-full object-contain" />
-                </div>
-              </div>
-              <div>
-                <h3 className="text-xs sm:text-sm font-black text-ocean-950 dark:text-white">
-                  شات المساعد ومخطط الرحلات
-                </h3>
-                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                  متصل بالخريطة والمسارات مباشرة
-                </span>
-              </div>
+          {/* Minimal Chat Sub-Header */}
+          <div className="p-3 px-4 bg-slate-50 dark:bg-[#101e2e] border-b border-slate-200 dark:border-[#1d2d3e] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs font-bold text-ocean-900 dark:text-white">
+                مساعد بورسعيد الذكي
+              </span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                • {activeModelObj.name.split(' ')[0]}
+              </span>
             </div>
 
-            {/* Quick Switch to Map button on mobile */}
             {currentPlan && (
               <button
                 onClick={() => setMobileView('canvas')}
                 type="button"
-                className="lg:hidden px-2.5 py-1 rounded-xl bg-teal2-500/20 text-teal2-700 dark:text-teal2-300 text-[11px] font-black border border-teal2-400/30 flex items-center gap-1"
+                className="lg:hidden px-2.5 py-1 rounded-xl bg-teal2-500/20 text-teal2-700 dark:text-teal2-300 text-[11px] font-black border border-teal2-400/30"
               >
-                <span>الخريطة 🗺️</span>
+                الخريطة 🗺️
               </button>
             )}
           </div>
@@ -833,6 +790,8 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
           <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-3.5 scrollbar-thin">
             {messages.map((m) => {
               const isBot = m.role === 'bot';
+              const isThinkingOpen = expandedThinking[m.id] ?? false;
+
               return (
                 <div
                   key={m.id}
@@ -840,8 +799,8 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                 >
                   {/* Avatar */}
                   {isBot ? (
-                    <div className="w-7 h-7 rounded-xl bg-ocean-900 text-sand-300 grid place-items-center shrink-0 mt-0.5 shadow-sm text-xs font-black">
-                      ⚓
+                    <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-cyan-600 to-indigo-600 text-white grid place-items-center shrink-0 mt-0.5 shadow-sm text-xs font-black">
+                      <Brain className="w-3.5 h-3.5" />
                     </div>
                   ) : (
                     <div className="w-7 h-7 rounded-xl bg-teal2-600 text-white grid place-items-center shrink-0 mt-0.5 shadow-sm text-xs font-black">
@@ -849,19 +808,59 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                     </div>
                   )}
 
-                  {/* Bubble */}
+                  {/* Message Bubble */}
                   <div
                     className={`p-3.5 rounded-2xl text-xs sm:text-[13px] leading-relaxed max-w-[88%] shadow-sm ${
                       isBot
-                        ? 'bg-sand-50 dark:bg-[#121f2f] text-ocean-950 dark:text-white rounded-tr-sm border border-sand-200 dark:border-[#1d2d3e]'
+                        ? 'bg-slate-50 dark:bg-[#121f2f] text-ocean-950 dark:text-white rounded-tr-sm border border-slate-200 dark:border-[#1d2d3e]'
                         : 'bg-gradient-to-r from-ocean-900 to-teal2-700 text-white rounded-tl-sm'
                     }`}
                   >
-                    <div className="whitespace-pre-line font-medium">{m.text}</div>
+                    {/* Collapsible Thinking Block */}
+                    {isBot && m.thinkingProcess && m.thinkingProcess.length > 0 && (
+                      <div className="mb-2.5 rounded-xl border border-indigo-500/20 bg-indigo-950/20 dark:bg-indigo-950/40 p-2 text-xs">
+                        <button
+                          type="button"
+                          onClick={() => toggleThinking(m.id)}
+                          className="w-full flex items-center justify-between font-bold text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 dark:hover:text-indigo-200 transition text-right"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <Brain className="w-3.5 h-3.5 text-indigo-500 animate-pulse" />
+                            <span>تفكير وتحليل النموذج ({m.thinkingProcess.length} خطوات)</span>
+                          </div>
+                          {isThinkingOpen ? (
+                            <ChevronUp className="w-3.5 h-3.5 text-indigo-400" />
+                          ) : (
+                            <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
+                          )}
+                        </button>
 
-                    {/* Plan Summary Badge if Message Created/Refined a Plan */}
+                        <AnimatePresence>
+                          {isThinkingOpen && (
+                            <motion.ul
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="mt-2 space-y-1.5 border-t border-indigo-500/15 pt-2 text-[11px] text-slate-700 dark:text-slate-300 overflow-hidden font-normal"
+                            >
+                              {m.thinkingProcess.map((step, sIdx) => (
+                                <li key={sIdx} className="flex items-start gap-1.5 leading-relaxed">
+                                  <span className="text-indigo-400 select-none">•</span>
+                                  <span>{step}</span>
+                                </li>
+                              ))}
+                            </motion.ul>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )}
+
+                    {/* Main Text Content */}
+                    <div className="whitespace-pre-line font-medium leading-relaxed">{m.text}</div>
+
+                    {/* Plan Summary Badge */}
                     {m.isPlanUpdate && m.planSummary && (
-                      <div className="mt-2.5 p-2.5 rounded-xl bg-white dark:bg-[#0c1622] border border-sand-300 dark:border-teal2-500/30 text-ocean-900 dark:text-white flex items-center justify-between gap-2 shadow-sm">
+                      <div className="mt-2.5 p-2.5 rounded-xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-teal2-500/30 text-ocean-900 dark:text-white flex items-center justify-between gap-2 shadow-sm">
                         <div className="min-w-0">
                           <p className="font-black text-xs truncate">{m.planSummary.title}</p>
                           <p className="text-[10px] text-teal2-700 dark:text-teal2-300 font-bold">
@@ -882,7 +881,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
 
                     {/* Suggested Places Chips */}
                     {isBot && m.suggestedPlaces && m.suggestedPlaces.length > 0 && (
-                      <div className="mt-3 pt-2.5 border-t border-sand-200 dark:border-white/10 space-y-1.5">
+                      <div className="mt-3 pt-2.5 border-t border-slate-200 dark:border-white/10 space-y-1.5">
                         <span className="text-[10px] font-black text-teal2-700 dark:text-teal2-300 block">
                           أماكن مقترحة على الخريطة:
                         </span>
@@ -894,7 +893,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                                 if (onViewPlaceDetails) onViewPlaceDetails(pl.id);
                               }}
                               type="button"
-                              className="px-2 py-1 rounded-lg bg-white dark:bg-[#152332] border border-sand-300 dark:border-[#22354a] text-[11px] font-bold text-ocean-900 dark:text-white hover:border-teal2-500 transition flex items-center gap-1 shadow-xs"
+                              className="px-2 py-1 rounded-lg bg-white dark:bg-[#152332] border border-slate-200 dark:border-[#22354a] text-[11px] font-bold text-ocean-900 dark:text-white hover:border-teal2-500 transition flex items-center gap-1 shadow-xs"
                             >
                               <MapPin className="w-3 h-3 text-rose-500" />
                               <span>{pl.n}</span>
@@ -912,28 +911,24 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               );
             })}
 
+            {/* Active Thinking Shimmer */}
             {loading && (
-              <div className="flex items-center gap-2 p-3 rounded-2xl bg-sand-50 dark:bg-[#121f2f] text-ocean-800 dark:text-white/80 text-xs font-bold w-fit border border-sand-200 dark:border-[#1d2d3e]">
-                <Sparkles className="w-4 h-4 text-amber-500 animate-spin" />
-                <span>مساعد بورسعيد بيفكر ويجهز المسار</span>
-                <span className="inline-flex gap-1 items-center">
-                  <span className="w-1.5 h-1.5 rounded-full bg-teal2-500 animate-bounce" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-teal2-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-teal2-500 animate-bounce" style={{ animationDelay: '300ms' }} />
-                </span>
+              <div className="flex items-center gap-2 p-3 rounded-2xl bg-indigo-50 dark:bg-[#121f2f] text-indigo-900 dark:text-indigo-200 text-xs font-bold w-fit border border-indigo-200 dark:border-indigo-900/40 shadow-sm animate-pulse">
+                <Brain className="w-4 h-4 text-indigo-500 animate-spin" />
+                <span>الذكاء الاصطناعي يفكر ويحلل النطاق الجغرافي والميزانية...</span>
               </div>
             )}
             <div ref={chatEndRef} />
           </div>
 
           {/* Quick Prompts Carousel */}
-          <div className="px-3 py-2 bg-sand-50/80 dark:bg-[#101e2e]/90 border-t border-sand-200 dark:border-[#1d2d3e] flex gap-1.5 overflow-x-auto scrollbar-none">
+          <div className="px-3 py-2 bg-slate-50/90 dark:bg-[#101e2e]/90 border-t border-slate-200 dark:border-[#1d2d3e] flex gap-1.5 overflow-x-auto scrollbar-none">
             {QUICK_PROMPTS.map((p, idx) => (
               <button
                 key={idx}
                 onClick={() => handleProcessUserMessage(p.text)}
                 type="button"
-                className="shrink-0 px-2.5 py-1 rounded-full bg-white dark:bg-[#162536] text-[11px] font-bold text-ocean-900 dark:text-white border border-sand-200 dark:border-[#22354a] hover:border-teal2-400 hover:bg-teal2-50 dark:hover:bg-teal2-900/30 transition shadow-xs flex items-center gap-1"
+                className="shrink-0 px-2.5 py-1 rounded-full bg-white dark:bg-[#162536] text-[11px] font-bold text-ocean-900 dark:text-white border border-slate-200 dark:border-[#22354a] hover:border-teal2-400 hover:bg-teal2-50 dark:hover:bg-teal2-900/30 transition shadow-xs flex items-center gap-1"
               >
                 <span>{p.icon}</span>
                 <span>{p.label}</span>
@@ -941,19 +936,19 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
             ))}
           </div>
 
-          {/* Chat Input Bar */}
+          {/* Clean Floating Input Bar */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleProcessUserMessage();
             }}
-            className="p-3 bg-white dark:bg-[#0c1622] border-t border-sand-200 dark:border-[#1d2d3e] flex items-center gap-2"
+            className="p-3 bg-white dark:bg-[#0c1622] border-t border-slate-200 dark:border-[#1d2d3e] flex items-center gap-2"
           >
             <button
               type="button"
               onClick={handleLocateUser}
               title="تحديد موقعي الجغرافي"
-              className="p-2.5 rounded-2xl bg-sand-100 dark:bg-[#162738] text-ocean-800 dark:text-sand-300 hover:bg-sand-200 transition shrink-0"
+              className="p-2.5 rounded-2xl bg-slate-100 dark:bg-[#162738] text-ocean-800 dark:text-slate-300 hover:bg-slate-200 transition shrink-0"
             >
               <MapPin className={`w-4 h-4 ${locatingUser ? 'animate-bounce text-rose-500' : ''}`} />
             </button>
@@ -968,27 +963,27 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                   ? 'اطلب تعديل الخطة (مثلاً: احذف المطعم، زود كافيه)...'
                   : 'اطلب خروجة بميزانيتك ووقتك، أو اسأل عن أي مكان...'
               }
-              className="flex-1 px-3.5 py-2.5 rounded-2xl bg-sand-50 dark:bg-[#121f2f] text-ocean-950 dark:text-white border border-sand-300 dark:border-[#1d2d3e] focus:border-teal2-500 outline-none text-xs sm:text-sm font-semibold transition"
+              className="flex-1 px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-[#121f2f] text-ocean-950 dark:text-white border border-slate-300 dark:border-[#1d2d3e] focus:border-teal2-500 outline-none text-xs sm:text-sm font-semibold transition"
             />
 
             <button
               type="submit"
               disabled={!input.trim() || loading}
-              className="p-2.5 rounded-2xl bg-gradient-to-r from-ocean-900 to-teal2-700 text-white disabled:opacity-40 hover:opacity-90 transition shrink-0 shadow-md"
+              className="p-2.5 rounded-2xl bg-gradient-to-r from-ocean-900 via-indigo-900 to-teal2-700 text-white disabled:opacity-40 hover:opacity-90 transition shrink-0 shadow-md"
             >
               <Send className="w-4 h-4" />
             </button>
           </form>
         </div>
 
-        {/* Left Column: Live Planner Canvas & Map (Desktop: 7 cols) */}
+        {/* Left Column: Live Planner Canvas & Map */}
         <div
           className={`lg:col-span-7 flex flex-col space-y-4 ${
             mobileView === 'canvas' ? 'flex' : 'hidden lg:flex'
           }`}
         >
-          {/* Canvas Top Bar: Active Plan Metrics or Live Guidance */}
-          <div className="p-3.5 sm:p-4 rounded-3xl bg-white dark:bg-[#0c1622] border border-sand-300 dark:border-[#1d2d3e] shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          {/* Canvas Top Bar */}
+          <div className="p-3.5 sm:p-4 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             {currentPlan ? (
               <div className="space-y-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -1022,7 +1017,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                   <span>الخريطة الحية ومسار الرحلة</span>
                 </h2>
                 <p className="text-[11px] text-ocean-700/70 dark:text-white/60 font-medium">
-                  اطلب أي خروجة في الشات وهتظهر لك أرقام المحطات ومسار الشوارع المعتمد هنا فوراً
+                  اطلب أي خروجة في الشات وستظهر محطات ومسار الشوارع الفعلي هنا فوراً
                 </p>
               </div>
             )}
@@ -1036,17 +1031,17 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                   className={`px-3 py-1.5 rounded-xl font-bold text-xs transition flex items-center gap-1 border ${
                     isCurrentSaved
                       ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-400/40'
-                      : 'bg-sand-100 dark:bg-[#162738] text-ocean-900 dark:text-white hover:bg-sand-200 border-sand-300 dark:border-[#22354a]'
+                      : 'bg-slate-100 dark:bg-[#162738] text-ocean-900 dark:text-white hover:bg-slate-200 border-slate-300 dark:border-[#22354a]'
                   }`}
                 >
                   <Bookmark className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                  <span>{isCurrentSaved ? 'محفوظة' : 'حفظ الخطة'}</span>
+                  <span>{isCurrentSaved ? 'محفوظة' : 'حفظ'}</span>
                 </button>
 
                 <button
                   onClick={handleSharePlan}
                   type="button"
-                  className="px-3 py-1.5 rounded-xl bg-sand-100 dark:bg-[#162738] text-ocean-900 dark:text-white hover:bg-sand-200 text-xs font-bold transition flex items-center gap-1 border border-sand-300 dark:border-[#22354a]"
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#162738] text-ocean-900 dark:text-white hover:bg-slate-200 text-xs font-bold transition flex items-center gap-1 border border-slate-300 dark:border-[#22354a]"
                 >
                   {copiedShare ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Share2 className="w-3.5 h-3.5 text-teal2-600" />}
                   <span>{copiedShare ? 'تم النسخ!' : 'مشاركة'}</span>
@@ -1056,7 +1051,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                   onClick={() => setCurrentPlan(null)}
                   type="button"
                   title="مسح الخطة"
-                  className="p-1.5 rounded-xl bg-sand-100 dark:bg-[#162738] text-ocean-600 dark:text-white/60 hover:text-rose-500 transition"
+                  className="p-1.5 rounded-xl bg-slate-100 dark:bg-[#162738] text-ocean-600 dark:text-white/60 hover:text-rose-500 transition"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -1064,8 +1059,8 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
             )}
           </div>
 
-          {/* Interactive MapLibre Container (Strict Port Said Bounds + Sequential Pins + OSRM Route) */}
-          <div className="h-[360px] sm:h-[420px] rounded-3xl overflow-hidden border border-sand-300 dark:border-[#1d2d3e] shadow-xl relative">
+          {/* Interactive Map Container */}
+          <div className="h-[360px] sm:h-[400px] rounded-3xl overflow-hidden border border-slate-200 dark:border-[#1d2d3e] shadow-xl relative">
             <PlannerMap
               plan={currentPlan}
               startPoint={startPoint}
@@ -1089,14 +1084,14 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
 
           {/* Live Itinerary Timeline & Stops List */}
           {currentPlan ? (
-            <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#0c1622] border border-sand-300 dark:border-[#1d2d3e] shadow-lg space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-sand-200 dark:border-[#1d2d3e]">
+            <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-md space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-[#1d2d3e]">
                 <h3 className="font-black text-xs sm:text-sm text-ocean-950 dark:text-white flex items-center gap-1.5">
                   <Clock className="w-4 h-4 text-teal2-600" />
                   <span>جدول المحطات الزمني ({currentPlan.stops.length} محطات)</span>
                 </h3>
                 <span className="text-[11px] text-ocean-700/70 dark:text-white/60 font-medium">
-                  اضغط على أي محطة لتحديدها على الخريطة
+                  اضغط على أي محطة لتكبيرها على الخريطة
                 </span>
               </div>
 
@@ -1110,13 +1105,12 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                       onClick={() => setActiveStopIndex(idx)}
                       className={`p-3 sm:p-3.5 rounded-2xl border transition-all cursor-pointer ${
                         isSelected
-                          ? 'bg-sand-50 dark:bg-[#152336] border-teal2-500 shadow-md ring-1 ring-teal2-500/30'
-                          : 'bg-white dark:bg-[#0f1b2b] border-sand-200 dark:border-[#1d2d3e] hover:border-sand-300'
+                          ? 'bg-slate-50 dark:bg-[#152336] border-teal2-500 shadow-md ring-1 ring-teal2-500/30'
+                          : 'bg-white dark:bg-[#0f1b2b] border-slate-200 dark:border-[#1d2d3e] hover:border-slate-300'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-2.5 min-w-0">
-                          {/* Number Pin Badge */}
                           <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-ocean-900 to-teal2-700 text-white font-black text-xs grid place-items-center shrink-0 shadow-sm">
                             {stop.order}
                           </div>
@@ -1158,7 +1152,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                                 }}
                                 type="button"
                                 title="تقديم المحطة"
-                                className="p-1 rounded-lg bg-sand-100 dark:bg-[#162738] hover:bg-sand-200 text-ocean-700 dark:text-white/70"
+                                className="p-1 rounded-lg bg-slate-100 dark:bg-[#162738] hover:bg-slate-200 text-ocean-700 dark:text-white/70"
                               >
                                 <ArrowUp className="w-3 h-3" />
                               </button>
@@ -1172,7 +1166,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                                 }}
                                 type="button"
                                 title="تأخير المحطة"
-                                className="p-1 rounded-lg bg-sand-100 dark:bg-[#162738] hover:bg-sand-200 text-ocean-700 dark:text-white/70"
+                                className="p-1 rounded-lg bg-slate-100 dark:bg-[#162738] hover:bg-slate-200 text-ocean-700 dark:text-white/70"
                               >
                                 <ArrowDown className="w-3 h-3" />
                               </button>
@@ -1185,7 +1179,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                               }}
                               type="button"
                               title="حذف المحطة"
-                              className="p-1 rounded-lg bg-sand-100 dark:bg-[#162738] hover:bg-rose-100 dark:hover:bg-rose-950/40 text-rose-600 transition"
+                              className="p-1 rounded-lg bg-slate-100 dark:bg-[#162738] hover:bg-rose-100 dark:hover:bg-rose-950/40 text-rose-600 transition"
                             >
                               <Trash2 className="w-3 h-3" />
                             </button>
@@ -1199,7 +1193,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
             </div>
           ) : (
             /* Inspiration Guide Cards when no plan is active */
-            <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#0c1622] border border-sand-300 dark:border-[#1d2d3e] shadow-lg space-y-3">
+            <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-md space-y-3">
               <span className="text-xs font-black text-ocean-950 dark:text-white block">
                 نماذج خروجات جاهزة بضغطة زر:
               </span>
@@ -1228,7 +1222,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                     key={i}
                     onClick={() => handleProcessUserMessage(item.query)}
                     type="button"
-                    className="p-3 rounded-2xl bg-sand-50 dark:bg-[#101e2e] border border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500 text-right transition flex flex-col justify-between"
+                    className="p-3 rounded-2xl bg-slate-50 dark:bg-[#101e2e] border border-slate-200 dark:border-[#1d2d3e] hover:border-teal2-500 text-right transition flex flex-col justify-between"
                   >
                     <div>
                       <span className="text-xl block mb-1">{item.icon}</span>
@@ -1248,6 +1242,104 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
         </div>
       </div>
 
+      {/* Model & AI Key Configuration Modal */}
+      <AnimatePresence>
+        {showSettingsModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-md p-5 rounded-3xl bg-white dark:bg-[#0d1826] border border-slate-200 dark:border-[#1d2d3e] shadow-2xl space-y-4 text-right"
+              dir="rtl"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#1d2d3e]">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500/15 text-indigo-500 grid place-items-center">
+                    <Settings className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-sm text-ocean-950 dark:text-white">
+                      إعدادات نموذج الذكاء الاصطناعي
+                    </h3>
+                    <p className="text-[10px] text-slate-500">تحكم بمحرك التفكير ومفاتيح OpenRouter</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowSettingsModal(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Model Selector */}
+              <div className="space-y-1.5 text-xs">
+                <label className="font-bold text-ocean-950 dark:text-white block">
+                  اختر نموذج الذكاء الاصطناعي:
+                </label>
+                <div className="space-y-1.5">
+                  {POPULAR_MODELS.map((model) => (
+                    <button
+                      key={model.id}
+                      type="button"
+                      onClick={() => setSelectedModel(model.id)}
+                      className={`w-full p-2.5 rounded-xl border text-right transition flex items-center justify-between text-xs font-bold ${
+                        selectedModel === model.id
+                          ? 'bg-indigo-500/15 border-indigo-500 text-indigo-700 dark:text-indigo-300'
+                          : 'bg-slate-50 dark:bg-[#121f2f] border-slate-200 dark:border-[#1d2d3e] text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <span className="truncate">{model.name}</span>
+                      <span className="text-[10px] opacity-70 shrink-0 mr-1">{model.tag}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom OpenRouter Key */}
+              <div className="space-y-1 text-xs">
+                <label className="font-bold text-ocean-950 dark:text-white flex items-center justify-between">
+                  <span>مفتاح OpenRouter API (اختياري):</span>
+                  <span className="text-[10px] text-slate-400 font-normal">محفوظ محلياً فقط في متصفحك</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="password"
+                    value={customKey}
+                    onChange={(e) => setCustomKey(e.target.value)}
+                    placeholder="sk-or-v1-..."
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#121f2f] border border-slate-200 dark:border-[#1d2d3e] text-ocean-950 dark:text-white text-xs outline-none focus:border-indigo-500 font-mono"
+                  />
+                  <Key className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+                </div>
+                <p className="text-[10px] text-slate-500 leading-relaxed pt-1">
+                  إذا لم تضع مفتاحاً، سيعمل تلقائياً المحرك الفكري الذكي السريع المدمج لـ Port Said Hub بدون أي قيود!
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={handleSaveSettings}
+                  className="flex-1 py-2 rounded-xl bg-gradient-to-r from-teal2-600 to-indigo-600 text-white font-bold text-xs hover:opacity-95 transition"
+                >
+                  حفظ وتفعيل
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSettingsModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-[#152332] text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-200 transition"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Saved Trips Modal */}
       <SavedTripsModal
         isOpen={showSavedModal}
@@ -1264,6 +1356,10 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               id: 'restored-' + Date.now(),
               role: 'bot',
               text: `تم استرجاع رحلة "${trip.title}" بنجاح! الخريطة ومسار الشوارع معروضة الآن على يسارك 🧭`,
+              thinkingProcess: [
+                `📂 فتح الرحلة المحفوظة: "${trip.title}".`,
+                `🗺️ تجهيز محطات الرحلة (${trip.stops.length} محطات) ومسار الشوارع.`,
+              ],
               timestamp: now,
             },
           ]);

@@ -30,12 +30,25 @@ export async function POST(req: Request) {
       currentPlan,
     } = body;
 
+    // قراءة مفاتيح OpenRouter إن تم تمريرها من العميل أو البيئة
+    const headerKey = req.headers.get('x-openrouter-key');
+    const headerModel = req.headers.get('x-openrouter-model');
+    const openRouterKey = (headerKey && headerKey.trim().length > 10) ? headerKey.trim() : (process.env.OPENROUTER_API_KEY || '');
+    const openRouterModel = (headerModel && headerModel.trim()) || process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001';
+
     // 1. معالجة تعديل خطة حالية (Refinement Action)
     if (action === 'refine' && currentPlan && refineInstruction) {
+      const thinkingProcess: string[] = [
+        `🧠 تحليل طلب التعديل: "${refineInstruction}".`,
+        `🔄 فحص الخطة الحالية: ${currentPlan.stops.length} محطات بتكلفة ${currentPlan.totalCost} ج.م.`,
+      ];
+
       const refined = applyRefinementToPlan(currentPlan, refineInstruction);
+      thinkingProcess.push(`✅ تطبيق التعديل: أصبح عدد المحطات ${refined.stops.length} محطة بتكلفة معدلة ${refined.totalCost} ج.م.`);
 
       // إعادة حساب مسار الشوارع الفعلي بين المحطات المعدلة
       if (refined.stops.length >= 2) {
+        thinkingProcess.push(`🛣️ إعادة حساب مسارات الشوارع عبر محرك OSRM لضمان التوجيه الدقيق.`);
         const waypoints = refined.stops.map((s) => ({ lat: s.lat, lon: s.lon }));
         const osrmResult = await fetchOSRMRoute(waypoints, refined.transportMode === 'walking' ? 'walking' : 'driving');
 
@@ -45,7 +58,6 @@ export async function POST(req: Request) {
         refined.totalDistanceKm = Number((osrmResult.totalDistanceMeters / 1000).toFixed(2));
         refined.totalTravelMinutes = Math.round(osrmResult.totalDurationSeconds / 60);
 
-        // تحديث travelFromPrevious لكل محطة
         refined.stops.forEach((stop, i) => {
           if (i > 0 && osrmResult.legs[i - 1]) {
             stop.travelFromPrevious = {
@@ -55,17 +67,22 @@ export async function POST(req: Request) {
             };
           }
         });
+        thinkingProcess.push(`⏱️ المسافة الإجمالية المحدثة: ${refined.totalDistanceKm} كم في حوالي ${refined.totalTravelMinutes} دقيقة.`);
       }
 
       return NextResponse.json({
         ok: true,
         action: 'refine',
         plan: refined,
+        thinkingProcess,
         message: 'تم تعديل الخطة وتحديث مسار الشوارع والميزانية بنجاح!',
       });
     }
 
     // 2. تحليل النص واستخراج النوايا (Intent Parsing)
+    const thinkingProcess: string[] = [];
+    thinkingProcess.push(`🎯 تحليل استفسار المستخدم: "${prompt || 'خطة تلقائية متوازنة'}"`);
+
     const extracted = parseTripQuery(prompt || '');
 
     // دمج الحقول الصريحة من النموذج إن وُجدت
@@ -77,6 +94,10 @@ export async function POST(req: Request) {
         ? selectedCategories
         : extracted.categories;
 
+    thinkingProcess.push(
+      `📊 استخراج المعايير: الميزانية = ${finalBudget} ج.م | المدة = ${finalDuration} ساعات | الأفراد = ${finalPartySize} | وسيلة النقل = ${transportMode === 'walking' ? 'سيراً على الأقدام' : 'بالسيارة / التاكسي'}.`
+    );
+
     const mergedIntent: ExtractedQueryIntent = {
       ...extracted,
       partySize: finalPartySize,
@@ -86,6 +107,7 @@ export async function POST(req: Request) {
     };
 
     // 3. بناء المحطات الأساسية باستخدام الخوارزمية المتخصصة لبورسعيد
+    thinkingProcess.push(`🗺️ فحص ومطابقة أماكن بورسعيد المعتمدة جغرافياً مع التصنيفات وتفادي التكرار.`);
     const rawStops = buildDeterministicPortSaidPlan({
       intent: mergedIntent,
       startPoint,
@@ -100,12 +122,15 @@ export async function POST(req: Request) {
       );
     }
 
+    thinkingProcess.push(
+      `📍 تم اختيار ${rawStops.length} محطات رئيسية مرتبة تسلسلياً: ${rawStops.map((s) => s.name).join(' ➔ ')}.`
+    );
+
     // 4. استدعاء OpenRouter لتوليد نصائح وتفاصيل ذكية وشخصية إذا كان المفتاح متوفراً
     let smartSummary = `خطة خروجة متكاملة وممتعة في بورسعيد لـ ${finalPartySize} أفراد لمدة ${finalDuration} ساعات بميزانية ${finalBudget} ج.م تشمل ${rawStops.map((s) => s.name).join(' و ')}.`;
-    const openRouterKey = process.env.OPENROUTER_API_KEY;
-    const openRouterModel = process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001';
 
     if (openRouterKey && prompt && prompt.length > 5) {
+      thinkingProcess.push(`🤖 تفعيل نموذج الذكاء الاصطناعي (${openRouterModel}) لتوليد التوصيات الشخصية والنصائح الحصرية.`);
       try {
         const aiPrompt = `أنت المساعد الذكي لمخطط رحلات Port Said Hub. تم اختيار المحطات التالية للخروجة بناءً على طلب المستخدم ("${prompt}"):
 ${rawStops.map((s, i) => `${i + 1}. ${s.name} (${s.categoryLabel}) - ${s.area}`).join('\n')}
@@ -116,7 +141,7 @@ ${rawStops.map((s, i) => `${i + 1}. ${s.name} (${s.categoryLabel}) - ${s.area}`)
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openRouterKey.trim()}`,
+            'Authorization': `Bearer ${openRouterKey}`,
             'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
             'X-Title': 'Port Said Hub Smart Planner',
           },
@@ -133,24 +158,26 @@ ${rawStops.map((s, i) => `${i + 1}. ${s.name} (${s.categoryLabel}) - ${s.area}`)
           const reply = aiData.choices?.[0]?.message?.content?.trim();
           if (reply) {
             smartSummary = reply;
+            thinkingProcess.push(`✨ تم دمج رؤى وتوصيات النموذج الذكي بنجاح.`);
           }
         }
       } catch (aiErr) {
         console.warn('OpenRouter enrichment skipped, using standard summary:', aiErr);
       }
+    } else {
+      thinkingProcess.push(`⚡ تم استخدام محرك التحليل الجغرافي والزمني الفائق لـ Port Said Hub.`);
     }
 
     // 5. حساب المسار الفعلي بشوارع بورسعيد عبر OSRM
+    thinkingProcess.push(`🛣️ استدعاء محرك مسارات شوارع بورسعيد الفعلي OSRM لحساب المسافات والزمن الواقعي.`);
     const routeCoords: Array<{ lat: number; lon: number }> = [];
 
-    // نقطة البداية المخصصة إن وجدت
     if (startPoint && typeof startPoint.lat === 'number' && typeof startPoint.lon === 'number') {
       routeCoords.push({ lat: startPoint.lat, lon: startPoint.lon });
     }
 
     rawStops.forEach((s) => routeCoords.push({ lat: s.lat, lon: s.lon }));
 
-    // نقطة النهاية المخصصة إن وجدت
     if (endPoint && typeof endPoint.lat === 'number' && typeof endPoint.lon === 'number') {
       routeCoords.push({ lat: endPoint.lat, lon: endPoint.lon });
     }
@@ -163,7 +190,6 @@ ${rawStops.map((s, i) => `${i + 1}. ${s.name} (${s.categoryLabel}) - ${s.area}`)
     // ربط مسافات وأوقات التنقل بين المحطات
     const stopsWithTravel = rawStops.map((stop, idx) => {
       let travelInfo = undefined;
-      // المسافة من المحطة السابقة
       const legIndex = startPoint ? idx : idx - 1;
       if (legIndex >= 0 && osrmResult.legs[legIndex]) {
         travelInfo = {
@@ -181,6 +207,13 @@ ${rawStops.map((s, i) => `${i + 1}. ${s.name} (${s.categoryLabel}) - ${s.area}`)
     const totalCost = rawStops.reduce((sum, s) => sum + s.totalCost, 0);
     const totalDistanceKm = Number((osrmResult.totalDistanceMeters / 1000).toFixed(2));
     const totalTravelMinutes = Math.round(osrmResult.totalDurationSeconds / 60);
+
+    thinkingProcess.push(
+      `💰 فحص الميزانية: التكلفة التقديرية ${totalCost} ج.م مقابل ميزانية ${finalBudget} ج.م (${totalCost <= finalBudget ? 'ضمن الميزانية بنجاح ✅' : 'تجاوز طفيف للميزانية ⚠️'}).`
+    );
+    thinkingProcess.push(
+      `🏁 إجمالي المسار: ${totalDistanceKm} كم • وقت التنقل الواقعي بين المحطات: ~${totalTravelMinutes} دقيقة.`
+    );
 
     const planResult: PlanResult = {
       id: 'plan-' + Date.now(),
@@ -211,6 +244,7 @@ ${rawStops.map((s, i) => `${i + 1}. ${s.name} (${s.categoryLabel}) - ${s.area}`)
       ok: true,
       action: 'generate',
       plan: planResult,
+      thinkingProcess,
       intent: mergedIntent,
     });
   } catch (error: any) {
