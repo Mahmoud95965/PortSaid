@@ -1,0 +1,285 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-cairo: 'Cairo', Tahoma, sans-serif;
+  color-scheme: light;
+}
+
+:root.dark {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-family: var(--font-cairo), 'Cairo', Tahoma, sans-serif;
+}
+
+body {
+  font-family: var(--font-cairo), 'Cairo', Tahoma, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===================== HERO BACKGROUND ===================== */
+.hero-bg {
+  background:
+    radial-gradient(ellipse at 15% 20%, rgba(255, 185, 56, 0.28) 0%, transparent 45%),
+    radial-gradient(ellipse at 88% 10%, rgba(34, 211, 197, 0.18) 0%, transparent 48%),
+    radial-gradient(ellipse at 55% 80%, rgba(21, 89, 183, 0.25) 0%, transparent 55%),
+    linear-gradient(150deg, #071e4a 0%, #0b3080 40%, #0e5f8a 75%, #0a9a92 115%);
+}
+
+.dark .hero-bg {
+  background:
+    radial-gradient(ellipse at 15% 20%, rgba(255, 185, 56, 0.22) 0%, transparent 45%),
+    radial-gradient(ellipse at 88% 10%, rgba(34, 211, 197, 0.25) 0%, transparent 48%),
+    radial-gradient(ellipse at 55% 80%, rgba(21, 89, 183, 0.3) 0%, transparent 55%),
+    linear-gradient(150deg, #040f24 0%, #071e4a 40%, #0a3570 75%, #0a8a82 115%);
+}
+
+/* ===================== WAVES PATTERN ===================== */
+.waves-pattern {
+  background-image:
+    url('/assets/waves.svg'),
+    radial-gradient(ellipse at 15% 20%, rgba(255, 185, 56, 0.28) 0%, transparent 45%),
+    radial-gradient(ellipse at 88% 10%, rgba(34, 211, 197, 0.18) 0%, transparent 48%),
+    radial-gradient(ellipse at 55% 80%, rgba(21, 89, 183, 0.25) 0%, transparent 55%),
+    linear-gradient(150deg, #071e4a 0%, #0b3080 40%, #0e5f8a 75%, #0a9a92 115%);
+  background-size: 80px 24px, auto, auto, auto, auto;
+}
+
+.dark .waves-pattern {
+  background-image:
+    url('/assets/waves.svg'),
+    radial-gradient(ellipse at 15% 20%, rgba(255, 185, 56, 0.22) 0%, transparent 45%),
+    radial-gradient(ellipse at 88% 10%, rgba(34, 211, 197, 0.25) 0%, transparent 48%),
+    radial-gradient(ellipse at 55% 80%, rgba(21, 89, 183, 0.3) 0%, transparent 55%),
+    linear-gradient(150deg, #040f24 0%, #071e4a 40%, #0a3570 75%, #0a8a82 115%);
+  background-size: 80px 24px, auto, auto, auto, auto;
+}
+
+/* ===================== ANIMATIONS ===================== */
+@keyframes bob {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 185, 56, 0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(255, 185, 56, 0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  33% { transform: translateY(-8px) rotate(1deg); }
+  66% { transform: translateY(4px) rotate(-1deg); }
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes ripple {
+  0% { transform: scale(0); opacity: 0.5; }
+  100% { transform: scale(4); opacity: 0; }
+}
+
+@keyframes textGlow {
+  0%, 100% { text-shadow: 0 0 20px rgba(255,185,56,0.3); }
+  50% { text-shadow: 0 0 40px rgba(255,185,56,0.6), 0 0 80px rgba(255,185,56,0.2); }
+}
+
+@keyframes morphBlob {
+  0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+  25% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+  50% { border-radius: 50% 60% 30% 60% / 30% 60% 70% 40%; }
+  75% { border-radius: 60% 40% 60% 30% / 60% 40% 30% 60%; }
+}
+
+@keyframes slideInFromRight {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInFromLeft {
+  from { opacity: 0; transform: translateX(-40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1) rotate(180deg); }
+}
+
+@keyframes waveMove {
+  0% { transform: translateX(0) translateY(0); }
+  50% { transform: translateX(-25px) translateY(5px); }
+  100% { transform: translateX(0) translateY(0); }
+}
+
+.animate-bob {
+  animation: bob 5s ease-in-out infinite;
+}
+
+.pop-in {
+  animation: popIn 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.fade-slide-up {
+  animation: fadeSlideUp 0.4s ease both;
+}
+
+.pulse-glow {
+  animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradientShift 4s ease infinite;
+}
+
+.animate-morph-blob {
+  animation: morphBlob 8s ease-in-out infinite;
+}
+
+.animate-text-glow {
+  animation: textGlow 3s ease-in-out infinite;
+}
+
+.animate-wave-move {
+  animation: waveMove 5s ease-in-out infinite;
+}
+
+/* ===================== PARTICLE EFFECTS ===================== */
+.particles-container {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* ===================== GLASS MORPHISM ===================== */
+.glass {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.dark .glass-card {
+  background: rgba(15, 26, 40, 0.7);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ===================== MAGNETIC HOVER ===================== */
+.magnetic-hover {
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.magnetic-hover:hover {
+  transform: translateY(-6px) scale(1.02);
+}
+
+.magnetic-hover:active {
+  transform: translateY(-2px) scale(0.98);
+}
+
+/* ===================== CARD HOVER ===================== */
+.card-hover {
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px -8px rgba(11, 42, 91, 0.18);
+}
+
+/* ===================== SHIMMER LOADING ===================== */
+.shimmer-bg {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,0.15) 50%,
+    rgba(255,255,255,0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+/* ===================== SCROLLBAR ===================== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #0b2a5b44; border-radius: 99px; }
+.dark ::-webkit-scrollbar-thumb { background: #ffffff22; }
+
+/* Hide scrollbar for carousel */
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ===================== FORM INPUTS ===================== */
+.ps-input {
+  @apply w-full rounded-2xl border border-sand-200 dark:border-[#2a3a4a] bg-white dark:bg-[#1a2535] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal2-500 dark:focus:ring-teal2-400 transition placeholder:text-gray-400 dark:placeholder:text-gray-500;
+}
+
+.ps-select {
+  @apply w-full rounded-2xl border border-sand-200 dark:border-[#2a3a4a] bg-white dark:bg-[#1a2535] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal2-500 dark:focus:ring-teal2-400 transition;
+}
+
+.ps-btn-primary {
+  @apply w-full py-3.5 rounded-2xl font-extrabold text-white bg-gradient-to-b from-teal2-500 to-teal2-600 hover:from-teal2-400 hover:to-teal2-500 shadow-lg shadow-teal2-600/30 transition active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.ps-btn-gold {
+  @apply inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-black text-ocean-900 bg-gradient-to-b from-[#ffd27a] to-[#ffb938] shadow-[0_14px_30px_-8px_rgba(255,185,56,0.6)] hover:-translate-y-1 hover:shadow-[0_20px_36px_-8px_rgba(255,185,56,0.7)] transition active:scale-95;
+}
+
+/* ===================== STAGGER ANIMATION DELAYS ===================== */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+.stagger-8 { animation-delay: 0.4s; }
+.stagger-9 { animation-delay: 0.45s; }
