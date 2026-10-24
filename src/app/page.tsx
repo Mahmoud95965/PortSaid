@@ -15,6 +15,7 @@ import { PlaceDetail } from '@/components/PlaceDetail';
 import { TransportView } from '@/components/TransportView';
 import { HousingView } from '@/components/HousingView';
 import { ExploreView } from '@/components/ExploreView';
+import { MapView } from '@/components/MapView';
 import { FeedbackView } from '@/components/FeedbackView';
 import { PartnerView } from '@/components/PartnerView';
 import { AccountView } from '@/components/AccountView';
@@ -241,7 +242,7 @@ export default function HomePage() {
               <HeroBanner />
               <CategoryGrid
                 onSelectCategory={(key) => {
-                  if (key === 'bus' || key === 'housing' || key === 'explore') {
+                  if (key === 'bus' || key === 'housing' || key === 'explore' || key === 'map') {
                     handleNavigate(key);
                   } else {
                     handleNavigate('list', key);
@@ -382,6 +383,16 @@ export default function HomePage() {
                 onBack={() => handleNavigate('home')}
                 onSelectPlace={(id) => handleNavigate('place', id)}
                 onOpenCouponModal={handleRequestCoupon}
+              />
+            </motion.div>
+          )}
+
+          {currentView === 'map' && (
+            <motion.div key="map-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+              <MapView
+                places={places}
+                onSelectPlace={(id) => handleNavigate('place', id)}
+                onBack={() => handleNavigate('home')}
               />
             </motion.div>
           )}
