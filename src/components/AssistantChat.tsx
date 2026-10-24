@@ -58,6 +58,7 @@ interface QuickPrompt {
 }
 
 const QUICK_PROMPTS: QuickPrompt[] = [
+  { label: 'مخطط الخروجات AI', text: 'خطط لي خروجة لشخصين لمدة 5 ساعات بميزانية 500 جنيه تشمل كافيه ومطعم', icon: '🧭' },
   { label: 'أقرب مكان لموقعي', text: '📍 إيه أقرب مطعم سمك وكافيه لموقعي الحالي؟', icon: '📍' },
   { label: 'النقاط والكوبونات', text: '⭐ إزاي أستفيد من النقط والكوبونات وأوفر فلوس؟', icon: '⭐' },
   { label: 'أكل وسمك', text: '🐟 أحسن مطعم سمك وسي فود وسوق السمك فين؟', icon: '🐟' },
@@ -199,11 +200,13 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
     const textToSend = userText || input.trim();
     if (!textToSend || loading) return;
 
-    // بمجرد إرسال الرسالة، الدخول فوراً على صفحة Gemini الكاملة للمحادثة الثابتة
+    // بمجرد إرسال الرسالة، الدخول فوراً على الصفحة المناسبة
     if (onNavigate) {
       setInput('');
       setOpen(false);
-      if (textToSend.includes('افتح خريطة') || textToSend.includes('الخريطة التفاعلية') || textToSend.includes('عرض الخريطة')) {
+      if (textToSend.includes('خطط') || textToSend.includes('خروجة') || textToSend.includes('رحلة') || textToSend.includes('مخطط')) {
+        onNavigate('ai', textToSend);
+      } else if (textToSend.includes('افتح خريطة') || textToSend.includes('الخريطة التفاعلية') || textToSend.includes('عرض الخريطة')) {
         onNavigate('map');
       } else {
         onNavigate('chat', textToSend);

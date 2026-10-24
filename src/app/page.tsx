@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { Header } from '@/components/Header';
@@ -39,6 +40,7 @@ const pageVariants: Variants = {
 };
 
 export default function HomePage() {
+  const router = useRouter();
   const { user, loading, hasSeenWelcome, setHasSeenWelcome, claimShareReward } = useAuth();
 
   const [currentView, setCurrentView] = useState('home');
@@ -126,8 +128,8 @@ export default function HomePage() {
 
   const handleNavigate = (view: string, arg?: string | null) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (view === 'planner') {
-      setCurrentView('planner');
+    if (view === 'planner' || view === 'ai') {
+      router.push(arg ? `/ai?q=${encodeURIComponent(arg)}` : '/ai');
       return;
     }
     if (view === 'chat') {

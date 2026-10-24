@@ -54,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const navLinks = [
     { key: 'home', label: 'الرئيسية', icon: Home },
-    { key: 'planner', label: 'مخطط الرحلات', icon: Compass },
+    { key: 'ai', label: 'مخطط الرحلات 🧭', icon: Compass },
     { key: 'map', label: 'الخريطة', icon: MapPin },
     { key: 'chat', label: 'مساعد Gemini', icon: Sparkles },
     { key: 'bus', label: 'المواصلات', icon: Bus },
@@ -372,7 +372,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <motion.div variants={menuItemVariants}>
                       <button
                         onClick={() => {
-                          onNavigate('planner');
+                          onNavigate('ai');
                           setMenuOpen(false);
                         }}
                         type="button"

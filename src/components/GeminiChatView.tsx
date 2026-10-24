@@ -68,6 +68,12 @@ const ACTIVE_SESSION_KEY = 'portsaid_hub_gemini_active_session_id';
 
 const QUICK_CARDS = [
   {
+    icon: '🧭',
+    title: 'مخطط الرحلات والخروجات الذكي',
+    desc: 'صمم خطة خروجة تفاعلية بالذكاء الاصطناعي مع حساب الميزانية ومسار الخريطة',
+    prompt: '__OPEN_AI_PLANNER__',
+  },
+  {
     icon: '🐟',
     title: 'أقرب مطاعم سمك وسي فود',
     desc: 'اقترح لي أقرب مطعم سمك طازة لموقعي مع نسبة الخصم والأسعار',
@@ -249,7 +255,16 @@ export const GeminiChatView: React.FC<GeminiChatViewProps> = ({
   // إرسال رسالة ومعالجتها بالـ AI
   const handleSendMessage = async (textOverride?: string) => {
     const textToSend = textOverride || input.trim();
-    if (!textToSend || loading || !activeSessionId) return;
+    if (!textToSend) return;
+
+    if (textToSend === '__OPEN_AI_PLANNER__') {
+      if (onNavigate) {
+        onNavigate('ai');
+      }
+      return;
+    }
+
+    if (loading || !activeSessionId) return;
 
     setInput('');
     if (textareaRef.current) {

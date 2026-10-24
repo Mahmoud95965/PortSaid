@@ -3,12 +3,16 @@ import assert from 'node:assert';
 const BASE_URL = 'http://localhost:3000';
 
 async function testSmartPlanner() {
-  console.log('--- 1. Testing /smart-planner Page HTTP 200 ---');
-  const pageRes = await fetch(`${BASE_URL}/smart-planner`);
-  assert.strictEqual(pageRes.status, 200, 'Page should return status 200');
-  const html = await pageRes.text();
-  assert.ok(html.includes('مخطط الرحلات') || html.includes('Planner'), 'Page should include planner title');
-  console.log('✓ /smart-planner route renders successfully with HTTP 200');
+  console.log('--- 1. Testing /ai and /smart-planner Page HTTP 200 ---');
+  const aiPageRes = await fetch(`${BASE_URL}/ai`);
+  assert.strictEqual(aiPageRes.status, 200, '/ai page should return status 200');
+  const aiHtml = await aiPageRes.text();
+  assert.ok(aiHtml.includes('مخطط الرحلات') || aiHtml.includes('Planner'), '/ai page should include planner title');
+  console.log('✓ /ai route renders successfully with HTTP 200');
+
+  const redirectRes = await fetch(`${BASE_URL}/smart-planner`, { redirect: 'manual' });
+  assert.strictEqual(redirectRes.status, 307, '/smart-planner should redirect with status 307');
+  console.log('✓ /smart-planner route cleanly redirects to /ai with HTTP 307');
 
   console.log('\n--- 2. Testing Natural Language Plan Generation (/api/planner) ---');
   const query = 'خطط لي خروجة لشخصين لمدة 5 ساعات بميزانية 500 جنيه، تشمل أماكن للزيارة وكافيه ومطعم';
