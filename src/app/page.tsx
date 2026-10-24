@@ -42,6 +42,7 @@ export default function HomePage() {
   const [currentView, setCurrentView] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState<string>('fun');
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [targetMapPlaceId, setTargetMapPlaceId] = useState<string | null>(null);
 
   const [places, setPlaces] = useState<Place[]>(INITIAL_PLACES);
   const [activeCouponPlace, setActiveCouponPlace] = useState<Place | null>(null);
@@ -122,6 +123,11 @@ export default function HomePage() {
 
   const handleNavigate = (view: string, arg?: string | null) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (view === 'map') {
+      setTargetMapPlaceId(arg || null);
+      setCurrentView('map');
+      return;
+    }
     if (view === 'list' && arg) {
       setSelectedCategory(arg);
       setCurrentView('list');
@@ -391,6 +397,7 @@ export default function HomePage() {
             <motion.div key="map-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
               <MapView
                 places={places}
+                initialPlaceId={targetMapPlaceId}
                 onSelectPlace={(id) => handleNavigate('place', id)}
                 onBack={() => handleNavigate('home')}
               />

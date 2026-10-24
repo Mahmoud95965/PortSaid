@@ -21,6 +21,7 @@ export default function MapPage() {
 
   const [places, setPlaces] = useState<Place[]>(INITIAL_PLACES);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [targetMapPlaceId, setTargetMapPlaceId] = useState<string | null>(null);
   const [activeCouponPlace, setActiveCouponPlace] = useState<Place | null>(null);
   const [showGuideModal, setShowGuideModal] = useState<boolean>(false);
 
@@ -66,6 +67,7 @@ export default function MapPage() {
     }
     if (view === 'map') {
       setSelectedPlaceId(null);
+      setTargetMapPlaceId(arg || null);
       return;
     }
     if (view === 'place' && arg) {
@@ -112,6 +114,7 @@ export default function MapPage() {
             >
               <MapView
                 places={places}
+                initialPlaceId={targetMapPlaceId}
                 onSelectPlace={(id) => setSelectedPlaceId(id)}
                 onBack={() => router.push('/')}
               />

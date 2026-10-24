@@ -81,3 +81,31 @@ export function calculateDistanceKm(
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return Number((R * c).toFixed(2));
 }
+
+// مراكز أحياء بورسعيد وبورفؤاد للتعرف الجغرافي السريع
+export const PORT_SAID_DISTRICTS = [
+  { name: 'حي الشرق', lat: 31.2640, lon: 32.3025, desc: 'المنطقة التاريخية وممشى ديليسبس والفنار القديم' },
+  { name: 'حي العرب', lat: 31.2580, lon: 32.2960, desc: 'قلب بورسعيد التجاري، سوق السمك، وسيلفر' },
+  { name: 'حي المناخ', lat: 31.2550, lon: 32.2850, desc: 'منطقة حيوية قريبة من الكليات والمواقف' },
+  { name: 'حي الزهور', lat: 31.2460, lon: 32.2740, desc: 'مجمع كليات الطب والصيدلة والعلاج الطبيعي' },
+  { name: 'حي الضواحي', lat: 31.2380, lon: 32.2820, desc: 'المدخل الجنوبي وموقف السوبرجيت' },
+  { name: 'مدينة بورفؤاد', lat: 31.2450, lon: 32.3210, desc: 'الضفة الشرقية لقناة السويس وجبال الملح' },
+];
+
+/**
+ * تحديد الحي الأقرب لإحداثيات المستخدم داخل بورسعيد
+ */
+export function identifyPortSaidDistrict(lat: number, lon: number): string {
+  let closest = PORT_SAID_DISTRICTS[0];
+  let minDistance = Infinity;
+
+  for (const d of PORT_SAID_DISTRICTS) {
+    const dist = calculateDistanceKm(lat, lon, d.lat, d.lon);
+    if (dist < minDistance) {
+      minDistance = dist;
+      closest = d;
+    }
+  }
+
+  return closest.name;
+}

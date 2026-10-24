@@ -18,16 +18,31 @@ import {
   ChevronUp,
   Copy,
   Check,
-  MessageSquare,
-  HelpCircle,
+  Navigation,
   ExternalLink,
+  Info,
+  Map as MapIcon,
+  Cpu,
 } from 'lucide-react';
+import { isPointInPortSaid, identifyPortSaidDistrict } from '@/lib/geoUtils';
+
+interface SuggestedPlace {
+  id: string;
+  n: string;
+  cat: string;
+  a: string;
+  lat: number;
+  lon: number;
+  disc?: number;
+  distanceKm?: number;
+}
 
 interface ChatMessage {
   id: string;
   role: 'bot' | 'me';
   text: string;
   timestamp: string;
+  suggestedPlaces?: SuggestedPlace[];
 }
 
 interface AssistantChatProps {
@@ -42,8 +57,10 @@ interface QuickPrompt {
 }
 
 const QUICK_PROMPTS: QuickPrompt[] = [
+  { label: 'أقرب مكان لموقعي', text: '📍 إيه أقرب مطعم سمك وكافيه لموقعي الحالي؟', icon: '📍' },
   { label: 'النقاط والكوبونات', text: '⭐ إزاي أستفيد من النقط والكوبونات وأوفر فلوس؟', icon: '⭐' },
   { label: 'أكل وسمك', text: '🐟 أحسن مطعم سمك وسي فود وسوق السمك فين؟', icon: '🐟' },
+  { label: 'خريطة بورسعيد', text: '🗺️ افتح خريطة بورسعيد التفاعلية واعرض الأماكن', icon: '🗺️' },
   { label: 'مواصلات الجامعة', text: '🚌 إزاي أروح كليات جامعة بورسعيد بالمينى باص؟', icon: '🚌' },
   { label: 'خروجة وفسح', text: '🏛️ رتب لي يوم خروجة وفسحة في بورسعيد وبورفؤاد', icon: '🏛️' },
   { label: 'سكن الطلبة', text: '🏠 إيه أحسن مناطق لسكن الطلاب والمغتربين؟', icon: '🏠' },
@@ -57,11 +74,17 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
   const [showTooltip, setShowTooltip] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // حالة تحديد الموقع الجغرافي للمستخدم
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; district?: string } | null>(null);
+  const [locatingUser, setLocatingUser] = useState(false);
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
+  const [aiProvider, setAiProvider] = useState<{ enabled: boolean; provider?: string; model?: string } | null>(null);
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome-1',
       role: 'bot',
-      text: 'أهلاً بيك يا غالي في Port Said Hub! 👋 أنا "مساعد بورسعيد الذكي".\n\nأقدر أساعدك في أي وقت بخصوص:\n• أحسن مطاعم الأسماك والحلويات البورسعيدية 🐟\n• كسب النقاط واستبدالها بكوبونات خصم حقيقية 10%-20% ⭐\n• خطوط المينى باص ومحطات كليات الجامعة 🚌\n• سكن الطلبة والمغتربين 🏠\n\nاسألني سؤالك أو اختر من الأسئلة المقترحة بالأسفل 👇',
+      text: 'أهلاً بيك يا غالي في Port Said Hub! 👋 أنا "مساعد بورسعيد الذكي".\n\nأنا متصل بالكامل بخريطة بورسعيد التفاعلية وأقدر أساعدك في:\n• تحديد موقعك بالـ GPS واقتراح أقرب الأماكن والمطاعم ليك 📍\n• عرض أي مكان بالضغط عليه فوراً على الخريطة 🗺️\n• كسب النقاط واستبدالها بكوبونات خصم حقيقية 10%-20% ⭐\n• خطوط المينى باص وسكن الطلبة 🚌\n\nاضغط على "📍 موقعي" أو اسألني أي سؤال 👇',
       timestamp: 'الآن',
     },
   ]);
@@ -72,7 +95,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto scroll to bottom
+  // التمرير التلقائي لأسفل
   useEffect(() => {
     if (chatBodyRef.current) {
       chatBodyRef.current.scrollTo({
@@ -82,7 +105,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
     }
   }, [messages, loading]);
 
-  // Focus input when opened
+  // التركيز على حقل الإدخال عند فتح النافذة
   useEffect(() => {
     if (open) {
       setHasOpenedBefore(true);
@@ -93,7 +116,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
     }
   }, [open]);
 
-  // Hide the initial callout tooltip after 8 seconds
+  // إخفاء تلميح الزر العائم بعد 8.5 ثوانٍ
   useEffect(() => {
     const t = setTimeout(() => {
       setShowTooltip(false);
@@ -106,7 +129,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
       {
         id: 'new-' + Date.now(),
         role: 'bot',
-        text: 'بدأنا محادثة جديدة! 🌊 اسألني عن أي حاجة في بورسعيد وأنا في خدمتك.',
+        text: 'بدأنا محادثة جديدة! 🌊 اسألني عن أي مكان أو شارك موقعك لأرشح لك الأقرب على الخريطة.',
         timestamp: 'الآن',
       },
     ]);
@@ -121,9 +144,68 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
     } catch (e) {}
   };
 
+  // وظيفة تحديد ومشاركة موقع المستخدم بالـ GPS
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationNotice('تحديد الموقع الجغرافي غير مدعوم في متصفحك.');
+      return;
+    }
+
+    setLocatingUser(true);
+    setLocationNotice(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocatingUser(false);
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const inside = isPointInPortSaid(lat, lng);
+
+        if (inside) {
+          const district = identifyPortSaidDistrict(lat, lng);
+          setUserLocation({ lat, lng, district });
+          setLocationNotice(`تم تحديد موقعك بنجاح في ${district} 📍`);
+
+          // إضافة رسالة تأكيد لطيفة من البوت
+          const now = new Date();
+          const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: 'loc-' + Date.now(),
+              role: 'bot',
+              text: `📍 تم تحديد موقعك في "${district}" بنجاح!\nاسألني الآن: "إيه أقرب مطعم سمك ليا؟" أو "أقرب كافيه أو معلم سياحي؟" وسأقيس لك المسافة بالضبط.`,
+              timestamp: timeStr,
+            },
+          ]);
+        } else {
+          setLocationNotice(`موقعك الحالي (${lat.toFixed(2)}, ${lng.toFixed(2)}) يقع خارج حدود بورسعيد.`);
+        }
+      },
+      (err) => {
+        setLocatingUser(false);
+        if (err.code === 1) {
+          setLocationNotice('يرجى السماح بصلاحية الموقع في المتصفح لمشاركة مكانك.');
+        } else {
+          setLocationNotice('تعذر تحديد الموقع، يرجى التأكد من تشغيل الـ GPS.');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
+
   const handleSend = async (userText?: string) => {
     const textToSend = userText || input.trim();
     if (!textToSend || loading) return;
+
+    // فحص طلب فتح الخريطة
+    if (textToSend.includes('افتح خريطة') || textToSend.includes('الخريطة التفاعلية') || textToSend.includes('عرض الخريطة')) {
+      if (onNavigate) {
+        onNavigate('map');
+        setOpen(false);
+        return;
+      }
+    }
 
     setInput('');
     setShowQuick(false);
@@ -131,7 +213,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
     const now = new Date();
     const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
 
-    // Append user message
+    // رسالة المستخدم
     const userMsg: ChatMessage = {
       id: 'usr-' + Date.now(),
       role: 'me',
@@ -143,34 +225,55 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
     setLoading(true);
 
     try {
+      const historyTurns = messages.map((m) => ({
+        role: m.role,
+        text: m.text,
+      }));
+
       const res = await fetch('/api/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: textToSend }),
+        body: JSON.stringify({
+          message: textToSend,
+          history: historyTurns,
+          userLocation: userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null,
+        }),
       });
+
       const data = await res.json();
 
-      const botReply =
-        data.ok && data.reply
-          ? data.reply
-          : 'أنا هنا لمساعدتك! تقدر تسألني عن نظام النقاط وكوبونات الخصم، أحسن مطاعم الأسماك، مواصلات كليات جامعة بورسعيد، أو أفضل مناطق السكن.';
+      if (data.ok) {
+        if (data.ai_enabled !== undefined) {
+          setAiProvider({
+            enabled: data.ai_enabled,
+            provider: data.provider,
+            model: data.model,
+          });
+        }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: 'bot-' + Date.now(),
-          role: 'bot',
-          text: botReply,
-          timestamp: timeStr,
-        },
-      ]);
+        const botReply = data.reply || 'أنا معاك يا بطل! اسألني عن أي حاجة في بورسعيد.';
+        const suggestedPlaces: SuggestedPlace[] = data.suggestedPlaces || [];
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-' + Date.now(),
+            role: 'bot',
+            text: botReply,
+            timestamp: timeStr,
+            suggestedPlaces,
+          },
+        ]);
+      } else {
+        throw new Error(data.error || 'Response error');
+      }
     } catch (e) {
       setMessages((prev) => [
         ...prev,
         {
           id: 'bot-err-' + Date.now(),
           role: 'bot',
-          text: 'عفواً حدث بطء في الاتصال. لكن تقدر تسألني عن أي حاجة وسأجيبك فوراً.',
+          text: 'عفواً حدث بطء مؤقت في الاتصال. لكن تقدر تسألني عن أي حاجة وسأجيبك فوراً.',
           timestamp: timeStr,
         },
       ]);
@@ -195,7 +298,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
               className="cursor-pointer hidden min-[400px]:flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white shadow-2xl border border-sand-300 dark:border-teal2-500/40 text-xs font-black select-none hover:scale-105 transition"
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-              <span>مساعد بورسعيد الذكي 👋 جاهز لخدمتك!</span>
+              <span>مساعد بورسعيد والخريطة 👋 جاهز لخدمتك!</span>
               <button
                 type="button"
                 onClick={(e) => {
@@ -250,7 +353,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.85, y: 35 }}
             transition={{ type: 'spring', stiffness: 350, damping: 26 }}
-            className="fixed left-2 sm:left-4 bottom-20 sm:bottom-24 z-50 w-[min(26rem,calc(100vw-1rem))] h-[min(38rem,calc(100vh-7rem))] flex flex-col rounded-3xl overflow-hidden shadow-2xl bg-white dark:bg-[#0b1624] border border-sand-300 dark:border-[#1d2d3e] backdrop-blur-xl"
+            className="fixed left-2 sm:left-4 bottom-20 sm:bottom-24 z-50 w-[min(27rem,calc(100vw-1rem))] h-[min(40rem,calc(100vh-6.5rem))] flex flex-col rounded-3xl overflow-hidden shadow-2xl bg-white dark:bg-[#0b1624] border border-sand-300 dark:border-[#1d2d3e] backdrop-blur-xl"
           >
             {/* Header: App Brand, Live Status, Controls */}
             <div className="bg-gradient-to-r from-ocean-950 via-ocean-900 to-teal2-800 text-white p-3.5 sm:p-4 flex items-center justify-between gap-2 border-b border-white/10 relative overflow-hidden shadow-md">
@@ -258,7 +361,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
               <div className="absolute top-0 right-0 w-40 h-40 bg-teal2-400/10 rounded-full blur-2xl pointer-events-none" />
 
               {/* Bot Info with Official App Icon */}
-              <div className="flex items-center gap-3 min-w-0 relative z-10">
+              <div className="flex items-center gap-2.5 min-w-0 relative z-10">
                 <motion.div
                   className="w-11 h-11 shrink-0 rounded-2xl bg-gradient-to-b from-[#f8f4ea] to-[#ffe3a8] p-1.5 border-2 border-white/70 shadow-lg flex items-center justify-center relative overflow-hidden"
                   whileHover={{ rotate: [0, -10, 10, 0] }}
@@ -273,7 +376,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
                 </motion.div>
 
                 <div className="min-w-0 leading-tight">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <h3 className="font-black text-sm sm:text-base text-white truncate tracking-tight">
                       مساعد بورسعيد الذكي
                     </h3>
@@ -281,13 +384,32 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-[11px] text-teal2-200 font-bold">متصل الآن 24/7 • ردود فورية</span>
+                    <span className="text-[11px] text-teal2-200 font-bold truncate">
+                      {aiProvider?.provider === 'openrouter'
+                        ? 'مدعوم بـ OpenRouter ⚡'
+                        : 'متصل 24/7 • مرتبط بالخريطة 🗺️'}
+                    </span>
                   </div>
                 </div>
               </div>
 
               {/* Header Action Buttons */}
-              <div className="flex items-center gap-1.5 relative z-10">
+              <div className="flex items-center gap-1.5 relative z-10 shrink-0">
+                {onNavigate && (
+                  <button
+                    onClick={() => {
+                      onNavigate('map');
+                      setOpen(false);
+                    }}
+                    title="فتح خريطة بورسعيد"
+                    type="button"
+                    className="px-2.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-sand-200 hover:text-white flex items-center gap-1 text-[11px] font-bold transition"
+                  >
+                    <Compass className="w-3.5 h-3.5 text-sand-300" />
+                    <span className="hidden sm:inline">الخريطة</span>
+                  </button>
+                )}
+
                 <button
                   onClick={handleResetChat}
                   title="بدء محادثة جديدة"
@@ -296,6 +418,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                 </button>
+
                 <button
                   onClick={() => setOpen(false)}
                   title="إغلاق المحادثة"
@@ -306,6 +429,26 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
                 </button>
               </div>
             </div>
+
+            {/* Location Notice Banner if Active */}
+            <AnimatePresence>
+              {locationNotice && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="px-3.5 py-2 bg-teal2-500/15 dark:bg-teal2-950/60 border-b border-teal2-500/30 text-teal2-800 dark:text-teal2-300 text-xs font-bold flex items-center justify-between gap-2"
+                >
+                  <span className="flex items-center gap-1.5 truncate">
+                    <Info className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{locationNotice}</span>
+                  </span>
+                  <button onClick={() => setLocationNotice(null)} type="button">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Chat Messages Body */}
             <div
@@ -327,7 +470,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
                     initial={{ opacity: 0, y: 12, scale: 0.96 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ type: 'spring', stiffness: 380, damping: 25 }}
-                    className={`flex items-start gap-2 max-w-[90%] ${isBot ? 'self-start' : 'self-end flex-row-reverse'}`}
+                    className={`flex items-start gap-2 max-w-[92%] ${isBot ? 'self-start' : 'self-end flex-row-reverse'}`}
                   >
                     {/* Bot Avatar */}
                     {isBot && (
@@ -347,7 +490,42 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
                       {/* Message Text with Line Breaks */}
                       <div className="whitespace-pre-line leading-relaxed">{m.text}</div>
 
-                      {/* Interactive Deep-Action Pills for Bot Messages */}
+                      {/* Bot Suggested Places Map Pills (Deep Linking to Map) */}
+                      {isBot && m.suggestedPlaces && m.suggestedPlaces.length > 0 && (
+                        <div className="mt-3 pt-2.5 border-t border-sand-200/80 dark:border-white/10 flex flex-col gap-2">
+                          <div className="text-[11px] font-black text-teal2-700 dark:text-teal2-300 flex items-center gap-1.5">
+                            <Compass className="w-3.5 h-3.5 text-teal2-500 animate-pulse" />
+                            <span>اضغط لمعاينة المكان على الخريطة التفاعلية:</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {m.suggestedPlaces.map((pl) => (
+                              <motion.button
+                                key={pl.id}
+                                whileHover={{ scale: 1.04 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => {
+                                  if (onNavigate) {
+                                    onNavigate('map', pl.id);
+                                    setOpen(false);
+                                  }
+                                }}
+                                type="button"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-ocean-900 to-teal2-800 text-white font-black text-[11px] shadow hover:shadow-md transition"
+                              >
+                                <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                <span>{pl.n}</span>
+                                {typeof pl.distanceKm === 'number' && (
+                                  <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-sand-200 text-[10px]">
+                                    {pl.distanceKm} كم
+                                  </span>
+                                )}
+                              </motion.button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Interactive Category Action Pills */}
                       {isBot && (
                         <div className="mt-3 pt-2.5 border-t border-sand-200/60 dark:border-white/10 flex flex-wrap gap-1.5">
                           {mentionsPoints && onOpenPoints && (
@@ -364,6 +542,20 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
                             </button>
                           )}
 
+                          {onNavigate && (
+                            <button
+                              onClick={() => {
+                                onNavigate('map');
+                                setOpen(false);
+                              }}
+                              type="button"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sand-100 dark:bg-sand-900/50 text-ocean-900 dark:text-sand-200 font-bold text-[11px] border border-sand-300/50 hover:bg-sand-200 transition"
+                            >
+                              <Compass className="w-3.5 h-3.5 text-teal2-600" />
+                              <span>فتح الخريطة 🗺️</span>
+                            </button>
+                          )}
+
                           {mentionsFish && onNavigate && (
                             <button
                               onClick={() => {
@@ -374,7 +566,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal2-100 dark:bg-teal2-950/70 text-teal2-800 dark:text-teal2-300 font-bold text-[11px] border border-teal2-300/40 hover:bg-teal2-200 transition"
                             >
                               <Utensils className="w-3.5 h-3.5 text-teal2-600" />
-                              <span>تصفح مطاعم الأسماك 🐟</span>
+                              <span>مطاعم الأسماك 🐟</span>
                             </button>
                           )}
 
@@ -388,7 +580,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-ocean-100 dark:bg-ocean-950/70 text-ocean-900 dark:text-ocean-200 font-bold text-[11px] border border-ocean-300/40 hover:bg-ocean-200 transition"
                             >
                               <Bus className="w-3.5 h-3.5 text-ocean-700" />
-                              <span>شبكة المواصلات والخطوط 🚌</span>
+                              <span>شبكة المواصلات 🚌</span>
                             </button>
                           )}
 
@@ -406,20 +598,6 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
                             </button>
                           )}
 
-                          {mentionsTour && onNavigate && (
-                            <button
-                              onClick={() => {
-                                onNavigate('explore');
-                                setOpen(false);
-                              }}
-                              type="button"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sand-100 dark:bg-sand-900/40 text-ocean-900 dark:text-sand-200 font-bold text-[11px] border border-sand-300/50 hover:bg-sand-200 transition"
-                            >
-                              <Compass className="w-3.5 h-3.5 text-amber-500" />
-                              <span>خريطة معالم بورسعيد 🧭</span>
-                            </button>
-                          )}
-
                           {mentionsSweets && onNavigate && (
                             <button
                               onClick={() => {
@@ -429,7 +607,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
                               type="button"
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-100 dark:bg-rose-950/70 text-rose-900 dark:text-rose-200 font-bold text-[11px] border border-rose-300/40 hover:bg-rose-200 transition"
                             >
-                              <span>حلويات وكاساتا بورسعيد 🍨</span>
+                              <span>كاساتا وحلويات 🍨</span>
                             </button>
                           )}
                         </div>
@@ -474,7 +652,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
                     <img src="/assets/logo/icon-192.png" alt="" className="w-full h-full object-contain" />
                   </div>
                   <div className="p-3 rounded-2xl bg-white dark:bg-[#132030] border border-sand-200 dark:border-[#1d2d3e] text-xs font-bold text-ocean-800 dark:text-white/80 flex items-center gap-2 shadow-sm">
-                    <span className="text-[11px]">مساعد بورسعيد بيكتب لك</span>
+                    <span className="text-[11px]">مساعد بورسعيد بيبحث لك</span>
                     <span className="inline-flex gap-1 items-center">
                       <span className="w-1.5 h-1.5 rounded-full bg-teal2-500 animate-bounce" style={{ animationDelay: '0ms' }} />
                       <span className="w-1.5 h-1.5 rounded-full bg-teal2-500 animate-bounce" style={{ animationDelay: '180ms' }} />
@@ -530,13 +708,50 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
               )}
             </AnimatePresence>
 
-            {/* Input Bar */}
+            {/* User Active Location Indicator Badge */}
+            {userLocation && (
+              <div className="px-3 py-1.5 bg-emerald-500/10 dark:bg-emerald-950/40 border-t border-emerald-500/20 flex items-center justify-between text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-600 animate-bounce" />
+                  <span>
+                    موقعك محدد: <strong>{userLocation.district || 'بورسعيد'}</strong> ({userLocation.lat.toFixed(3)}, {userLocation.lng.toFixed(3)})
+                  </span>
+                </span>
+                <button
+                  onClick={() => setUserLocation(null)}
+                  type="button"
+                  title="إلغاء تحديد الموقع"
+                  className="text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 p-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+
+            {/* Input Bar with GPS Button */}
             <div className="p-3 border-t border-sand-200/90 dark:border-[#1d2d3e] flex items-center gap-2 bg-white dark:bg-[#0b1624]">
+              {/* GPS Geolocation Button */}
+              <motion.button
+                onClick={handleGetLocation}
+                disabled={locatingUser}
+                type="button"
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
+                title="تحديد ومشاركة موقعك الحالي بالـ GPS"
+                className={`w-10 h-10 shrink-0 rounded-2xl grid place-items-center transition border ${
+                  userLocation
+                    ? 'bg-emerald-500 text-white border-emerald-600 shadow-md shadow-emerald-500/30'
+                    : 'bg-sand-100 dark:bg-[#162536] text-ocean-800 dark:text-sand-300 border-sand-300 dark:border-[#22354a] hover:bg-sand-200'
+                }`}
+              >
+                <Navigation className={`w-4 h-4 ${locatingUser ? 'animate-spin' : ''}`} />
+              </motion.button>
+
               <div className="flex-1 relative flex items-center">
                 <input
                   ref={inputRef}
                   type="text"
-                  placeholder="اسأل عن أي حاجة في بورسعيد..."
+                  placeholder="اسأل عن أي مكان أو أقرب مطعم لموقعك..."
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
