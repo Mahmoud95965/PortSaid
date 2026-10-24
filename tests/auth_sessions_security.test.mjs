@@ -11,6 +11,11 @@
  * 6. Tamper detection: Signature verification failure on signature tampering.
  * 7. Expiration detection: Rejection of expired session tokens.
  * 8. Role & privilege authorization verification.
+ * 9. Real Session Invalidation: Immediate rejection after revokeSession and revokeAllUserSessions.
+ * 10. SESSION_SECRET production enforcement (throws if weak or missing).
+ * 11. Sliding-Window Rate Limiter (blocks brute-force attempts without locking account).
+ * 12. Egyptian Phone Normalization (+20, 0020, spaces, dashes).
+ * 13. Avatar URL Validation (blocks XSS, javascript:, accepts safe images).
  */
 
 import assert from 'node:assert';
@@ -18,12 +23,23 @@ import crypto from 'node:crypto';
 import {
   hashPasswordModern,
   hashPasswordLegacy,
-  verifyAndUpgradePassword
+  verifyAndUpgradePassword,
 } from '../src/lib/auth/password.ts';
 import {
   sealSessionToken,
-  unsealSessionToken
+  unsealSessionToken,
+  revokeSession,
+  revokeAllUserSessions,
+  getSessionSecret,
 } from '../src/lib/auth/session.ts';
+import {
+  checkRateLimit,
+  resetRateLimit,
+} from '../src/lib/auth/rateLimit.ts';
+import {
+  normalizePhone,
+  isValidAvatarUrl,
+} from '../src/lib/auth/validation.ts';
 
 async function runAuthSecurityTests() {
   console.log('===============================================================');
@@ -31,7 +47,7 @@ async function runAuthSecurityTests() {
   console.log('===============================================================\n');
 
   let passed = 0;
-  let total = 8;
+  const total = 13;
 
   const TEST_PASSWORD = 'PortSaid@Password2026!';
   const WRONG_PASSWORD = 'WrongPassword999!';
@@ -159,7 +175,6 @@ async function runAuthSecurityTests() {
   // Test 7: Expiration detection
   try {
     console.log('[Test 7] Testing rejection of expired session token...');
-    // Create token with negative validity (-10 seconds)
     const expiredToken = sealSessionToken({
       userId: '11111111-2222-3333-4444-555555555555',
       name: 'منتهي الصلاحية',
@@ -197,6 +212,150 @@ async function runAuthSecurityTests() {
     passed++;
   } catch (err) {
     console.error('  -> FAIL Test 8:', err.message);
+  }
+
+  // Test 9: Real Session Invalidation (Logout & Password Change)
+  try {
+    console.log('[Test 9] Testing real session revocation upon logout and password change...');
+    const userRevokedId = '22222222-3333-4444-5555-666666666666';
+    const activeToken = sealSessionToken({
+      userId: userRevokedId,
+      name: 'مستخدم تجريبي للإبطال',
+      email: 'revoked@test.com',
+      phone: '01033333333',
+      role: 'user',
+    });
+
+    const unsealedBefore = unsealSessionToken(activeToken);
+    assert(unsealedBefore !== null, 'Token should be valid before revocation');
+    assert(unsealedBefore.sessionId, 'Token must contain a sessionId');
+
+    // 1. Invalidate single session (logout simulation)
+    revokeSession(unsealedBefore.sessionId);
+    const unsealedAfterLogout = unsealSessionToken(activeToken);
+    assert.strictEqual(unsealedAfterLogout, null, 'Revoked session must immediately return null');
+
+    // 2. Invalidate all user sessions (password change simulation)
+    const tokenNewDevice = sealSessionToken({
+      userId: userRevokedId,
+      name: 'مستخدم تجريبي للإبطال',
+      email: 'revoked@test.com',
+      phone: '01033333333',
+      role: 'user',
+    });
+    // Fast-forward revocation timestamp by 1s
+    revokeAllUserSessions(userRevokedId);
+    const unsealedAfterPwdChange = unsealSessionToken(tokenNewDevice);
+    assert.strictEqual(unsealedAfterPwdChange, null, 'All sessions issued prior to revocation must return null');
+
+    console.log('  -> PASS: Session revocation verified for logout and password change.');
+    passed++;
+  } catch (err) {
+    console.error('  -> FAIL Test 9:', err.message);
+  }
+
+  // Test 10: Production SESSION_SECRET enforcement
+  try {
+    console.log('[Test 10] Testing production SESSION_SECRET enforcement...');
+    const origEnv = process.env.NODE_ENV;
+    const origSecret = process.env.SESSION_SECRET;
+
+    process.env.NODE_ENV = 'production';
+    delete process.env.SESSION_SECRET;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    let threw = false;
+    try {
+      getSessionSecret();
+    } catch (e) {
+      threw = true;
+      assert(e.message.includes('FATAL_SECURITY_CONFIG'), 'Must throw fatal config error');
+    }
+    assert.strictEqual(threw, true, 'Production must throw if secret is missing');
+
+    // Test with short secret in production
+    process.env.SESSION_SECRET = 'short_secret_under_32_chars';
+    let threwShort = false;
+    try {
+      getSessionSecret();
+    } catch (e) {
+      threwShort = true;
+    }
+    assert.strictEqual(threwShort, true, 'Production must throw if secret is < 32 chars');
+
+    // Restore environment
+    process.env.NODE_ENV = origEnv;
+    if (origSecret) process.env.SESSION_SECRET = origSecret;
+
+    console.log('  -> PASS: Production SESSION_SECRET strictly enforced (no weak/missing fallback in prod).');
+    passed++;
+  } catch (err) {
+    console.error('  -> FAIL Test 10:', err.message);
+  }
+
+  // Test 11: Sliding-Window Rate Limiting
+  try {
+    console.log('[Test 11] Testing sliding-window rate limiting on login/register...');
+    const testKey = 'test_ip_192.168.1.100';
+    resetRateLimit(testKey);
+
+    // 5 attempts allowed with limit = 5
+    for (let i = 1; i <= 5; i++) {
+      const res = checkRateLimit(testKey, 5, 60);
+      assert.strictEqual(res.allowed, true, `Attempt ${i} should be allowed`);
+    }
+
+    // 6th attempt should be blocked
+    const blockedRes = checkRateLimit(testKey, 5, 60);
+    assert.strictEqual(blockedRes.allowed, false, '6th attempt must be blocked');
+    assert(blockedRes.retryAfterSeconds > 0, 'Retry-after must be > 0');
+
+    // Reset allows immediately
+    resetRateLimit(testKey);
+    const afterReset = checkRateLimit(testKey, 5, 60);
+    assert.strictEqual(afterReset.allowed, true, 'Immediate attempt after reset must be allowed');
+
+    console.log('  -> PASS: Rate limiter blocks excessive attempts and resets cleanly.');
+    passed++;
+  } catch (err) {
+    console.error('  -> FAIL Test 11:', err.message);
+  }
+
+  // Test 12: Egyptian Phone Normalization
+  try {
+    console.log('[Test 12] Testing Egyptian phone normalization...');
+    assert.strictEqual(normalizePhone('01012345678'), '01012345678');
+    assert.strictEqual(normalizePhone('+201012345678'), '01012345678');
+    assert.strictEqual(normalizePhone('00201012345678'), '01012345678');
+    assert.strictEqual(normalizePhone('201012345678'), '01012345678');
+    assert.strictEqual(normalizePhone('010 1234 5678'), '01012345678');
+    assert.strictEqual(normalizePhone('010-1234-5678'), '01012345678');
+
+    console.log('  -> PASS: Egyptian phone numbers normalized correctly.');
+    passed++;
+  } catch (err) {
+    console.error('  -> FAIL Test 12:', err.message);
+  }
+
+  // Test 13: Avatar URL Validation
+  try {
+    console.log('[Test 13] Testing avatar URL validation and XSS prevention...');
+    assert.strictEqual(isValidAvatarUrl('https://example.com/avatar.jpg'), true);
+    assert.strictEqual(isValidAvatarUrl('http://example.com/avatar.png'), true);
+    assert.strictEqual(isValidAvatarUrl('/avatars/avatar1.png'), true);
+    assert.strictEqual(isValidAvatarUrl('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='), true);
+
+    // Malicious or invalid inputs
+    assert.strictEqual(isValidAvatarUrl('javascript:alert(1)'), false);
+    assert.strictEqual(isValidAvatarUrl('//evil.com/xss.jpg'), false);
+    assert.strictEqual(isValidAvatarUrl('data:text/html;base64,PHNjcmlwdD4='), false);
+    assert.strictEqual(isValidAvatarUrl(''), false);
+    assert.strictEqual(isValidAvatarUrl('a'.repeat(2049)), false);
+
+    console.log('  -> PASS: Avatar URL validator safely accepts valid images and rejects XSS vectors.');
+    passed++;
+  } catch (err) {
+    console.error('  -> FAIL Test 13:', err.message);
   }
 
   console.log('\n===============================================================');

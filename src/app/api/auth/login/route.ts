@@ -3,11 +3,24 @@ import { cookies } from 'next/headers';
 import { getSupabaseServer } from '@/lib/supabase/server';
 import { verifyAndUpgradePassword } from '@/lib/auth/password';
 import { sealSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from '@/lib/auth/session';
+import { checkRateLimit, resetRateLimit, getClientIp } from '@/lib/auth/rateLimit';
+import { normalizePhone } from '@/lib/auth/validation';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   try {
+    const ip = getClientIp(req);
+
+    // 1. IP-level rate limiting: max 30 login requests per 15 minutes per IP
+    const ipRate = checkRateLimit(`login_ip:${ip}`, 30, 15 * 60);
+    if (!ipRate.allowed) {
+      return NextResponse.json(
+        { ok: false, message: 'تم تجاوز الحد المسموح به لمحاولات الدخول من هذا الجهاز. برجاء المحاولة بعد 15 دقيقة.' },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const { identifier, password } = body;
 
@@ -19,19 +32,35 @@ export async function POST(req: Request) {
       );
     }
 
+    const isEmail = trimmedId.includes('@');
+    const normalizedId = isEmail ? trimmedId.toLowerCase() : normalizePhone(trimmedId);
+
+    // 2. Specific Account/IP Rate Limiting: max 5 attempts per 15 minutes per account per IP
+    const accountRateKey = `login_account:${ip}:${normalizedId}`;
+    const accountRate = checkRateLimit(accountRateKey, 5, 15 * 60);
+    if (!accountRate.allowed) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: `تم حظر المحاولات مؤقتاً لكثرة المحاولات الخاطئة. برجاء المحاولة بعد ${Math.ceil(accountRate.retryAfterSeconds / 60)} دقيقة.`,
+        },
+        { status: 429 }
+      );
+    }
+
     const supabase = getSupabaseServer();
     if (!supabase) {
-      // Fallback dev mock when Supabase is not reachable
-      const isOwner = trimmedId.toLowerCase().includes('admin') || trimmedId === '01000000001';
-      const isMerchant = trimmedId.toLowerCase().includes('merchant') || trimmedId === '01000000002';
+      // Fallback dev mock when remote database is not reachable
+      const isOwner = normalizedId.includes('admin') || normalizedId === '01000000001';
+      const isMerchant = normalizedId.includes('merchant') || normalizedId === '01000000002';
       const mockRole = isOwner ? 'owner' : isMerchant ? 'merchant' : 'user';
       const mockUserId = isOwner ? '00000000-0000-0000-0000-000000000001' : '00000000-0000-0000-0000-000000000002';
 
       const token = sealSessionToken({
         userId: mockUserId,
         name: isOwner ? 'المالك الرئيسي' : isMerchant ? 'صاحب مطعم كاستن' : 'أحمد محمود',
-        email: trimmedId.includes('@') ? trimmedId : 'user@portsaidhub.com',
-        phone: trimmedId.startsWith('01') ? trimmedId : '01012345678',
+        email: isEmail ? normalizedId : 'user@portsaidhub.com',
+        phone: !isEmail ? normalizedId : '01012345678',
         role: mockRole,
       });
 
@@ -43,13 +72,14 @@ export async function POST(req: Request) {
         maxAge: SESSION_MAX_AGE_SECONDS,
       });
 
+      resetRateLimit(accountRateKey);
       return NextResponse.json({
         ok: true,
         user: {
           id: mockUserId,
           name: isOwner ? 'المالك الرئيسي' : isMerchant ? 'صاحب مطعم كاستن' : 'أحمد محمود',
-          email: trimmedId.includes('@') ? trimmedId : 'user@portsaidhub.com',
-          phone: trimmedId.startsWith('01') ? trimmedId : '01012345678',
+          email: isEmail ? normalizedId : 'user@portsaidhub.com',
+          phone: !isEmail ? normalizedId : '01012345678',
           role: mockRole,
           points: isOwner ? 500 : 120,
           email_verified: true,
@@ -58,56 +88,46 @@ export async function POST(req: Request) {
       });
     }
 
-    const isEmail = trimmedId.includes('@');
+    // 3. Query Database for user
     const { data: dbUser, error } = await supabase
       .from('users')
       .select('*, roles(code), user_types(code), governorates(name_ar), institutions(name_ar)')
-      .eq(isEmail ? 'email' : 'phone', isEmail ? trimmedId.toLowerCase() : trimmedId)
+      .eq(isEmail ? 'email' : 'phone', normalizedId)
       .eq('status', 'active')
       .is('deleted_at', null)
       .maybeSingle();
 
+    // Constant-time unified error message to prevent user enumeration
+    const UNIFIED_AUTH_ERROR = 'بيانات تسجيل الدخول أو كلمة المرور غير صحيحة.';
+
     if (error || !dbUser) {
-      return NextResponse.json(
-        { ok: false, message: 'بيانات تسجيل الدخول أو كلمة المرور غير صحيحة.' },
-        { status: 401 }
-      );
+      return NextResponse.json({ ok: false, message: UNIFIED_AUTH_ERROR }, { status: 401 });
     }
 
-    // 1. Check account lockout
+    // 4. Check administrative account lockout
     if (dbUser.locked_until && new Date(dbUser.locked_until) > new Date()) {
       return NextResponse.json(
-        { ok: false, message: 'تم إيقاف الحساب مؤقتاً لكثرة المحاولات الخاطئة. برجاء المحاولة بعد 15 دقيقة.' },
-        { status: 423 }
+        { ok: false, message: 'هذا الحساب موقوف إدارياً. برجاء التواصل مع إدارة المنصة.' },
+        { status: 403 }
       );
     }
 
-    // 2. Dual-Hash Password Verification & Upgrade Check
+    // 5. Dual-Hash Password Verification & Upgrade Check
     const { valid, needsUpgrade, upgradedHash } = verifyAndUpgradePassword(password, dbUser.password_hash);
 
     if (!valid) {
-      // Increment failed logins and lock if >= 5 attempts
-      const newFailed = (dbUser.failed_logins || 0) + 1;
-      const shouldLock = newFailed >= 5;
-      await supabase
-        .from('users')
-        .update({
-          failed_logins: newFailed,
-          locked_until: shouldLock ? new Date(Date.now() + 15 * 60 * 1000).toISOString() : null,
-        })
-        .eq('id', dbUser.id);
-
-      return NextResponse.json(
-        { ok: false, message: 'كلمة المرور غير صحيحة.' },
-        { status: 401 }
-      );
+      // Return identical error message and status code (no user enumeration)
+      return NextResponse.json({ ok: false, message: UNIFIED_AUTH_ERROR }, { status: 401 });
     }
 
-    // 3. Password verified! Perform JIT upgrade if legacy hash
+    // 6. Password verified! Reset rate limits
+    resetRateLimit(accountRateKey);
+    resetRateLimit(`login_ip:${ip}`);
+
+    // Update last_login_at and JIT upgraded hash if needed
     const updatePayload: Record<string, any> = {
-      failed_logins: 0,
-      locked_until: null,
       last_login_at: new Date().toISOString(),
+      failed_logins: 0,
     };
     if (needsUpgrade && upgradedHash) {
       updatePayload.password_hash = upgradedHash;
@@ -115,7 +135,7 @@ export async function POST(req: Request) {
 
     await supabase.from('users').update(updatePayload).eq('id', dbUser.id);
 
-    // 4. Issue Cryptographic HttpOnly Session Cookie
+    // 7. Issue Cryptographic HttpOnly Session Cookie
     const roleCode = (dbUser.roles?.code || 'user') as 'owner' | 'admin' | 'merchant' | 'user';
     const sessionToken = sealSessionToken({
       userId: dbUser.id,

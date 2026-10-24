@@ -2,7 +2,13 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseServer } from '@/lib/supabase/server';
 import { hashPasswordModern, verifyAndUpgradePassword } from '@/lib/auth/password';
-import { unsealSessionToken, sealSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from '@/lib/auth/session';
+import {
+  unsealSessionToken,
+  sealSessionToken,
+  revokeAllUserSessions,
+  SESSION_COOKIE_NAME,
+  SESSION_MAX_AGE_SECONDS,
+} from '@/lib/auth/session';
 
 export const runtime = 'nodejs';
 
@@ -47,18 +53,37 @@ export async function POST(req: Request) {
     const supabase = getSupabaseServer();
     if (!supabase) {
       // Local dev mock
+      revokeAllUserSessions(session.userId);
+      const freshToken = sealSessionToken({
+        userId: session.userId,
+        name: session.name,
+        email: session.email,
+        phone: session.phone,
+        role: session.role,
+      });
+
+      cookieStore.set(SESSION_COOKIE_NAME, freshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: SESSION_MAX_AGE_SECONDS,
+      });
+
       return NextResponse.json({ ok: true, message: 'تم تغيير كلمة المرور بنجاح.' });
     }
 
-    // 1. Fetch current password hash from DB
+    // 1. Fetch current password hash from DB and verify account is active
     const { data: dbUser, error: fetchErr } = await supabase
       .from('users')
-      .select('password_hash, status')
+      .select('id, password_hash, status, deleted_at')
       .eq('id', session.userId)
+      .eq('status', 'active')
+      .is('deleted_at', null)
       .maybeSingle();
 
-    if (fetchErr || !dbUser || dbUser.status !== 'active') {
-      return NextResponse.json({ ok: false, message: 'تعذر التحقق من بيانات الحساب.' }, { status: 404 });
+    if (fetchErr || !dbUser) {
+      return NextResponse.json({ ok: false, message: 'تعذر التحقق من بيانات الحساب أو الحساب معطل.' }, { status: 404 });
     }
 
     // 2. Verify current password
@@ -84,7 +109,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: updateErr.message }, { status: 500 });
     }
 
-    // 5. Re-issue fresh session cookie
+    // 5. Invalidate all existing sessions on other devices/tabs
+    revokeAllUserSessions(session.userId);
+
+    // 6. Re-issue fresh session cookie for the current session
     const freshToken = sealSessionToken({
       userId: session.userId,
       name: session.name,
@@ -93,7 +121,7 @@ export async function POST(req: Request) {
       role: session.role,
     });
 
-    cookies().set(SESSION_COOKIE_NAME, freshToken, {
+    cookieStore.set(SESSION_COOKIE_NAME, freshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -101,12 +129,9 @@ export async function POST(req: Request) {
       maxAge: SESSION_MAX_AGE_SECONDS,
     });
 
-    return NextResponse.json({ ok: true, message: 'تم تغيير كلمة المرور وحفظها بنجاح.' });
+    return NextResponse.json({ ok: true, message: 'تم تغيير كلمة المرور بنجاح.' });
   } catch (err: any) {
-    console.error('Server change-password error:', err);
-    return NextResponse.json(
-      { ok: false, message: 'حدث خطأ في معالجة تغيير كلمة المرور.' },
-      { status: 500 }
-    );
+    console.error('Change password error:', err);
+    return NextResponse.json({ ok: false, message: 'حدث خطأ في معالجة تغيير كلمة المرور.' }, { status: 500 });
   }
 }

@@ -9,6 +9,7 @@
 import crypto from 'node:crypto';
 
 export interface SessionPayload {
+  sessionId: string;
   userId: string;
   name: string;
   email: string | null;
@@ -22,19 +23,73 @@ export interface SessionPayload {
 export const SESSION_COOKIE_NAME = 'ps_session';
 export const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
-// Server secret key fallback for development (production must set SESSION_SECRET)
-function getSessionSecret(): string {
-  const secret = process.env.SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || 'portsaid_hub_dev_secret_key_change_in_prod_min32chars';
-  return secret;
+const DEV_FALLBACK_SECRET = 'portsaid_hub_dev_secret_only_local_dev_minimum_32_characters';
+
+// Server secret key validation: Enforced strictly in production without insecure fallback
+export function getSessionSecret(): string {
+  const secret = process.env.SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (process.env.NODE_ENV === 'production') {
+    if (!secret || secret.length < 32 || secret === DEV_FALLBACK_SECRET) {
+      throw new Error(
+        'FATAL_SECURITY_CONFIG: In production, SESSION_SECRET must be set, unique, and contain at least 32 characters.'
+      );
+    }
+    return secret;
+  }
+
+  // Development/Test fallback only
+  return secret || DEV_FALLBACK_SECRET;
+}
+
+// In-Memory Revocation Store for instantaneous session invalidation
+const revokedSessionIds = new Set<string>();
+const userRevocationTimestamps = new Map<string, number>();
+
+export function revokeSession(sessionId: string): void {
+  if (sessionId) {
+    revokedSessionIds.add(sessionId);
+  }
+}
+
+export function revokeAllUserSessions(userId: string): void {
+  if (userId) {
+    userRevocationTimestamps.set(userId, Math.floor(Date.now() / 1000));
+  }
+}
+
+export function isSessionRevoked(payload: SessionPayload): boolean {
+  if (payload.sessionId && revokedSessionIds.has(payload.sessionId)) {
+    return true;
+  }
+  const minIat = userRevocationTimestamps.get(payload.userId);
+  if (minIat && payload.iat <= minIat) {
+    return true;
+  }
+  return false;
 }
 
 /**
  * Creates a cryptographically signed session token: base64(payload).base64(hmac)
  */
-export function sealSessionToken(payload: Omit<SessionPayload, 'iat' | 'exp'>, maxAgeSeconds = SESSION_MAX_AGE_SECONDS): string {
-  const now = Math.floor(Date.now() / 1000);
+export function sealSessionToken(
+  payload: Omit<SessionPayload, 'iat' | 'exp' | 'sessionId'> & { sessionId?: string },
+  maxAgeSeconds = SESSION_MAX_AGE_SECONDS
+): string {
+  let now = Math.floor(Date.now() / 1000);
+  const minIat = userRevocationTimestamps.get(payload.userId);
+  if (minIat && now <= minIat) {
+    now = minIat + 1;
+  }
+
   const fullPayload: SessionPayload = {
-    ...payload,
+    sessionId: payload.sessionId || crypto.randomUUID(),
+    userId: payload.userId,
+    name: payload.name,
+    email: payload.email,
+    phone: payload.phone,
+    role: payload.role,
+    sessionVersion: payload.sessionVersion || 1,
     iat: now,
     exp: now + maxAgeSeconds,
   };
@@ -50,7 +105,7 @@ export function sealSessionToken(payload: Omit<SessionPayload, 'iat' | 'exp'>, m
 }
 
 /**
- * Verifies and unseals a signed session token. Returns null if invalid, tampered, or expired.
+ * Verifies and unseals a signed session token. Returns null if invalid, tampered, expired, or revoked.
  */
 export function unsealSessionToken(token: string): SessionPayload | null {
   if (!token || typeof token !== 'string') return null;
@@ -85,6 +140,11 @@ export function unsealSessionToken(token: string): SessionPayload | null {
 
     if (!payload.userId || !payload.role) {
       return null;
+    }
+
+    // 4. Check revocation status
+    if (isSessionRevoked(payload)) {
+      return null; // Token revoked
     }
 
     return payload;

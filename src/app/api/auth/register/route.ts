@@ -3,14 +3,27 @@ import { cookies } from 'next/headers';
 import { getSupabaseServer } from '@/lib/supabase/server';
 import { hashPasswordModern } from '@/lib/auth/password';
 import { sealSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from '@/lib/auth/session';
+import { checkRateLimit, getClientIp } from '@/lib/auth/rateLimit';
+import { normalizePhone } from '@/lib/auth/validation';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   try {
+    const ip = getClientIp(req);
+
+    // 1. IP-level rate limiting: max 5 registrations per hour per IP
+    const regRate = checkRateLimit(`register:${ip}`, 5, 60 * 60);
+    if (!regRate.allowed) {
+      return NextResponse.json(
+        { ok: false, message: 'تم تجاوز الحد الأقصى لمحاولات التسجيل من هذا الجهاز. برجاء المحاولة بعد ساعة.' },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
 
-    // 1. Anti-Bot Honeypot check: If the hidden honeypot field is filled, reject silently
+    // 2. Anti-Bot Honeypot check: If the hidden honeypot field is filled, reject silently
     if (body.website_url || body.hp_check) {
       return NextResponse.json({ ok: false, message: 'طلب غير صالح.' }, { status: 400 });
     }
@@ -35,9 +48,9 @@ export async function POST(req: Request) {
 
     const trimmedName = (name || '').trim();
     const trimmedEmail = (email || '').toLowerCase().trim();
-    const trimmedPhone = (phone || '').trim();
+    const normalizedPhone = normalizePhone((phone || '').trim());
 
-    if (!trimmedName || !trimmedEmail || !trimmedPhone || !password) {
+    if (!trimmedName || !trimmedEmail || !normalizedPhone || !password) {
       return NextResponse.json(
         { ok: false, message: 'جميع الحقول الأساسية (الاسم، البريد، الهاتف، كلمة المرور) مطلوبة.' },
         { status: 400 }
@@ -51,7 +64,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Hash password with modern Salted Scrypt
+    // 3. Hash password with modern Salted Scrypt
     const hashedPassword = hashPasswordModern(password);
 
     const supabase = getSupabaseServer();
@@ -62,7 +75,7 @@ export async function POST(req: Request) {
         userId: mockId,
         name: trimmedName,
         email: trimmedEmail,
-        phone: trimmedPhone,
+        phone: normalizedPhone,
         role: role === 'merchant' ? 'merchant' : 'user',
       });
 
@@ -80,7 +93,7 @@ export async function POST(req: Request) {
           id: mockId,
           name: trimmedName,
           email: trimmedEmail,
-          phone: trimmedPhone,
+          phone: normalizedPhone,
           role: role === 'merchant' ? 'merchant' : 'user',
           points: role === 'merchant' ? 0 : 20,
           email_verified: false,
@@ -89,7 +102,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 3. Resolve metadata IDs
+    // 4. Resolve metadata IDs
     let userTypeId: number | null = null;
     let governorateId: number | null = null;
     let institutionId: number | null = null;
@@ -119,13 +132,13 @@ export async function POST(req: Request) {
 
     const initialPoints = role === 'merchant' ? 0 : 20;
 
-    // 4. Insert user into DB
+    // 5. Insert user into DB
     const { data: newUser, error: insertErr } = await supabase
       .from('users')
       .insert({
         name: trimmedName,
         email: trimmedEmail,
-        phone: trimmedPhone,
+        phone: normalizedPhone,
         password_hash: hashedPassword,
         gender: gender || 'male',
         role_id: role === 'merchant' ? 3 : 4,
@@ -148,13 +161,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: insertErr.message }, { status: 400 });
     }
 
-    // 5. Handle merchant partner application if applicable
+    // 6. Handle merchant partner application if applicable
     if (role === 'merchant' && business_name) {
       await supabase.from('partner_applications').insert({
         user_id: newUser.id,
         business_name: business_name.trim(),
         area_ar: (area || 'بورسعيد').trim(),
-        phone: trimmedPhone,
+        phone: normalizedPhone,
         proposed_discount_percent: discount || 10,
         proposed_commission_amount: commission || 5,
         promo_notes: notes || '',
@@ -162,7 +175,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // 6. Record welcome ledger entry if points awarded
+    // 7. Record welcome ledger entry if points awarded
     if (initialPoints > 0) {
       try {
         await supabase.from('points_ledger').insert({
@@ -178,7 +191,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 7. Issue HttpOnly Session Cookie
+    // 8. Issue HttpOnly Session Cookie
     const userRole = role === 'merchant' ? 'merchant' : 'user';
     const sessionToken = sealSessionToken({
       userId: newUser.id,
