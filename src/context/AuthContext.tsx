@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, RoleType, UserTypeCategory, GenderType } from '@/types';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
-import { hashPassword, verifyPassword, logSupabaseActivity, resolveMetadataIds } from '@/lib/supabase/auth';
+import { logSupabaseActivity } from '@/lib/supabase/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [hasSeenWelcome, setHasSeenWelcomeState] = useState(false);
 
-  // تحميل الثيم وحالة الترحيب والمستخدم المخزن
+  // تحميل الثيم وحالة الترحيب والتحقق الخادمي من الجلسة الآمنة
   useEffect(() => {
     try {
       const savedTheme = localStorage.getItem('ps_theme') as 'light' | 'dark' | null;
@@ -72,13 +72,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const welcomeSeen = sessionStorage.getItem('ps_welcome_seen') === 'true';
       setHasSeenWelcomeState(welcomeSeen);
 
+      // تحميل فوري مساعد لواجهة المستخدم من الكاش
       const savedUser = sessionStorage.getItem('ps_user');
       if (savedUser) {
-        setUser(JSON.parse(savedUser));
+        try {
+          setUser(JSON.parse(savedUser));
+        } catch (e) {}
       }
+
+      // التحقق الإلزامي من الجلسة الخادمية الموثقة عبر HttpOnly Cookie
+      fetch('/api/auth/me')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.ok && data.user) {
+            setUser(data.user);
+            sessionStorage.setItem('ps_user', JSON.stringify(data.user));
+          } else {
+            setUser(null);
+            sessionStorage.removeItem('ps_user');
+          }
+        })
+        .catch((err) => {
+          console.warn('Session verification notice:', err);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     } catch (e) {
       console.error(e);
-    } finally {
       setLoading(false);
     }
   }, []);
@@ -105,7 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   /**
-   * تسجيل الدخول عبر Supabase
+   * تسجيل الدخول الآمن عبر مسار الخادم Next.js API (/api/auth/login)
    */
   const login = async (identifier: string, pass: string): Promise<{ ok: boolean; message?: string }> => {
     const trimmedId = identifier.trim();
@@ -113,114 +134,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { ok: false, message: 'برجاء كتابة رقم الهاتف أو البريد الإلكتروني وكلمة المرور.' };
     }
 
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        const isEmail = trimmedId.includes('@');
-        const query = supabase
-          .from('users')
-          .select('*, roles(code), user_types(code), governorates(name_ar), institutions(name_ar)')
-          .eq(isEmail ? 'email' : 'phone', isEmail ? trimmedId.toLowerCase() : trimmedId)
-          .eq('status', 'active')
-          .is('deleted_at', null)
-          .maybeSingle();
-
-        const { data, error } = await query;
-        if (error || !data) {
-          return { ok: false, message: 'بيانات تسجيل الدخول أو كلمة المرور غير صحيحة.' };
-        }
-
-        // التحقق الآمن من كلمة المرور ضد الهاش
-        const isPasswordValid = await verifyPassword(pass, data.password_hash);
-        if (!isPasswordValid) {
-          return { ok: false, message: 'كلمة المرور غير صحيحة.' };
-        }
-
-        const roleCode = (data.roles?.code || 'user') as RoleType;
-        const loggedUser: User = {
-          id: data.id,
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          role: roleCode,
-          type: data.user_types?.code,
-          gov: data.governorates?.name_ar,
-          institution: data.institutions?.name_ar,
-          gender: data.gender,
-          points: data.points_balance || 0,
-          avatar: data.avatar,
-          email_verified: !!data.email_verified_at,
-          staff: roleCode === 'owner' || roleCode === 'admin',
-          must_change_password: data.must_change_password,
-        };
-
-        // تحديث آخر موعد تسجيل دخول
-        try {
-          await supabase
-            .from('users')
-            .update({ last_login_at: new Date().toISOString() })
-            .eq('id', data.id);
-
-          await logSupabaseActivity(
-            data.id,
-            data.name,
-            roleCode,
-            'AUTH_LOGIN',
-            'تسجيل دخول ناجح للمستخدم عبر Supabase'
-          );
-        } catch (e) {
-          console.warn('Login metadata update notice:', e);
-        }
-
-        saveUserSession(loggedUser);
-        return { ok: true };
-      } catch (err: any) {
-        console.warn('Supabase login network/DNS error, falling back to local session:', err);
-        const isOwner = trimmedId.toLowerCase().includes('admin') || trimmedId === '01000000001';
-        const isMerchant = trimmedId.toLowerCase().includes('merchant') || trimmedId === '01000000002';
-        const mockUser: User = {
-          id: isOwner ? '00000000-0000-0000-0000-000000000001' : '00000000-0000-0000-0000-000000000002',
-          name: isOwner ? 'المالك الرئيسي' : isMerchant ? 'صاحب مطعم كاستن' : (trimmedId.split('@')[0] || 'أحمد محمود'),
-          email: trimmedId.includes('@') ? trimmedId : 'user@portsaidhub.com',
-          phone: trimmedId.startsWith('01') ? trimmedId : '01012345678',
-          role: isOwner ? 'owner' : isMerchant ? 'merchant' : 'user',
-          type: 'student',
-          gov: 'بورسعيد',
-          institution: 'كلية الهندسة — جامعة بورسعيد',
-          gender: 'male',
-          points: isOwner ? 500 : 120,
-          email_verified: true,
-          staff: isOwner,
-        };
-
-        saveUserSession(mockUser);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: trimmedId, password: pass }),
+      });
+      const data = await res.json();
+      if (data.ok && data.user) {
+        saveUserSession(data.user);
         return { ok: true };
       }
-    } else {
-      // Offline fallback login for preview
-      const isOwner = trimmedId.toLowerCase().includes('admin') || trimmedId === '01000000001';
-      const isMerchant = trimmedId.toLowerCase().includes('merchant') || trimmedId === '01000000002';
-      const mockUser: User = {
-        id: isOwner ? '00000000-0000-0000-0000-000000000001' : '00000000-0000-0000-0000-000000000002',
-        name: isOwner ? 'المالك الرئيسي' : isMerchant ? 'صاحب مطعم كاستن' : 'أحمد محمود',
-        email: trimmedId.includes('@') ? trimmedId : 'user@portsaidhub.com',
-        phone: trimmedId.startsWith('01') ? trimmedId : '01012345678',
-        role: isOwner ? 'owner' : isMerchant ? 'merchant' : 'user',
-        type: 'student',
-        gov: 'بورسعيد',
-        institution: 'كلية الهندسة — جامعة بورسعيد',
-        gender: 'male',
-        points: isOwner ? 500 : 120,
-        email_verified: true,
-        staff: isOwner,
-      };
-
-      saveUserSession(mockUser);
-      return { ok: true };
+      return { ok: false, message: data.message || 'بيانات تسجيل الدخول أو كلمة المرور غير صحيحة.' };
+    } catch (err: any) {
+      console.warn('Server login request error, checking fallback:', err);
+      return { ok: false, message: 'تعذر الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت.' };
     }
   };
 
   /**
-   * إنشاء وتسجيل حساب مستخدم جديد وحفظه في Supabase
+   * إنشاء وتسجيل حساب مستخدم جديد بأمان عبر مسار الخادم Next.js API (/api/auth/register)
    */
   const registerUser = async (data: {
     name: string;
@@ -236,125 +169,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { ok: false, message: 'جميع الحقول الأساسية مطلوبة.' };
     }
 
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        const hashedPassword = await hashPassword(data.password);
-        const { userTypeId, governorateId, institutionId } = await resolveMetadataIds({
-          userType: data.user_type,
-          governorateName: data.governorate,
-          institutionName: data.institution,
-        });
-
-        const initialPoints = 20; // 20 نقطة هدية تسجيل ترحيبية
-
-        const { data: newUser, error } = await supabase
-          .from('users')
-          .insert({
-            name: data.name.trim(),
-            email: data.email.toLowerCase().trim(),
-            phone: data.phone.trim(),
-            password_hash: hashedPassword,
-            gender: data.gender,
-            role_id: 4, // user
-            user_type_id: userTypeId,
-            governorate_id: governorateId,
-            institution_id: institutionId,
-            points_balance: initialPoints,
-            status: 'active',
-          })
-          .select('id, name, email, phone, gender, points_balance, created_at')
-          .single();
-
-        if (error) {
-          if (error.message.includes('unique') || error.code === '23505') {
-            return { ok: false, message: 'البريد الإلكتروني أو رقم الهاتف مسجل بالفعل مسبقاً.' };
-          }
-          return { ok: false, message: error.message };
-        }
-
-        // إضافة حركة النقاط الترحيبية في جدول points_ledger على Supabase
-        try {
-          await supabase.from('points_ledger').insert({
-            user_id: newUser.id,
-            delta: initialPoints,
-            balance_after: initialPoints,
-            reason: 'هدية إنشاء الحساب الجديد والترحيب في بورسعيد',
-            ref_type: 'welcome_gift',
-          });
-
-          // تسجيل الحدث في سجل النشاط
-          await logSupabaseActivity(
-            newUser.id,
-            data.name,
-            'user',
-            'AUTH_REGISTER',
-            'تسجيل حساب مستخدم جديد وحفظه في قاعدة بيانات Supabase'
-          );
-        } catch (subErr) {
-          console.warn('Post registration auxiliary insert notice:', subErr);
-        }
-
-        const registered: User = {
-          id: newUser.id,
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          role: 'user',
-          type: data.user_type,
-          gov: data.governorate || 'بورسعيد',
-          institution: data.institution,
-          gender: data.gender,
-          points: initialPoints,
-          email_verified: false,
-          staff: false,
-        };
-
-        saveUserSession(registered);
-        return { ok: true };
-      } catch (err: any) {
-        console.warn('Supabase register network/DNS error, falling back to local registration:', err);
-        const registered: User = {
-          id: crypto.randomUUID(),
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          role: 'user',
-          type: data.user_type,
-          gov: data.governorate || 'بورسعيد',
-          institution: data.institution,
-          gender: data.gender,
-          points: 20,
-          email_verified: false,
-          staff: false,
-        };
-
-        saveUserSession(registered);
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, role: 'user' }),
+      });
+      const json = await res.json();
+      if (json.ok && json.user) {
+        saveUserSession(json.user);
         return { ok: true };
       }
-    } else {
-      // Offline fallback
-      const registered: User = {
-        id: crypto.randomUUID(),
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        role: 'user',
-        type: data.user_type,
-        gov: data.governorate || 'بورسعيد',
-        institution: data.institution,
-        gender: data.gender,
-        points: 20,
-        email_verified: false,
-        staff: false,
-      };
-
-      saveUserSession(registered);
-      return { ok: true };
+      return { ok: false, message: json.message || 'حدث خطأ أثناء التسجيل.' };
+    } catch (err: any) {
+      console.warn('Server register request error, checking fallback:', err);
+      return { ok: false, message: 'تعذر الاتصال بالخادم لإتمام التسجيل.' };
     }
   };
 
   /**
-   * إنشاء وتسجيل حساب تاجر / شريك وطلب الانضمام وحفظهما في Supabase
+   * إنشاء وتسجيل حساب تاجر / شريك بأمان عبر مسار الخادم Next.js API (/api/auth/register)
    */
   const registerMerchant = async (data: {
     name: string;
@@ -368,108 +202,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     commission: number;
     notes?: string;
   }): Promise<{ ok: boolean; message?: string }> => {
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        const hashedPassword = await hashPassword(data.password);
-
-        const { data: newUser, error: userErr } = await supabase
-          .from('users')
-          .insert({
-            name: data.name.trim(),
-            email: data.email.toLowerCase().trim(),
-            phone: data.phone.trim(),
-            password_hash: hashedPassword,
-            role_id: 3, // merchant
-            points_balance: 0,
-            status: 'active',
-          })
-          .select('id, name, email, phone')
-          .single();
-
-        if (userErr) {
-          if (userErr.message.includes('unique') || userErr.code === '23505') {
-            return { ok: false, message: 'البريد الإلكتروني أو رقم الهاتف مسجل بالفعل مسبقاً.' };
-          }
-          return { ok: false, message: userErr.message };
-        }
-
-        // حفظ طلب انضمام التاجر في جدول partner_applications على Supabase
-        await supabase.from('partner_applications').insert({
-          user_id: newUser.id,
-          business_name: data.business_name.trim(),
-          area_ar: data.area.trim(),
-          phone: data.phone.trim(),
-          proposed_discount_percent: data.discount,
-          proposed_commission_amount: data.commission,
-          promo_notes: data.notes || '',
-          status: 'pending',
-        });
-
-        // تسجيل النشاط
-        await logSupabaseActivity(
-          newUser.id,
-          data.name,
-          'merchant',
-          'MERCHANT_APPLY',
-          `تسجيل تاجر جديد بنجاح (${data.business_name}) وحفظ الطلب في Supabase`
-        );
-
-        const registered: User = {
-          id: newUser.id,
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          role: 'merchant',
-          points: 0,
-          email_verified: false,
-          staff: false,
-        };
-
-        saveUserSession(registered);
-        return { ok: true };
-      } catch (err: any) {
-        console.warn('Supabase merchant register network/DNS error, falling back to local merchant session:', err);
-        const registered: User = {
-          id: crypto.randomUUID(),
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          role: 'merchant',
-          points: 0,
-          email_verified: false,
-          staff: false,
-        };
-
-        saveUserSession(registered);
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, role: 'merchant' }),
+      });
+      const json = await res.json();
+      if (json.ok && json.user) {
+        saveUserSession(json.user);
         return { ok: true };
       }
-    } else {
-      const registered: User = {
-        id: crypto.randomUUID(),
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        role: 'merchant',
-        points: 0,
-        email_verified: false,
-        staff: false,
-      };
-
-      saveUserSession(registered);
-      return { ok: true };
+      return { ok: false, message: json.message || 'حدث خطأ أثناء تسجيل الشريك.' };
+    } catch (err: any) {
+      console.warn('Server merchant register error:', err);
+      return { ok: false, message: 'تعذر الاتصال بالخادم لإتمام التسجيل.' };
     }
   };
 
   /**
-   * تسجيل الخروج
+   * تسجيل الخروج وإبطال الجلسة الخادمية
    */
-  const logout = () => {
+  const logout = async () => {
     setUser(null);
     try {
       sessionStorage.removeItem('ps_user');
-      if (isSupabaseConfigured() && supabase) {
-        supabase.auth.signOut().catch(() => {});
-      }
+      await fetch('/api/auth/logout', { method: 'POST' });
     } catch (e) {}
   };
 
@@ -617,29 +375,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   /**
-   * تحديث الصورة الشخصية وحفظها في Supabase
+   * تحديث الصورة الشخصية بأمان عبر مسار الخادم Next.js API (/api/user/avatar)
    */
   const updateAvatar = async (avatarUrl: string) => {
     if (!user) return;
     const updated = { ...user, avatar: avatarUrl };
     saveUserSession(updated);
 
-    if (isSupabaseConfigured() && supabase && user.id) {
-      try {
-        await supabase
-          .from('users')
-          .update({ avatar: avatarUrl })
-          .eq('id', user.id);
-      } catch (e) {
-        console.warn('Avatar sync to Supabase notice:', e);
-      }
+    try {
+      await fetch('/api/user/avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatarUrl }),
+      });
+    } catch (e) {
+      console.warn('Avatar sync notice:', e);
     }
   };
 
   /**
-   * تغيير كلمة المرور والتحقق منها وحفظها المشفرة في Supabase
+   * تغيير كلمة المرور بأمان عبر مسار الخادم Next.js API (/api/auth/change-password)
    */
-  const changePassword = async (oldPass: string, newPass: string) => {
+  const changePassword = async (oldPass: string, newPass: string): Promise<{ ok: boolean; message?: string }> => {
     if (!oldPass || !newPass) {
       return { ok: false, message: 'يرجى كتابة كلمة المرور الحالية والجديدة.' };
     }
@@ -650,52 +407,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { ok: false, message: 'اختر كلمة مرور مختلفة عن الحالية.' };
     }
 
-    if (isSupabaseConfigured() && supabase && user?.id) {
-      try {
-        // التحقق من كلمة المرور القديمة المخزنة
-        const { data: dbUser, error } = await supabase
-          .from('users')
-          .select('password_hash')
-          .eq('id', user.id)
-          .single();
-
-        if (error || !dbUser) {
-          return { ok: false, message: 'تعذر التحقق من بيانات المستخدم.' };
-        }
-
-        const isCurrentValid = await verifyPassword(oldPass, dbUser.password_hash);
-        if (!isCurrentValid) {
-          return { ok: false, message: 'كلمة المرور الحالية غير صحيحة.' };
-        }
-
-        const newHashed = await hashPassword(newPass);
-        const { error: updateErr } = await supabase
-          .from('users')
-          .update({
-            password_hash: newHashed,
-            must_change_password: false,
-          })
-          .eq('id', user.id);
-
-        if (updateErr) {
-          return { ok: false, message: updateErr.message };
-        }
-
-        await logSupabaseActivity(
-          user.id,
-          user.name,
-          user.role,
-          'AUTH_PASSWORD_CHANGE',
-          'تم تغيير كلمة المرور بنجاح وتحديثها في Supabase'
-        );
-
-        return { ok: true, message: 'تم تغيير كلمة المرور بنجاح في Supabase.' };
-      } catch (e: any) {
-        return { ok: false, message: e?.message || 'حصل خطأ أثناء تحديث كلمة المرور.' };
-      }
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ oldPassword: oldPass, newPassword: newPass }),
+      });
+      const json = await res.json();
+      return { ok: json.ok, message: json.message };
+    } catch (err: any) {
+      console.warn('Server change-password request error:', err);
+      return { ok: false, message: 'حدث خطأ في الاتصال بالخادم لتحديث كلمة المرور.' };
     }
-
-    return { ok: true, message: 'تم تغيير كلمة المرور بنجاح.' };
   };
 
   return (
