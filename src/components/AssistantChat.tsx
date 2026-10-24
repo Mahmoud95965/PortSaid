@@ -23,6 +23,7 @@ import {
   Info,
   Map as MapIcon,
   Cpu,
+  Maximize2,
 } from 'lucide-react';
 import { isPointInPortSaid, identifyPortSaidDistrict } from '@/lib/geoUtils';
 
@@ -198,13 +199,16 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
     const textToSend = userText || input.trim();
     if (!textToSend || loading) return;
 
-    // فحص طلب فتح الخريطة
-    if (textToSend.includes('افتح خريطة') || textToSend.includes('الخريطة التفاعلية') || textToSend.includes('عرض الخريطة')) {
-      if (onNavigate) {
+    // بمجرد إرسال الرسالة، الدخول فوراً على صفحة Gemini الكاملة للمحادثة الثابتة
+    if (onNavigate) {
+      setInput('');
+      setOpen(false);
+      if (textToSend.includes('افتح خريطة') || textToSend.includes('الخريطة التفاعلية') || textToSend.includes('عرض الخريطة')) {
         onNavigate('map');
-        setOpen(false);
-        return;
+      } else {
+        onNavigate('chat', textToSend);
       }
+      return;
     }
 
     setInput('');
@@ -395,6 +399,21 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
 
               {/* Header Action Buttons */}
               <div className="flex items-center gap-1.5 relative z-10 shrink-0">
+                {onNavigate && (
+                  <button
+                    onClick={() => {
+                      onNavigate('chat');
+                      setOpen(false);
+                    }}
+                    title="فتح في شاشة Gemini الكاملة"
+                    type="button"
+                    className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-500/25 via-indigo-500/25 to-amber-500/25 hover:bg-white/25 text-white flex items-center gap-1 text-[11px] font-black border border-white/20 transition"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5 text-sand-300" />
+                    <span className="hidden sm:inline">شاشة Gemini</span>
+                  </button>
+                )}
+
                 {onNavigate && (
                   <button
                     onClick={() => {

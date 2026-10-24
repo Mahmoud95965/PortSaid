@@ -54,6 +54,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const navLinks = [
     { key: 'home', label: 'الرئيسية', icon: Home },
+    { key: 'chat', label: 'مساعد Gemini', icon: Sparkles },
     { key: 'map', label: 'الخريطة', icon: MapPin },
     { key: 'bus', label: 'المواصلات', icon: Bus },
     { key: 'housing', label: 'السكن', icon: Bed },

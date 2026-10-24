@@ -16,6 +16,7 @@ import { TransportView } from '@/components/TransportView';
 import { HousingView } from '@/components/HousingView';
 import { ExploreView } from '@/components/ExploreView';
 import { MapView } from '@/components/MapView';
+import { GeminiChatView } from '@/components/GeminiChatView';
 import { FeedbackView } from '@/components/FeedbackView';
 import { PartnerView } from '@/components/PartnerView';
 import { AccountView } from '@/components/AccountView';
@@ -43,6 +44,7 @@ export default function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('fun');
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [targetMapPlaceId, setTargetMapPlaceId] = useState<string | null>(null);
+  const [targetChatInitialPrompt, setTargetChatInitialPrompt] = useState<string | null>(null);
 
   const [places, setPlaces] = useState<Place[]>(INITIAL_PLACES);
   const [activeCouponPlace, setActiveCouponPlace] = useState<Place | null>(null);
@@ -123,6 +125,11 @@ export default function HomePage() {
 
   const handleNavigate = (view: string, arg?: string | null) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (view === 'chat') {
+      setTargetChatInitialPrompt(arg || null);
+      setCurrentView('chat');
+      return;
+    }
     if (view === 'map') {
       setTargetMapPlaceId(arg || null);
       setCurrentView('map');
@@ -389,6 +396,17 @@ export default function HomePage() {
                 onBack={() => handleNavigate('home')}
                 onSelectPlace={(id) => handleNavigate('place', id)}
                 onOpenCouponModal={handleRequestCoupon}
+              />
+            </motion.div>
+          )}
+
+          {currentView === 'chat' && (
+            <motion.div key="chat-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+              <GeminiChatView
+                initialPrompt={targetChatInitialPrompt}
+                onNavigate={handleNavigate}
+                onOpenPoints={() => handleNavigate('points')}
+                onBack={() => handleNavigate('home')}
               />
             </motion.div>
           )}
