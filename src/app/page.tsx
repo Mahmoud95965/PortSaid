@@ -443,7 +443,10 @@ export default function HomePage() {
       />
 
       {/* Assistant AI Chatbot FAB */}
-      <AssistantChat onOpenPoints={() => handleNavigate('points')} />
+      <AssistantChat
+        onOpenPoints={() => handleNavigate('points')}
+        onNavigate={handleNavigate}
+      />
 
       {/* Footer */}
       <Footer />
