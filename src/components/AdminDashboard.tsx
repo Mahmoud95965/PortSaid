@@ -109,7 +109,7 @@ export const AdminDashboard: React.FC = () => {
 
           const { data: staffData } = await supabase
             .from('users')
-            .select('*, roles(code)')
+            .select('id, name, email, phone, status, role_id, roles(code)')
             .in('role_id', [1, 2])
             .is('deleted_at', null);
 
