@@ -83,7 +83,8 @@ const OPENROUTER_KEY_STORAGE = 'portsaid_openrouter_key';
 const OPENROUTER_MODEL_STORAGE = 'portsaid_openrouter_model';
 
 const POPULAR_MODELS = [
-  { id: 'google/gemini-2.0-flash-001', name: 'Gemini 2.0 Flash (سريع ودقيق وموصى به)', tag: 'Recommended ⭐' },
+  { id: 'openai/gpt-4.1-nano', name: 'OpenAI GPT-4.1 Nano (الموديل المعتمد فائق السرعة)', tag: 'Default ⭐' },
+  { id: 'google/gemini-2.0-flash-001', name: 'Gemini 2.0 Flash (سريع ودقيق)', tag: 'Fast ⚡' },
   { id: 'google/gemini-2.0-flash-thinking-exp:free', name: 'Gemini 2.0 Flash Thinking (مجاني ويفكر)', tag: 'Free 💡' },
   { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1 (تفكير متعمق واستدلال كامل)', tag: 'Reasoning 🧠' },
   { id: 'deepseek/deepseek-chat', name: 'DeepSeek V3 (ذكاء عالي وسريع)', tag: 'Fast ⚡' },
@@ -145,7 +146,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
   // إعدادات الموديل و OpenRouter
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [customKey, setCustomKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState('google/gemini-2.0-flash-001');
+  const [selectedModel, setSelectedModel] = useState('openai/gpt-4.1-nano');
   const [isTestingKey, setIsTestingKey] = useState(false);
   const [keyTestFeedback, setKeyTestFeedback] = useState<{ ok: boolean; message: string } | null>(null);
 
@@ -314,7 +315,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
     if (savedModel && savedModel !== 'built-in') {
       headers['x-openrouter-model'] = savedModel.trim();
     } else if (savedKey && savedKey.trim().length > 5) {
-      headers['x-openrouter-model'] = 'google/gemini-2.0-flash-001';
+      headers['x-openrouter-model'] = 'openai/gpt-4.1-nano';
     }
     return headers;
   };

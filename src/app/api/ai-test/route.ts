@@ -5,7 +5,7 @@ export const runtime = 'nodejs';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { apiKey, model = 'google/gemini-2.0-flash-001' } = body;
+    const { apiKey, model = 'openai/gpt-4.1-nano' } = body;
 
     const keyToTest = (apiKey && apiKey.trim().length > 5)
       ? apiKey.trim()
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
         'X-Title': 'Port Said Hub Key Verification',
       },
       body: JSON.stringify({
-        model: model || 'google/gemini-2.0-flash-001',
+        model: model || 'openai/gpt-4.1-nano',
         messages: [{ role: 'user', content: 'Say "OK"' }],
         max_tokens: 5,
       }),

@@ -192,7 +192,7 @@ export async function POST(req: Request) {
     const headerKey = req.headers.get('x-openrouter-key');
     const headerModel = req.headers.get('x-openrouter-model');
     const openRouterKey = (headerKey && headerKey.trim().length > 5) ? headerKey.trim() : (process.env.OPENROUTER_API_KEY || '').trim();
-    const openRouterModel = (headerModel && headerModel.trim()) || process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001';
+    const openRouterModel = (headerModel && headerModel.trim()) || process.env.OPENROUTER_MODEL || 'openai/gpt-4.1-nano';
 
     // 1. تشغيل موديل OpenRouter الحقيقي عند توفر المفتاح
     if (openRouterKey && openRouterKey.length > 5) {

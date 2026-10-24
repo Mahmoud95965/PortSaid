@@ -282,6 +282,8 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
         }
         if (storedModel && storedModel.trim() && storedModel !== 'built-in') {
           headers['x-openrouter-model'] = storedModel.trim();
+        } else if (storedKey && storedKey.trim().length > 5) {
+          headers['x-openrouter-model'] = 'openai/gpt-4.1-nano';
         }
       }
 
