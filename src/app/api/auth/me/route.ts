@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseServer } from '@/lib/supabase/server';
 import { unsealSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { dbFindUserById } from '@/lib/db/localDb';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,21 +23,35 @@ export async function GET() {
 
     const supabase = getSupabaseServer();
     if (!supabase) {
-      // In dev fallback mode when remote DB is offline, return session payload
+      // Local persistent database lookup
+      const dbUser = dbFindUserById(session.userId);
+      if (!dbUser || dbUser.status !== 'active' || dbUser.deleted_at) {
+        cookieStore.delete(SESSION_COOKIE_NAME);
+        return NextResponse.json({ ok: false, user: null });
+      }
+
       return NextResponse.json({
         ok: true,
         user: {
-          id: session.userId,
-          name: session.name,
-          email: session.email,
-          phone: session.phone,
-          role: session.role,
-          points: 120,
-          staff: session.role === 'owner' || session.role === 'admin',
+          id: dbUser.id,
+          name: dbUser.name,
+          email: dbUser.email,
+          phone: dbUser.phone,
+          role: dbUser.role,
+          type: dbUser.user_type,
+          gov: dbUser.governorate,
+          institution: dbUser.institution,
+          gender: dbUser.gender,
+          points: dbUser.points_balance,
+          avatar: dbUser.avatar,
+          email_verified: !!dbUser.email_verified_at,
+          staff: dbUser.role === 'owner' || dbUser.role === 'admin',
+          must_change_password: !!dbUser.must_change_password,
         },
       });
     }
 
+    // Remote Supabase database lookup
     const { data: dbUser, error } = await supabase
       .from('users')
       .select('*, roles(code), user_types(code), governorates(name_ar), institutions(name_ar)')
@@ -46,7 +61,6 @@ export async function GET() {
       .maybeSingle();
 
     if (error || !dbUser) {
-      // User deleted or suspended
       cookieStore.delete(SESSION_COOKIE_NAME);
       return NextResponse.json({ ok: false, user: null });
     }

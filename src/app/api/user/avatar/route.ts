@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { getSupabaseServer } from '@/lib/supabase/server';
 import { unsealSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
 import { isValidAvatarUrl } from '@/lib/auth/validation';
+import { dbFindUserById, dbUpdateUser } from '@/lib/db/localDb';
 
 export const runtime = 'nodejs';
 
@@ -23,7 +24,6 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { avatarUrl } = body;
 
-    // Validate avatar URL format and length
     if (!avatarUrl || !isValidAvatarUrl(avatarUrl)) {
       return NextResponse.json(
         { ok: false, message: 'رابط الصورة الرمزية غير صالح. يجب أن يكون رابطاً آمناً (HTTP/HTTPS أو مسار صورة).' },
@@ -32,31 +32,44 @@ export async function POST(req: Request) {
     }
 
     const supabase = getSupabaseServer();
-    if (supabase) {
-      // Verify account active status and existence
-      const { data: dbUser, error: fetchErr } = await supabase
-        .from('users')
-        .select('id, status, deleted_at')
-        .eq('id', session.userId)
-        .eq('status', 'active')
-        .is('deleted_at', null)
-        .maybeSingle();
-
-      if (fetchErr || !dbUser) {
-        return NextResponse.json(
-          { ok: false, message: 'الحساب غير موجود أو معطل.' },
-          { status: 403 }
-        );
+    if (!supabase) {
+      // Local persistent database execution
+      const dbUser = dbFindUserById(session.userId);
+      if (!dbUser || dbUser.status !== 'active') {
+        return NextResponse.json({ ok: false, message: 'الحساب غير موجود أو معطل.' }, { status: 403 });
       }
 
-      const { error: updateErr } = await supabase
-        .from('users')
-        .update({ avatar: avatarUrl.trim(), updated_at: new Date().toISOString() })
-        .eq('id', session.userId);
+      dbUpdateUser(session.userId, {
+        avatar: avatarUrl.trim(),
+        updated_at: new Date().toISOString(),
+      });
 
-      if (updateErr) {
-        return NextResponse.json({ ok: false, message: updateErr.message }, { status: 500 });
-      }
+      return NextResponse.json({ ok: true, avatarUrl: avatarUrl.trim() });
+    }
+
+    // Remote Supabase execution
+    const { data: dbUser, error: fetchErr } = await supabase
+      .from('users')
+      .select('id, status, deleted_at')
+      .eq('id', session.userId)
+      .eq('status', 'active')
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (fetchErr || !dbUser) {
+      return NextResponse.json(
+        { ok: false, message: 'الحساب غير موجود أو معطل.' },
+        { status: 403 }
+      );
+    }
+
+    const { error: updateErr } = await supabase
+      .from('users')
+      .update({ avatar: avatarUrl.trim(), updated_at: new Date().toISOString() })
+      .eq('id', session.userId);
+
+    if (updateErr) {
+      return NextResponse.json({ ok: false, message: updateErr.message }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true, avatarUrl: avatarUrl.trim() });

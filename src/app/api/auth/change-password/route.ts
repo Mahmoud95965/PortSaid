@@ -9,6 +9,7 @@ import {
   SESSION_COOKIE_NAME,
   SESSION_MAX_AGE_SECONDS,
 } from '@/lib/auth/session';
+import { dbFindUserById, dbUpdateUser } from '@/lib/db/localDb';
 
 export const runtime = 'nodejs';
 
@@ -52,8 +53,26 @@ export async function POST(req: Request) {
 
     const supabase = getSupabaseServer();
     if (!supabase) {
-      // Local dev mock
+      // Local persistent database execution
+      const dbUser = dbFindUserById(session.userId);
+      if (!dbUser || dbUser.status !== 'active') {
+        return NextResponse.json({ ok: false, message: 'تعذر التحقق من بيانات الحساب أو الحساب معطل.' }, { status: 404 });
+      }
+
+      const { valid } = verifyAndUpgradePassword(oldPassword, dbUser.password_hash);
+      if (!valid) {
+        return NextResponse.json({ ok: false, message: 'كلمة المرور الحالية غير صحيحة.' }, { status: 401 });
+      }
+
+      const newHashed = hashPasswordModern(newPassword);
+      dbUpdateUser(session.userId, {
+        password_hash: newHashed,
+        must_change_password: 0,
+        updated_at: new Date().toISOString(),
+      });
+
       revokeAllUserSessions(session.userId);
+
       const freshToken = sealSessionToken({
         userId: session.userId,
         name: session.name,
@@ -70,10 +89,10 @@ export async function POST(req: Request) {
         maxAge: SESSION_MAX_AGE_SECONDS,
       });
 
-      return NextResponse.json({ ok: true, message: 'تم تغيير كلمة المرور بنجاح.' });
+      return NextResponse.json({ ok: true, message: 'تم تغيير كلمة المرور بنجاح وحفظها.' });
     }
 
-    // 1. Fetch current password hash from DB and verify account is active
+    // Remote Supabase execution
     const { data: dbUser, error: fetchErr } = await supabase
       .from('users')
       .select('id, password_hash, status, deleted_at')
@@ -86,16 +105,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: 'تعذر التحقق من بيانات الحساب أو الحساب معطل.' }, { status: 404 });
     }
 
-    // 2. Verify current password
     const { valid } = verifyAndUpgradePassword(oldPassword, dbUser.password_hash);
     if (!valid) {
       return NextResponse.json({ ok: false, message: 'كلمة المرور الحالية غير صحيحة.' }, { status: 401 });
     }
 
-    // 3. Hash new password with modern Salted Scrypt
     const newHashed = hashPasswordModern(newPassword);
-
-    // 4. Update in database
     const { error: updateErr } = await supabase
       .from('users')
       .update({
@@ -109,10 +124,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: updateErr.message }, { status: 500 });
     }
 
-    // 5. Invalidate all existing sessions on other devices/tabs
     revokeAllUserSessions(session.userId);
 
-    // 6. Re-issue fresh session cookie for the current session
     const freshToken = sealSessionToken({
       userId: session.userId,
       name: session.name,

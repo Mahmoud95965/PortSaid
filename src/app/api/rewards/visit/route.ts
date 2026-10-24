@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseServer } from '@/lib/supabase/server';
 import { unsealSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { dbRecordVisit } from '@/lib/db/localDb';
 
 export const runtime = 'nodejs';
 
@@ -28,16 +29,12 @@ export async function POST(req: Request) {
 
     const supabase = getSupabaseServer();
     if (!supabase) {
-      // Local dev mock response
-      return NextResponse.json({
-        ok: true,
-        message: 'مبروك! تم تسجيل الزيارة بنجاح وحصلت على +20 نقطة 🎉',
-        pointsAwarded: 20,
-        balance: 140,
-      });
+      // Local persistent database execution
+      const result = dbRecordVisit(session.userId, placeId, lat, lon, distanceM);
+      return NextResponse.json(result, { status: result.ok ? 200 : 400 });
     }
 
-    // 1. Verify user exists and is active
+    // Remote Supabase execution
     const { data: dbUser, error: userErr } = await supabase
       .from('users')
       .select('id, status, deleted_at')
@@ -50,11 +47,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: 'الحساب غير موجود أو معطل.' }, { status: 403 });
     }
 
-    // 2. Compute date-based idempotency key
     const today = new Date().toISOString().slice(0, 10);
     const idempKey = `visit_${session.userId}_${placeId}_${today}`;
 
-    // 3. Call atomic RPC with verified session user ID
     const { data, error } = await supabase.rpc('rpc_record_visit', {
       p_user_id: session.userId,
       p_place_id: placeId,

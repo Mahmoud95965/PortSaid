@@ -86,28 +86,27 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart }) => {
       {/* Background Slides */}
       <div className="absolute inset-0" aria-hidden="true">
         <AnimatePresence mode="wait">
-          {SLIDES.map((s, i) => (
-            <motion.div
-              key={s.src}
-              className="absolute inset-0"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: i === slide ? 1 : 0 }}
-              transition={{ duration: 1.2, ease: 'easeInOut' }}
-            >
-              <motion.img
-                src={s.src}
-                alt=""
-                className="w-full h-full object-cover"
-                animate={{
-                  scale: i === slide ? [1, 1.08] : 1,
-                }}
-                transition={{
-                  duration: 6,
-                  ease: 'easeOut',
-                }}
-              />
-            </motion.div>
-          ))}
+          <motion.div
+            key={SLIDES[slide].src}
+            className="absolute inset-0"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.2, ease: 'easeInOut' }}
+          >
+            <motion.img
+              src={SLIDES[slide].src}
+              alt=""
+              className="w-full h-full object-cover"
+              animate={{
+                scale: [1, 1.08],
+              }}
+              transition={{
+                duration: 6,
+                ease: 'easeOut',
+              }}
+            />
+          </motion.div>
         </AnimatePresence>
         {/* Multi-layer overlay */}
         <div

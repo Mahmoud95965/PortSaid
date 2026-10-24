@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseServer } from '@/lib/supabase/server';
 import { unsealSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { dbClaimShareReward } from '@/lib/db/localDb';
 
 export const runtime = 'nodejs';
 
@@ -21,16 +22,12 @@ export async function POST() {
 
     const supabase = getSupabaseServer();
     if (!supabase) {
-      // Local dev mock response
-      return NextResponse.json({
-        ok: true,
-        message: 'مبروك! تمت إضافة +40 نقطة لمشاركة التطبيق بنجاح.',
-        pointsAwarded: 40,
-        balance: 160,
-      });
+      // Local persistent database execution
+      const result = dbClaimShareReward(session.userId);
+      return NextResponse.json(result, { status: result.ok ? 200 : 400 });
     }
 
-    // 1. Verify user exists and is active
+    // Remote Supabase execution
     const { data: dbUser, error: userErr } = await supabase
       .from('users')
       .select('id, status, deleted_at')
@@ -43,7 +40,6 @@ export async function POST() {
       return NextResponse.json({ ok: false, message: 'الحساب غير موجود أو معطل.' }, { status: 403 });
     }
 
-    // 2. Invoke RPC using verified session user ID and deterministic idempotency key
     const idempKey = `share_${session.userId}`;
     const { data, error } = await supabase.rpc('rpc_claim_share_reward', {
       p_user_id: session.userId,

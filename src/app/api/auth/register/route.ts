@@ -5,6 +5,7 @@ import { hashPasswordModern } from '@/lib/auth/password';
 import { sealSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from '@/lib/auth/session';
 import { checkRateLimit, getClientIp } from '@/lib/auth/rateLimit';
 import { normalizePhone } from '@/lib/auth/validation';
+import { dbCreateUser, dbInsertPartnerApplication } from '@/lib/db/localDb';
 
 export const runtime = 'nodejs';
 
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
 
     const body = await req.json();
 
-    // 2. Anti-Bot Honeypot check: If the hidden honeypot field is filled, reject silently
+    // 2. Anti-Bot Honeypot check
     if (body.website_url || body.hp_check) {
       return NextResponse.json({ ok: false, message: 'طلب غير صالح.' }, { status: 400 });
     }
@@ -66,43 +67,84 @@ export async function POST(req: Request) {
 
     // 3. Hash password with modern Salted Scrypt
     const hashedPassword = hashPasswordModern(password);
+    const initialPoints = role === 'merchant' ? 0 : 20;
 
     const supabase = getSupabaseServer();
     if (!supabase) {
-      // Local dev fallback
-      const mockId = crypto.randomUUID();
-      const token = sealSessionToken({
-        userId: mockId,
-        name: trimmedName,
-        email: trimmedEmail,
-        phone: normalizedPhone,
-        role: role === 'merchant' ? 'merchant' : 'user',
-      });
-
-      cookies().set(SESSION_COOKIE_NAME, token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: SESSION_MAX_AGE_SECONDS,
-      });
-
-      return NextResponse.json({
-        ok: true,
-        user: {
-          id: mockId,
+      // Local persistent database execution
+      try {
+        const newUser = dbCreateUser({
           name: trimmedName,
           email: trimmedEmail,
           phone: normalizedPhone,
+          passwordHash: hashedPassword,
+          gender: gender || 'male',
           role: role === 'merchant' ? 'merchant' : 'user',
-          points: role === 'merchant' ? 0 : 20,
-          email_verified: false,
-          staff: false,
-        },
-      });
+          userType: user_type || 'student',
+          governorate: governorate || 'بورسعيد',
+          institution: institution || null,
+          initialPoints,
+        });
+
+        if (role === 'merchant' && business_name) {
+          dbInsertPartnerApplication({
+            userId: newUser.id,
+            businessName: business_name.trim(),
+            areaAr: (area || 'بورسعيد').trim(),
+            phone: normalizedPhone,
+            discount: discount || 10,
+            commission: commission || 5,
+            notes: notes || '',
+          });
+        }
+
+        const userRole = role === 'merchant' ? 'merchant' : 'user';
+        const sessionToken = sealSessionToken({
+          userId: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          phone: newUser.phone,
+          role: userRole,
+        });
+
+        cookies().set(SESSION_COOKIE_NAME, sessionToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+          maxAge: SESSION_MAX_AGE_SECONDS,
+        });
+
+        return NextResponse.json({
+          ok: true,
+          user: {
+            id: newUser.id,
+            name: newUser.name,
+            email: newUser.email,
+            phone: newUser.phone,
+            role: userRole,
+            type: newUser.user_type,
+            gov: newUser.governorate,
+            institution: newUser.institution,
+            gender: newUser.gender,
+            points: newUser.points_balance,
+            email_verified: false,
+            staff: false,
+          },
+        });
+      } catch (err: any) {
+        if (err.message && err.message.includes('UNIQUE constraint failed')) {
+          return NextResponse.json(
+            { ok: false, message: 'البريد الإلكتروني أو رقم الهاتف مسجل بالفعل مسبقاً.' },
+            { status: 409 }
+          );
+        }
+        console.error('LocalDb registration error:', err);
+        return NextResponse.json({ ok: false, message: 'حدث خطأ أثناء حفظ الحساب الجديد.' }, { status: 500 });
+      }
     }
 
-    // 4. Resolve metadata IDs
+    // 4. Remote Supabase execution
     let userTypeId: number | null = null;
     let governorateId: number | null = null;
     let institutionId: number | null = null;
@@ -130,9 +172,6 @@ export async function POST(req: Request) {
       if (inst?.id) institutionId = inst.id;
     }
 
-    const initialPoints = role === 'merchant' ? 0 : 20;
-
-    // 5. Insert user into DB
     const { data: newUser, error: insertErr } = await supabase
       .from('users')
       .insert({
@@ -161,7 +200,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: insertErr.message }, { status: 400 });
     }
 
-    // 6. Handle merchant partner application if applicable
     if (role === 'merchant' && business_name) {
       await supabase.from('partner_applications').insert({
         user_id: newUser.id,
@@ -175,7 +213,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // 7. Record welcome ledger entry if points awarded
     if (initialPoints > 0) {
       try {
         await supabase.from('points_ledger').insert({
@@ -191,7 +228,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // 8. Issue HttpOnly Session Cookie
     const userRole = role === 'merchant' ? 'merchant' : 'user';
     const sessionToken = sealSessionToken({
       userId: newUser.id,
