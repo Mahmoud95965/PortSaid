@@ -20,6 +20,7 @@ import {
   Home,
   Sparkles,
   MapPin,
+  Settings,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -155,19 +156,6 @@ export const Header: React.FC<HeaderProps> = ({
                 </motion.button>
               );
             })}
-
-            {onOpenGuide && (
-              <motion.button
-                onClick={onOpenGuide}
-                type="button"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs xl:text-sm bg-amber-400/20 hover:bg-amber-400/30 text-sand-300 border border-amber-400/40 transition"
-                whileHover={{ y: -2, scale: 1.03 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>دليل الموقع</span>
-              </motion.button>
-            )}
           </div>
         )}
 
@@ -315,116 +303,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </motion.div>
 
                   <div className="mt-3 space-y-1.5">
-                    {user?.staff && (
-                      <motion.div variants={menuItemVariants}>
-                        <Link
-                          href="/admin"
-                          onClick={() => setMenuOpen(false)}
-                          className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-ocean-900 text-white font-bold text-sm hover:bg-ocean-800 transition"
-                        >
-                          <span className="flex items-center gap-2">
-                            <Shield className="w-4 h-4 text-sand-400" />
-                            <span>لوحة التحكم الإدارية</span>
-                          </span>
-                          <span className="text-[10px] bg-sand-400 text-ocean-900 px-2 py-0.5 rounded-full font-black">أدمن</span>
-                        </Link>
-                      </motion.div>
-                    )}
-
-                    {isMerchant && (
-                      <motion.div variants={menuItemVariants}>
-                        <button
-                          onClick={() => {
-                            onNavigate('partner');
-                            setMenuOpen(false);
-                          }}
-                          type="button"
-                          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-teal2-600 text-white font-bold text-sm hover:bg-teal2-500 transition"
-                        >
-                          <Store className="w-4 h-4" />
-                          <span>لوحة المتجر والعروض</span>
-                        </button>
-                      </motion.div>
-                    )}
-
-                    {onOpenGuide && (
-                      <motion.div variants={menuItemVariants}>
-                        <button
-                          onClick={() => {
-                            onOpenGuide();
-                            setMenuOpen(false);
-                          }}
-                          type="button"
-                          className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 text-ocean-900 dark:text-amber-200 font-bold text-sm hover:bg-amber-500/20 transition border border-amber-500/30"
-                        >
-                          <span className="flex items-center gap-2.5">
-                            <Sparkles className="w-4 h-4 text-amber-500" />
-                            <span>دليل وشرح الموقع بالأسهم</span>
-                          </span>
-                          <span className="text-[10px] font-black bg-amber-500 text-ocean-950 px-2 py-0.5 rounded-full">
-                            تفاعلي
-                          </span>
-                        </button>
-                      </motion.div>
-                    )}
-
-                    <motion.div variants={menuItemVariants}>
-                      <button
-                        onClick={() => {
-                          onNavigate('ai');
-                          setMenuOpen(false);
-                        }}
-                        type="button"
-                        className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-teal2-500/10 via-ocean-900/10 to-indigo-500/10 text-ocean-900 dark:text-white font-bold text-sm hover:bg-sand-100 dark:hover:bg-[#22334a] transition border border-teal2-500/20"
-                      >
-                        <span className="flex items-center gap-2.5">
-                          <Sparkles className="w-4 h-4 text-teal2-600 dark:text-teal2-400" />
-                          <span>مركز الذكاء الاصطناعي (مخطط + Gemini)</span>
-                        </span>
-                        <span className="text-[10px] font-black bg-teal2-500/20 text-teal2-700 dark:text-teal2-300 px-2 py-0.5 rounded-full">
-                          AI Hub ✦
-                        </span>
-                      </button>
-                    </motion.div>
-
-                    <motion.div variants={menuItemVariants}>
-                      <button
-                        onClick={() => {
-                          onNavigate('map');
-                          setMenuOpen(false);
-                        }}
-                        type="button"
-                        className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-sand-50 dark:bg-[#1a2739] text-ocean-900 dark:text-white font-bold text-sm hover:bg-sand-100 dark:hover:bg-[#22334a] transition"
-                      >
-                        <span className="flex items-center gap-2.5">
-                          <MapPin className="w-4 h-4 text-teal2-600 dark:text-teal2-400" />
-                          <span>خريطة بورسعيد التفاعلية</span>
-                        </span>
-                        <span className="text-[10px] font-black bg-teal2-500/20 text-teal2-700 dark:text-teal2-300 px-2 py-0.5 rounded-full">
-                          Maps
-                        </span>
-                      </button>
-                    </motion.div>
-
-                    <motion.div variants={menuItemVariants}>
-                      <button
-                        onClick={() => {
-                          onOpenPoints();
-                          setMenuOpen(false);
-                        }}
-                        type="button"
-                        className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-sand-50 dark:bg-[#1a2739] text-ocean-900 dark:text-white font-bold text-sm hover:bg-sand-100 dark:hover:bg-[#22334a] transition"
-                      >
-                        <span className="flex items-center gap-2.5">
-                          <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                          <span>رصيد النقاط والمكافآت</span>
-                        </span>
-                        <span className="font-extrabold text-xs text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded-full">
-                          {user?.points || 0} نقطة
-                        </span>
-                      </button>
-                    </motion.div>
-
+                    {/* 1. الملف الشخصي */}
                     <motion.div variants={menuItemVariants}>
                       <button
                         onClick={() => {
@@ -432,13 +311,39 @@ export const Header: React.FC<HeaderProps> = ({
                           setMenuOpen(false);
                         }}
                         type="button"
-                        className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-sand-50 dark:bg-[#1a2739] text-ocean-900 dark:text-white font-bold text-sm hover:bg-sand-100 dark:hover:bg-[#22334a] transition"
+                        className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-sand-50 dark:bg-[#1a2739] text-ocean-900 dark:text-white font-bold text-sm hover:bg-sand-100 dark:hover:bg-[#22334a] transition border border-sand-200/80 dark:border-[#2a3a4f]"
                       >
-                        <IdCard className="w-4 h-4 text-teal2-600 dark:text-teal2-400" />
-                        <span>الملف الشخصي والبيانات</span>
+                        <span className="flex items-center gap-2.5">
+                          <UserIcon className="w-4 h-4 text-teal2-600 dark:text-teal2-400" />
+                          <span>الملف الشخصي والبيانات</span>
+                        </span>
+                        <span className="text-[10px] font-black text-ocean-600 dark:text-sand-300 bg-sand-200/60 dark:bg-white/10 px-2 py-0.5 rounded-full">
+                          حسابي
+                        </span>
                       </button>
                     </motion.div>
 
+                    {/* 2. الإعدادات */}
+                    <motion.div variants={menuItemVariants}>
+                      <button
+                        onClick={() => {
+                          onNavigate('account');
+                          setMenuOpen(false);
+                        }}
+                        type="button"
+                        className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-sand-50 dark:bg-[#1a2739] text-ocean-900 dark:text-white font-bold text-sm hover:bg-sand-100 dark:hover:bg-[#22334a] transition border border-sand-200/80 dark:border-[#2a3a4f]"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <Settings className="w-4 h-4 text-teal2-600 dark:text-teal2-400" />
+                          <span>الإعدادات والتفضيلات</span>
+                        </span>
+                        <span className="text-[10px] font-black text-ocean-600 dark:text-sand-300 bg-sand-200/60 dark:bg-white/10 px-2 py-0.5 rounded-full">
+                          إعدادات
+                        </span>
+                      </button>
+                    </motion.div>
+
+                    {/* 3. تسجيل الخروج */}
                     <motion.div variants={menuItemVariants}>
                       <button
                         onClick={() => {
@@ -446,7 +351,7 @@ export const Header: React.FC<HeaderProps> = ({
                           setMenuOpen(false);
                         }}
                         type="button"
-                        className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 font-bold text-sm hover:bg-red-100 dark:hover:bg-red-900/40 transition"
+                        className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 font-bold text-sm hover:bg-red-100 dark:hover:bg-red-900/40 transition border border-red-200/60 dark:border-red-900/30"
                       >
                         <LogOut className="w-4 h-4" />
                         <span>تسجيل الخروج</span>

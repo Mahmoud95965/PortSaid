@@ -9,7 +9,6 @@ import { MapView } from '@/components/MapView';
 import { PlaceDetail } from '@/components/PlaceDetail';
 import { QRModal } from '@/components/QRModal';
 import { AssistantChat } from '@/components/AssistantChat';
-import { SiteGuideModal } from '@/components/SiteGuideModal';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Place } from '@/types';
 import { INITIAL_PLACES } from '@/lib/constants';
@@ -86,7 +85,6 @@ export default function MapPage() {
         onNavigate={handleNavigate}
         onOpenFeedback={() => router.push('/')}
         onOpenPoints={() => router.push('/')}
-        onOpenGuide={() => setShowGuideModal(true)}
       />
 
       {/* Main Map Container */}
@@ -127,16 +125,6 @@ export default function MapPage() {
       {activeCouponPlace && (
         <QRModal place={activeCouponPlace} onClose={() => setActiveCouponPlace(null)} />
       )}
-
-      {/* Interactive Site Guide Modal */}
-      <SiteGuideModal
-        isOpen={showGuideModal}
-        onClose={() => setShowGuideModal(false)}
-        onNavigateToView={(view) => {
-          handleNavigate(view);
-          setShowGuideModal(false);
-        }}
-      />
 
       {/* Assistant AI Chatbot */}
       <AssistantChat

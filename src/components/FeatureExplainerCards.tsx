@@ -436,22 +436,11 @@ export const FeatureExplainerCards: React.FC<FeatureExplainerCardsProps> = ({
             <button
               onClick={() => setIsExpanded(true)}
               type="button"
-              className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-sand-200/90 dark:bg-[#152332] hover:bg-sand-300 dark:hover:bg-[#1f344a] text-ocean-900 dark:text-white text-xs font-bold transition flex items-center justify-center gap-1.5"
+              className="px-4 py-2.5 rounded-xl bg-sand-200/90 dark:bg-[#152332] hover:bg-sand-300 dark:hover:bg-[#1f344a] text-ocean-900 dark:text-white text-xs font-bold transition flex items-center justify-center gap-1.5"
             >
               <span>عرض خريطة الأسهم</span>
               <ChevronDown className="w-4 h-4 text-teal2-500" />
             </button>
-
-            {onOpenGuideModal && (
-              <button
-                onClick={onOpenGuideModal}
-                type="button"
-                className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-ocean-950 text-xs font-black shadow-md hover:shadow-lg transition flex items-center justify-center gap-1.5"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-ocean-950" />
-                <span>الجولة التفاعلية</span>
-              </button>
-            )}
           </div>
         </motion.div>
       </section>
@@ -512,19 +501,6 @@ export const FeatureExplainerCards: React.FC<FeatureExplainerCardsProps> = ({
             <span>إخفاء الأسهم</span>
             <ChevronUp className="w-3.5 h-3.5" />
           </button>
-
-          {onOpenGuideModal && (
-            <motion.button
-              onClick={onOpenGuideModal}
-              type="button"
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-ocean-950 font-black text-xs sm:text-sm shadow-md shadow-amber-500/20 hover:shadow-lg transition"
-            >
-              <Navigation className="w-4 h-4 fill-current" />
-              <span>جولة الشرح التفاعلية خطوة بخطوة</span>
-            </motion.button>
-          )}
         </div>
       </div>
 
@@ -805,18 +781,6 @@ export const FeatureExplainerCards: React.FC<FeatureExplainerCardsProps> = ({
             تمكنك من الحصول على خصومات فورية عند زيارة شركائنا في بورسعيد.
           </p>
         </div>
-
-        {onOpenGuideModal && (
-          <motion.button
-            onClick={onOpenGuideModal}
-            type="button"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="px-5 py-2.5 rounded-2xl bg-sand-400 hover:bg-sand-300 text-ocean-950 font-black text-xs sm:text-sm shadow-md transition shrink-0"
-          >
-            🧭 افتح جولة الشرح الكاملة
-          </motion.button>
-        )}
       </motion.div>
     </section>
   );

@@ -28,7 +28,18 @@ import { FeatureExplainerCards } from '@/components/FeatureExplainerCards';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Place } from '@/types';
 import { INITIAL_PLACES } from '@/lib/constants';
-import { Share2, MessageSquare, Store, Sparkles, ChevronLeft } from 'lucide-react';
+import {
+  Share2,
+  MessageSquare,
+  Store,
+  Sparkles,
+  ChevronLeft,
+  Compass,
+  MapPin,
+  Bus,
+  Star,
+  ArrowLeft,
+} from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 const pageVariants: Variants = {
@@ -253,7 +264,6 @@ export default function HomePage() {
         onNavigate={handleNavigate}
         onOpenFeedback={() => handleNavigate('feedback')}
         onOpenPoints={() => handleNavigate('points')}
-        onOpenGuide={() => setShowGuideModal(true)}
       />
 
       {/* Main Dynamic View Content with AnimatePresence */}
@@ -269,6 +279,40 @@ export default function HomePage() {
               className="space-y-4 sm:space-y-6"
             >
               <HeroBanner />
+
+              {/* Modern Glass Quick Discovery Bar */}
+              <div className="flex items-center justify-center gap-2 overflow-x-auto py-1 scrollbar-none">
+                <motion.button
+                  onClick={() => handleNavigate('ai')}
+                  whileHover={{ scale: 1.03, y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="shrink-0 px-3.5 sm:px-4 py-2 rounded-2xl bg-gradient-to-r from-ocean-900 to-teal2-700 text-white text-xs sm:text-sm font-black shadow-md border border-teal2-400/30 flex items-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4 text-sand-300" />
+                  <span>خطط خروجتك بالذكاء الاصطناعي ✦</span>
+                </motion.button>
+
+                <motion.button
+                  onClick={() => handleNavigate('map')}
+                  whileHover={{ scale: 1.03, y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="shrink-0 px-3.5 sm:px-4 py-2 rounded-2xl bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white text-xs sm:text-sm font-black shadow-sm border border-sand-300 dark:border-[#1d2d3e] hover:border-teal2-400 flex items-center gap-2 transition"
+                >
+                  <MapPin className="w-4 h-4 text-rose-500" />
+                  <span>خريطة بورسعيد التفاعلية</span>
+                </motion.button>
+
+                <motion.button
+                  onClick={() => handleNavigate('points')}
+                  whileHover={{ scale: 1.03, y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="shrink-0 px-3.5 sm:px-4 py-2 rounded-2xl bg-amber-500/15 dark:bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs sm:text-sm font-black border border-amber-400/40 hover:bg-amber-500/25 flex items-center gap-2 transition"
+                >
+                  <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                  <span>رصيد نقاطك: {user.points} نقطة</span>
+                </motion.button>
+              </div>
+
               <CategoryGrid
                 onSelectCategory={(key) => {
                   if (key === 'bus' || key === 'housing' || key === 'explore' || key === 'map') {
@@ -278,67 +322,143 @@ export default function HomePage() {
                   }
                 }}
               />
+
               <PortSaidGallery />
 
-              {/* Quick Interactive Actions Grid (Mobile & Desktop) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-4 pt-1">
-                {/* Points & Rewards Card */}
+              {/* Master 4-Card Service Hub (بوابة خدمات بورسعيد الكبرى) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pt-1">
+                {/* 1. AI Studio & Outing Planner */}
+                <motion.button
+                  onClick={() => handleNavigate('ai')}
+                  type="button"
+                  whileHover={{ y: -6, scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="group relative overflow-hidden rounded-3xl p-5 text-right bg-gradient-to-br from-[#061a3d] via-[#092754] to-[#044343] text-white shadow-xl shadow-ocean-950/20 border border-teal2-500/30 flex flex-col justify-between gap-4 touch-manipulation"
+                >
+                  <div className="relative z-10 space-y-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal2-500/25 border border-teal2-400/40 text-[10px] font-black text-sand-300">
+                      <Sparkles className="w-3 h-3 text-sand-300 animate-pulse" />
+                      <span>AI Suite ✦ مباشر</span>
+                    </span>
+                    <h4 className="font-black text-base sm:text-lg leading-tight text-white group-hover:text-sand-300 transition-colors">
+                      مخطط الرحلات والخروجات
+                    </h4>
+                    <p className="text-xs text-white/80 font-medium leading-relaxed line-clamp-2">
+                      خطة ذكية مع الخريطة الحية ومسارات الشوارع المعتمدة وحساب الميزانية بدقة.
+                    </p>
+                  </div>
+                  <div className="relative z-10 flex items-center justify-between text-xs font-black text-sand-300 pt-1 border-t border-white/10">
+                    <span>ابدأ التخطيط الذكي</span>
+                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1.5 transition-transform" />
+                  </div>
+                </motion.button>
+
+                {/* 2. Interactive Map */}
+                <motion.button
+                  onClick={() => handleNavigate('map')}
+                  type="button"
+                  whileHover={{ y: -6, scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="group relative overflow-hidden rounded-3xl p-5 text-right bg-gradient-to-br from-[#072440] via-[#0b3858] to-[#0a4864] text-white shadow-xl shadow-ocean-950/20 border border-cyan-500/30 flex flex-col justify-between gap-4 touch-manipulation"
+                >
+                  <div className="relative z-10 space-y-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-500/25 border border-cyan-400/40 text-[10px] font-black text-cyan-200">
+                      <MapPin className="w-3 h-3 text-cyan-300" />
+                      <span>خريطة حقيقية</span>
+                    </span>
+                    <h4 className="font-black text-base sm:text-lg leading-tight text-white group-hover:text-cyan-200 transition-colors">
+                      خريطة بورسعيد التفاعلية
+                    </h4>
+                    <p className="text-xs text-white/80 font-medium leading-relaxed line-clamp-2">
+                      تصفح مطاعم السمك، الكافيهات، والمعالم، واحسب المسافة لموقعك بالكيلومتر.
+                    </p>
+                  </div>
+                  <div className="relative z-10 flex items-center justify-between text-xs font-black text-cyan-200 pt-1 border-t border-white/10">
+                    <span>افتح الخريطة الآن</span>
+                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1.5 transition-transform" />
+                  </div>
+                </motion.button>
+
+                {/* 3. Points & Rewards */}
                 <motion.button
                   onClick={() => handleNavigate('points')}
                   type="button"
                   whileHover={{ y: -6, scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
-                  className="group relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-5 text-right bg-gradient-to-br from-[#ffe7b3] via-[#ffb938] to-[#f59e0b] text-ocean-900 shadow-lg shadow-amber-500/15 border border-amber-300/80 flex items-center justify-between gap-3 touch-manipulation"
+                  className="group relative overflow-hidden rounded-3xl p-5 text-right bg-gradient-to-br from-[#ffd97a] via-[#ffb938] to-[#f59e0b] text-ocean-950 shadow-xl shadow-amber-500/15 border border-amber-300 flex flex-col justify-between gap-4 touch-manipulation"
                 >
-                  <div className="min-w-0 flex-1 relative z-10">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="rounded-full bg-ocean-900 text-sand-300 px-3 py-0.5 text-[11px] font-black tracking-wide flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-sand-400" />
-                        <span>رصيدك: {user.points} نقطة</span>
-                      </span>
-                    </div>
-                    <h4 className="font-black text-sm min-[400px]:text-base sm:text-lg leading-tight text-ocean-900">
-                      مكافآتك ونقاطك في بورسعيد
+                  <div className="relative z-10 space-y-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-ocean-900 text-sand-300 text-[10px] font-black">
+                      <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                      <span>رصيدك: {user.points} نقطة</span>
+                    </span>
+                    <h4 className="font-black text-base sm:text-lg leading-tight text-ocean-950">
+                      كوبونات وخصومات بورسعيد
                     </h4>
-                    <p className="text-[11px] min-[400px]:text-xs sm:text-sm text-ocean-900/85 font-bold mt-1 line-clamp-1">
-                      اضغط لمعرفة كيف تستخدم نقاطك للحصول على خصومات حقيقية وكوبونات
+                    <p className="text-xs text-ocean-900/85 font-bold leading-relaxed line-clamp-2">
+                      سجّل حضورك بالـ GPS واستبدل نقاطك بخصومات 10% إلى 20% حقيقية عند الكاشير.
                     </p>
                   </div>
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/40 backdrop-blur-md grid place-items-center shrink-0 shadow-inner group-hover:scale-110 transition-transform relative z-10">
-                    <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-ocean-900" />
+                  <div className="relative z-10 flex items-center justify-between text-xs font-black text-ocean-950 pt-1 border-t border-ocean-950/15">
+                    <span>استبدل نقاطك بكوبونات</span>
+                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1.5 transition-transform" />
                   </div>
                 </motion.button>
 
-                {/* Feedback & Suggestions Card */}
+                {/* 4. Transit & Campus */}
                 <motion.button
-                  onClick={() => handleNavigate('feedback')}
+                  onClick={() => handleNavigate('bus')}
                   type="button"
                   whileHover={{ y: -6, scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
-                  className="group relative overflow-hidden rounded-2xl sm:rounded-3xl p-4 sm:p-5 text-right bg-white dark:bg-[#0f1a28] text-ocean-900 dark:text-white shadow-md shadow-ocean-900/5 dark:shadow-black/40 border border-sand-200/80 dark:border-[#1d2d3e] border-b-4 border-b-teal2-500 flex items-center justify-between gap-3 touch-manipulation"
+                  className="group relative overflow-hidden rounded-3xl p-5 text-right bg-gradient-to-br from-[#1a1738] via-[#241a4a] to-[#341d5a] text-white shadow-xl shadow-purple-950/20 border border-purple-500/30 flex flex-col justify-between gap-4 touch-manipulation"
                 >
-                  <div className="min-w-0 flex-1 relative z-10">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="rounded-full bg-teal2-100 dark:bg-teal2-950/60 text-teal2-700 dark:text-teal2-400 px-3 py-0.5 text-[11px] font-black">
-                        رأيك يهمنا
-                      </span>
-                    </div>
-                    <h4 className="font-black text-sm min-[400px]:text-base sm:text-lg leading-tight">
-                      شكاوى واقتراحات
+                  <div className="relative z-10 space-y-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-500/25 border border-purple-400/40 text-[10px] font-black text-purple-200">
+                      <Bus className="w-3 h-3 text-purple-300" />
+                      <span>دليل الجامعة والمعدية</span>
+                    </span>
+                    <h4 className="font-black text-base sm:text-lg leading-tight text-white group-hover:text-purple-200 transition-colors">
+                      المواصلات وسكن الطلاب
                     </h4>
-                    <p className="text-[11px] min-[400px]:text-xs sm:text-sm text-ocean-700/70 dark:text-white/60 font-semibold mt-1 line-clamp-1">
-                      شاركنا مقترحاتك لتطوير موقع بورسعيد وتحديث الأماكن
+                    <p className="text-xs text-white/80 font-medium leading-relaxed line-clamp-2">
+                      خطوط المينى باص من السكن لكليات الطب والهندسة والتربية والمعدية 24 ساعة.
                     </p>
                   </div>
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-teal2-50 dark:bg-[#162738] text-teal2-600 dark:text-teal2-400 grid place-items-center shrink-0 group-hover:scale-110 transition-transform relative z-10">
-                    <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <div className="relative z-10 flex items-center justify-between text-xs font-black text-purple-200 pt-1 border-t border-white/10">
+                    <span>تصفح خطوط المواصلات</span>
+                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1.5 transition-transform" />
                   </div>
                 </motion.button>
               </div>
 
+              {/* Community Feedback Strip */}
+              <motion.button
+                onClick={() => handleNavigate('feedback')}
+                type="button"
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#0c1622] border border-sand-300 dark:border-[#1d2d3e] text-ocean-900 dark:text-white flex items-center justify-between gap-3 shadow-sm hover:border-teal2-400 transition"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-teal2-100 dark:bg-teal2-950/60 text-teal2-700 dark:text-teal2-400 grid place-items-center shrink-0">
+                    <MessageSquare className="w-4 h-4" />
+                  </div>
+                  <div className="text-right min-w-0">
+                    <p className="font-black text-xs sm:text-sm truncate">رأيك يهمنا لتطوير بورسعيد</p>
+                    <p className="text-[11px] text-ocean-700/70 dark:text-white/60 font-medium truncate">
+                      عندك اقتراح أو مكان جديد تحب نضيفه للموقع؟ شاركنا رأيك في ثوانٍ
+                    </p>
+                  </div>
+                </div>
+                <span className="px-3 py-1.5 rounded-xl bg-sand-100 dark:bg-[#162738] text-teal2-700 dark:text-teal2-300 text-xs font-black shrink-0 flex items-center gap-1">
+                  <span>اكتب مقترحك</span>
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                </span>
+              </motion.button>
+
               {/* Interactive Roadmap Cards & Flow Arrows Explaining Every Feature */}
               <FeatureExplainerCards
-                onOpenGuideModal={() => setShowGuideModal(true)}
                 onNavigate={handleNavigate}
                 hasSeenGuide={hasSeenGuide}
               />

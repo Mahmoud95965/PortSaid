@@ -1,11 +1,10 @@
 'use client';
 
-import React, { Suspense, useState } from 'react';
+import React, { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { UnifiedAiStudio } from '@/components/SmartPlanner/UnifiedAiStudio';
-import { SiteGuideModal } from '@/components/SiteGuideModal';
 
 function AIPageContent() {
   const router = useRouter();
@@ -13,7 +12,6 @@ function AIPageContent() {
 
   const initialPrompt = searchParams.get('q');
   const initialPlanData = searchParams.get('plan');
-  const [showGuideModal, setShowGuideModal] = useState<boolean>(false);
 
   const handleNavigate = (view: string, arg?: string | null) => {
     if (view === 'home') {
@@ -50,7 +48,6 @@ function AIPageContent() {
         onNavigate={handleNavigate}
         onOpenFeedback={() => router.push('/')}
         onOpenPoints={() => router.push('/')}
-        onOpenGuide={() => setShowGuideModal(true)}
       />
 
       {/* Main Unified AI Workspace (Planner + Chat + Map in One Single Screen) */}
@@ -62,16 +59,6 @@ function AIPageContent() {
           onBackToHome={() => router.push('/')}
         />
       </main>
-
-      {/* Site Guide Modal */}
-      <SiteGuideModal
-        isOpen={showGuideModal}
-        onClose={() => setShowGuideModal(false)}
-        onNavigateToView={(view) => {
-          handleNavigate(view);
-          setShowGuideModal(false);
-        }}
-      />
 
       {/* Footer */}
       <Footer />
@@ -92,3 +79,4 @@ export default function AIPage() {
     </Suspense>
   );
 }
+
