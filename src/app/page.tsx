@@ -21,6 +21,8 @@ import { AccountView } from '@/components/AccountView';
 import { PointsDetailsView } from '@/components/PointsDetailsView';
 import { QRModal } from '@/components/QRModal';
 import { AssistantChat } from '@/components/AssistantChat';
+import { SiteGuideModal } from '@/components/SiteGuideModal';
+import { FeatureExplainerCards } from '@/components/FeatureExplainerCards';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Place } from '@/types';
 import { INITIAL_PLACES } from '@/lib/constants';
@@ -43,6 +45,7 @@ export default function HomePage() {
   const [places, setPlaces] = useState<Place[]>(INITIAL_PLACES);
   const [activeCouponPlace, setActiveCouponPlace] = useState<Place | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showGuideModal, setShowGuideModal] = useState<boolean>(false);
 
   // جلب الأماكن الحقيقية من Supabase
   useEffect(() => {
@@ -193,6 +196,7 @@ export default function HomePage() {
         onNavigate={handleNavigate}
         onOpenFeedback={() => handleNavigate('feedback')}
         onOpenPoints={() => handleNavigate('points')}
+        onOpenGuide={() => setShowGuideModal(true)}
       />
 
       {/* Main Dynamic View Content with AnimatePresence */}
@@ -274,6 +278,12 @@ export default function HomePage() {
                   </div>
                 </motion.button>
               </div>
+
+              {/* Interactive Roadmap Cards & Flow Arrows Explaining Every Feature */}
+              <FeatureExplainerCards
+                onOpenGuideModal={() => setShowGuideModal(true)}
+                onNavigate={handleNavigate}
+              />
             </motion.div>
           )}
 
@@ -393,6 +403,16 @@ export default function HomePage() {
       {activeCouponPlace && (
         <QRModal place={activeCouponPlace} onClose={() => setActiveCouponPlace(null)} />
       )}
+
+      {/* Interactive Site Guide & Roadmap Modal */}
+      <SiteGuideModal
+        isOpen={showGuideModal}
+        onClose={() => setShowGuideModal(false)}
+        onNavigateToView={(view) => {
+          handleNavigate(view);
+          setShowGuideModal(false);
+        }}
+      />
 
       {/* Assistant AI Chatbot FAB */}
       <AssistantChat onOpenPoints={() => handleNavigate('points')} />

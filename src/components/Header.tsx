@@ -18,6 +18,7 @@ import {
   Bed,
   Compass,
   Home,
+  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -25,9 +26,15 @@ interface HeaderProps {
   onNavigate: (view: string, arg?: string | null) => void;
   onOpenFeedback: () => void;
   onOpenPoints: () => void;
+  onOpenGuide?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onNavigate, onOpenFeedback, onOpenPoints }) => {
+export const Header: React.FC<HeaderProps> = ({
+  onNavigate,
+  onOpenFeedback,
+  onOpenPoints,
+  onOpenGuide,
+}) => {
   const { user, theme, toggleTheme, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -145,6 +152,19 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate, onOpenFeedback, onOp
                 </motion.button>
               );
             })}
+
+            {onOpenGuide && (
+              <motion.button
+                onClick={onOpenGuide}
+                type="button"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs xl:text-sm bg-amber-400/20 hover:bg-amber-400/30 text-sand-300 border border-amber-400/40 transition"
+                whileHover={{ y: -2, scale: 1.03 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>دليل الموقع</span>
+              </motion.button>
+            )}
           </div>
         )}
 
@@ -320,6 +340,27 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate, onOpenFeedback, onOp
                         >
                           <Store className="w-4 h-4" />
                           <span>لوحة المتجر والعروض</span>
+                        </button>
+                      </motion.div>
+                    )}
+
+                    {onOpenGuide && (
+                      <motion.div variants={menuItemVariants}>
+                        <button
+                          onClick={() => {
+                            onOpenGuide();
+                            setMenuOpen(false);
+                          }}
+                          type="button"
+                          className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 text-ocean-900 dark:text-amber-200 font-bold text-sm hover:bg-amber-500/20 transition border border-amber-500/30"
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <Sparkles className="w-4 h-4 text-amber-500" />
+                            <span>دليل وشرح الموقع بالأسهم</span>
+                          </span>
+                          <span className="text-[10px] font-black bg-amber-500 text-ocean-950 px-2 py-0.5 rounded-full">
+                            تفاعلي
+                          </span>
                         </button>
                       </motion.div>
                     )}
