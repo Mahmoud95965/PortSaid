@@ -1,65 +1,178 @@
 import { NextResponse } from 'next/server';
 
+export const runtime = 'nodejs';
+
 const SYSTEM_PROMPT = `
-إنت "مساعد بورسعيد"، مساعد ذكي جوه موقع Port Said Hub (تطبيق سياحة وتخفيضات لمدينة بورسعيد، صممه فريق Alpha).
-اتكلم باللهجة المصرية العامية، بشكل ودود ومباشر ومختصر (سطرين لتلاتة عادةً).
-الموقع بيدي للمستخدم: نقاط لما يزور أماكن (+50 أو +20 نقطة)، ونقاط لما يشارك الموقع مع صحابه (+40 نقطة)، وكوبونات خصم بالـ QR يستبدلها بالنقط،
-وقسم استكشف بورسعيد، وقسم سكن، وقسم مواصلات فيه خطوط المينى باص بين أحياء بورسعيد.
-أصحاب المحلات يقدروا يسجلوا كتاجر ويحصلوا على لوحة تحكم خاصة لإدارة الخصم والعمولة.
-جاوب بإيجاز وود وساعد المستخدم يوصل لأي معلومة في بورسعيد.
+إنت "مساعد بورسعيد الذكي"، مرشد سياحي ومعرفي متخصص ومحب لمدينة بورسعيد الباسلة داخل منصة Port Said Hub (التي طورها فريق Alpha).
+اتكلم باللهجة المصرية العامية البورسعيدية الودودة، وكن دقيقًا ومختصرًا وواضحًا في إجاباتك (3 إلى 5 أسطر عادةً).
+
+معلومات شاملة يجب أن تعرفها وتجيب بناءً عليها:
+1. نظام النقاط والمكافآت (Hubs Rewards):
+   - كيف تكسب نقاط؟ عند التسجيل يحصل المستخدم على +20 نقطة ترحيبية فورية. وعند زيارة أي مكان أو معلم سياحي في بورسعيد والضغط على "سجّل حضورك الآن" يحصل على من +20 إلى +50 نقطة فورية (مسموح بزيارة واحدة لكل مكان في اليوم).
+   - تم إلغاء كسب النقاط من المشاركة العشوائية، وأصبح كسب النقاط مقتصرًا على النشاط الحقيقي والزيارات الميدانية.
+   - كيف تستخدم النقاط؟ تستبدلها بكوبونات خصم فورية بنسبة 10% إلى 20% لدى المطاعم والكافيهات الشريكة (مثل مطعم كاستن، حلويات سيلفر، كافيه بينوس، مطعم الجندي). يظهر كود QR ورمز الكوبون لإظهاره للكاشير عند الدفع.
+
+2. المطاعم والأكلات:
+   - الأسماك والمأكولات البحرية: مطعم كاستن للأسماك (حي الشرق - عريق ومطل على القناة)، مطعم الجندي (حي العرب - طعم بلدي وأسعار مناسبة للطلبة)، وسوق السمك الحضاري الجديد (حي العرب - تشتري سمك طازة وتشوي وتاكل هناك).
+   - الحلويات: كاساتا بورسعيد الشهيرة وحلويات سيلفر (حي العرب)، وحلويات الباشا، والتمرية البورسعيدية السخنة.
+   - الكافيهات: كافيهات ممشى ديليسبس وممشى القناة (إطلالة ساحرة على السفن العابرة في قناة السويس).
+
+3. المعالم والسياحة والفسح:
+   - فنار بورسعيد التاريخي (أول فنار خرساني في العالم).
+   - الممشى السياحي وممشى ديليسبس ومدخل قناة السويس.
+   - حديقة فريال التاريخية (مكان حفل افتتاح قناة السويس 1869).
+   - جبال الملح في بورفؤاد (التصوير كأنك وسط الجليد).
+   - المعدية المجانية بين بورسعيد وبورفؤاد (رحلة بحرية ممتعة بالمركب ومشاهدة النوارس).
+
+4. المواصلات والجامعة:
+   - خط الأمين: يربط المعدية والسكن الجامعي بمعهد الحاسب الآلي، كلية التكنولوجيا والحقوق، بنك الإسكان، والمنشية.
+   - خط الزهور: يربط قصر الثقافة بكليات الطب البشري، العلاج الطبيعي، الصيدلة، وشارع النصر.
+   - خط الـ 5000: يربط المعدية بكلية التربية النوعية والإفرنج وحي العرب والمناخ.
+   - كليات شرق بورسعيد الأهلية: تقع في مدينة سلام مصر بشرق بورسعيد وتخدمها خطوط مخصصة.
+
+5. السكن الطلابي والمغتربين:
+   - أفضل المناطق لسكن الطلبة: حي الشرق (راقي وقريب من البحر والمواصلات)، حي العرب (حيوي والخدمات والأسعار فيه مناسبة)، وحي الزهور (قريب من مجمع كليات الطب والصيدلة).
+
+6. انضمام التجار والشركاء:
+   - أصحاب المحلات والمطاعم يقدروا يسجلوا من قسم "سجل متجرك" لإنشاء حساب شريك وتحديد نسبة الخصم والعمولة وعرض منتجاتهم لآلاف الزوار.
 `;
+
+// Smart Local Knowledge Engine (works instantly even without API keys)
+function getSmartLocalReply(message: string): string {
+  const q = (message || '').toLowerCase().trim();
+
+  // 1. Points and Rewards
+  if (q.includes('نقط') || q.includes('نقاط') || q.includes('مكاف') || q.includes('كوبون') || q.includes('خصم') || q.includes('استبدال') || q.includes('اكسب')) {
+    return '⭐ نظام النقاط في Port Said Hub حقيقي ومفيد جداً:\n' +
+      '1. بتكسب 20 نقطة هدية أول ما تسجل حسابك الجديد.\n' +
+      '2. لما تزور أي مكان في بورسعيد، دوس "سجّل حضورك الآن" من صفحته واكسب من 20 لـ 50 نقطة فورية (مرة واحدة للمكان يومياً).\n' +
+      '3. تقدر تستبدل نقطك بكوبونات خصم بنسبة 10% لـ 20% في مطاعم وكافيهات بورسعيد (زي كاستن وسيلفر وبينوس) بالكود والـ QR عند الكاشير!\n' +
+      'تقدر تدوس على عداد النقط فوق عشان تشوف كل التفاصيل وسجل معاملاتك.';
+  }
+
+  // 2. Food & Fish Dining
+  if (q.includes('سمك') || q.includes('اكل') || q.includes('مطعم') || q.includes('مطاعم') || q.includes('سي فود') || q.includes('غدا') || q.includes('عشا') || q.includes('جمبري') || q.includes('كاستن') || q.includes('سوق السمك')) {
+    return '🐟 أهلاً بيك في عاصمة المأكولات البحرية!\n' +
+      '• لو عايز تجربة عريقة وفخمة بإطلالة على الممشى والقناة: مطعم "كاستن" في حي الشرق.\n' +
+      '• لو عايز طعم بلدي وجودة عالية وأسعار ممتازة للطلبة: مطعم "الجندي" في حي العرب.\n' +
+      '• لو عايز تشتري سمك طازة على ذوقك وتشويه وتاكله سخن: "سوق السمك الحضاري الجديد" في حي العرب.\n' +
+      'وما تنساش تحلي بكاساتا بورسعيد الشهيرة من حلويات سيلفر!';
+  }
+
+  // 3. Sweets & Cassata
+  if (q.includes('حلو') || q.includes('كاساتا') || q.includes('حلويات') || q.includes('سيلفر') || q.includes('تمرية') || q.includes('ايس كريم')) {
+    return '🍨 حلويات بورسعيد مالهاش مثيل:\n' +
+      '• "كاساتا بورسعيد" الأسطورية بطبقات الآيس كريم والمكسرات والكريمة من حلويات سيلفر بحي العرب.\n' +
+      '• "التمرية البورسعيدية" السخنة المقرمشة من المحلات الشعبية في الصباح.\n' +
+      '• حلويات الباشا وألذ قشطوطة وبسبوسة عند الممشى السياحي.';
+  }
+
+  // 4. Tourism & Sights
+  if (q.includes('فسح') || q.includes('خروج') || q.includes('سياح') || q.includes('معالم') || q.includes('فنار') || q.includes('ممشى') || q.includes('ديليسبس') || q.includes('جبال الملح') || q.includes('فريال') || q.includes('بورفؤاد')) {
+    return '🏛️ يوم مثالي في بورسعيد تقدر تقضيه كده:\n' +
+      '1. تبدأ الصبح في حديقة فريال التاريخية وسط الخضرة والفيو التاريخي.\n' +
+      '2. تمشي في ممشى ديليسبس وتشوف فنار بورسعيد التاريخي والسفن العملاقة في قناة السويس.\n' +
+      '3. تركب "المعدية المجانية" وتعدي لبورفؤاد وتتصور عند "جبال الملح" كانك في القطب الشمالي!\n' +
+      '4. ترجع تتغدى وجبة سمك في سوق السمك الحضاري وتقضي السهرة في كافيهات الممشى السياحي.';
+  }
+
+  // 5. Transportation & Lines
+  if (q.includes('مواصلات') || q.includes('اروح ازاي') || q.includes('مينى باص') || q.includes('باص') || q.includes('ميكروباص') || q.includes('تاكسي') || q.includes('معدية') || q.includes('موقف')) {
+    return '🚌 مواصلات بورسعيد سهلة ومنظمة جداً:\n' +
+      '• خط الأمين: من المعدية والسكن الجامعي لمعهد الحاسب وكلية التكنولوجيا والحقوق والمنشية.\n' +
+      '• خط الزهور: من قصر الثقافة وشارع النصر لكليات الطب البشري، العلاج الطبيعي، والصيدلة.\n' +
+      '• خط الـ 5000: من المعدية لكلية التربية النوعية والإفرنج وحي العرب وحي المناخ.\n' +
+      '• المعدية بين بورسعيد وبورفؤاد: مجانية تماماً للمشاة والركاب وشغالة 24 ساعة!\n' +
+      'تقدر تشوف الخريطة الكاملة للمحطات من قسم "مواصلات" في الموقع.';
+  }
+
+  // 6. Student Housing & Colleges
+  if (q.includes('سكن') || q.includes('شقة') || q.includes('شقق') || q.includes('كلية') || q.includes('جامعة') || q.includes('طالب') || q.includes('طالبات')) {
+    return '🏠 نصائح السكن الطلابي في بورسعيد:\n' +
+      '• لطلبة كليات الطب والصيدلة والعلاج الطبيعي: أفضل سكن في "حي الزهور" و"المناخ" لقرابتهم الشديدة من مجمع الكليات.\n' +
+      '• لطلبة الهندسة والتربية والتجارة: "حي الشرق" و"حي العرب" ممتازين وهاديين وقريبين من المواصلات.\n' +
+      'تقدر تتصفح قسم "السكن" في موقعنا للاطلاع على أماكن السكن المتاحة وأسعارها وتفاصيلها.';
+  }
+
+  // 7. Merchant & Partner Registration
+  if (q.includes('متجر') || q.includes('محل') || q.includes('تاجر') || q.includes('شريك') || q.includes('انضمام') || q.includes('سجل متجرك')) {
+    return '💼 لو عندك مطعم أو كافيه أو محل في بورسعيد، تشرفنا بانضمامك:\n' +
+      'دوس على زر "سجل متجرك كشريك" في أسفل الصفحة الرئيسية أو من قسم التجار، وحدد نسبة الخصم اللي تحب تقدمها لزوار الموقع، وفريقنا هيتواصل معاك فوراً لتفعيل متجرك على الخريطة.';
+  }
+
+  // 8. Greetings & General
+  if (q.includes('سلام') || q.includes('ازيك') || q.includes('ازيك') || q.includes('مرحبا') || q.includes('صباح') || q.includes('مساء') || q.includes('مين انت') || q.includes('هلا')) {
+    return 'أهلاً بيك يا غالي في Port Said Hub 🌊 أنا مساعد بورسعيد الذكي.\n' +
+      'اسألني عن أي حاجة: أحسن مطاعم السمك، خطوط المواصلات، إزاي تستخدم رصيد نقطك وتاخد خصومات، أو أرشحلك خروجة حلوة في المدينة!';
+  }
+
+  // 9. Default Fallback
+  return 'أنا معاك يا بطل! ⚓ تقدر تسألني عن أي حاجة في بورسعيد:\n' +
+    '• "إزاي أستفيد من النقط والكوبونات؟"\n' +
+    '• "أحسن مطعم سمك أو كافيه في بورسعيد؟"\n' +
+    '• "إزاي أروح كليتي ومواعيد المواصلات؟"\n' +
+    '• "أماكن الخروج وفسح جبال الملح والمعدية؟"';
+}
 
 export async function POST(req: Request) {
   try {
     const { message, history } = await req.json();
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ ok: true, ai_enabled: false, reply: null });
-    }
 
-    const messages = [];
-    if (Array.isArray(history)) {
-      for (const turn of history.slice(-6)) {
-        if (turn.text && turn.role) {
-          messages.push({
-            role: turn.role === 'me' ? 'user' : 'assistant',
-            content: turn.text,
-          });
+    // If Claude Anthropic API key is available, use Claude with complete Port Said context
+    if (apiKey && apiKey.startsWith('sk-ant-')) {
+      try {
+        const messages = [];
+        if (Array.isArray(history)) {
+          for (const turn of history.slice(-6)) {
+            if (turn.text && turn.role) {
+              messages.push({
+                role: turn.role === 'me' ? 'user' : 'assistant',
+                content: turn.text,
+              });
+            }
+          }
         }
+        messages.push({ role: 'user', content: message });
+
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-3-5-sonnet-20241022',
+            max_tokens: 450,
+            system: SYSTEM_PROMPT,
+            messages,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          let reply = '';
+          if (data.content && Array.isArray(data.content)) {
+            for (const b of data.content) {
+              if (b.type === 'text') reply += b.text;
+            }
+          }
+          if (reply.trim()) {
+            return NextResponse.json({ ok: true, ai_enabled: true, reply: reply.trim() });
+          }
+        }
+      } catch (anthropicErr) {
+        console.warn('Anthropic API request failed, falling back to smart local knowledge engine:', anthropicErr);
       }
     }
-    messages.push({ role: 'user', content: message });
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 350,
-        system: SYSTEM_PROMPT,
-        messages,
-      }),
-    });
-
-    if (!response.ok) {
-      return NextResponse.json({ ok: true, ai_enabled: false, reply: null });
-    }
-
-    const data = await response.json();
-    let reply = '';
-    if (data.content && Array.isArray(data.content)) {
-      for (const b of data.content) {
-        if (b.type === 'text') reply += b.text;
-      }
-    }
-
-    return NextResponse.json({ ok: true, ai_enabled: true, reply: reply.trim() });
+    // Smart Local Knowledge Engine fallback
+    const localReply = getSmartLocalReply(message);
+    return NextResponse.json({ ok: true, ai_enabled: false, reply: localReply });
   } catch (error: any) {
+    console.error('Assistant route error:', error);
     return NextResponse.json({ ok: false, error: error?.message || 'Server error' }, { status: 500 });
   }
 }

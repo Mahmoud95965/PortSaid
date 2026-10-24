@@ -488,6 +488,73 @@ export function dbRecordVisit(
   }
 }
 
+export function dbGetUserLedger(userId: string): DbLedgerEntry[] {
+  const db = getLocalDb();
+  return db.prepare(`
+    SELECT * FROM points_ledger 
+    WHERE user_id = ? 
+    ORDER BY created_at DESC 
+    LIMIT 100
+  `).all(userId) as DbLedgerEntry[];
+}
+
+export function dbRedeemCoupon(
+  userId: string,
+  placeId: string,
+  pointsCost: number,
+  placeName: string
+): { ok: boolean; balance: number; message: string; couponCode?: string } {
+  const db = getLocalDb();
+  const user = dbFindUserById(userId);
+
+  if (!user || user.status !== 'active') {
+    return { ok: false, balance: 0, message: 'الحساب غير موجود أو معطل.' };
+  }
+
+  if (user.points_balance < pointsCost) {
+    return {
+      ok: false,
+      balance: user.points_balance,
+      message: `رصيد نقاطك (${user.points_balance}) لا يكفي لاستبدال هذا الكوبون (${pointsCost} نقطة مطلوبة).`,
+    };
+  }
+
+  const newBal = user.points_balance - pointsCost;
+  const now = new Date().toISOString();
+  const couponCode = `HUB-${Math.random().toString(36).substring(2, 7).toUpperCase()}-${Date.now().toString().slice(-4)}`;
+  const idempKey = `redeem_${userId}_${placeId}_${Date.now()}`;
+
+  db.exec('BEGIN TRANSACTION;');
+  try {
+    db.prepare('UPDATE users SET points_balance = ?, updated_at = ? WHERE id = ?').run(newBal, now, userId);
+
+    db.prepare(`
+      INSERT INTO points_ledger (user_id, delta, balance_after, reason, ref_type, ref_id, idempotency_key, created_at)
+      VALUES (?, ?, ?, ?, 'coupon_redemption', ?, ?, ?)
+    `).run(
+      userId,
+      -pointsCost,
+      newBal,
+      `استبدال كوبون خصم في ${placeName}`,
+      couponCode,
+      idempKey,
+      now
+    );
+
+    db.exec('COMMIT;');
+
+    return {
+      ok: true,
+      balance: newBal,
+      couponCode,
+      message: `تم استبدال ${pointsCost} نقطة بنجاح والحصول على كوبون خصم في ${placeName} 🎉`,
+    };
+  } catch (err) {
+    db.exec('ROLLBACK;');
+    throw err;
+  }
+}
+
 export function dbInsertPartnerApplication(app: {
   userId: string;
   businessName: string;

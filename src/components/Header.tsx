@@ -24,10 +24,10 @@ import Link from 'next/link';
 interface HeaderProps {
   onNavigate: (view: string, arg?: string | null) => void;
   onOpenFeedback: () => void;
-  onShare: () => void;
+  onOpenPoints: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onNavigate, onOpenFeedback, onShare }) => {
+export const Header: React.FC<HeaderProps> = ({ onNavigate, onOpenFeedback, onOpenPoints }) => {
   const { user, theme, toggleTheme, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -152,15 +152,14 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate, onOpenFeedback, onSh
         {!isMerchant && (
           <div className="hidden md:flex lg:hidden items-center gap-2">
             <motion.button
-              onClick={onShare}
+              onClick={onOpenPoints}
               type="button"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs bg-sand-400 text-ocean-900 shadow hover:bg-sand-200 transition"
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
             >
-              <Share2 className="w-3.5 h-3.5" />
-              <span>شير واكسب</span>
-              <span className="font-black text-[10px] bg-ocean-900 text-sand-400 px-1.5 py-0.2 rounded-full">+40</span>
+              <Star className="w-3.5 h-3.5 fill-current" />
+              <span>نقاطي ومكافآتي</span>
             </motion.button>
             <motion.button
               onClick={onOpenFeedback}
@@ -179,11 +178,11 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate, onOpenFeedback, onSh
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           {/* Points Badge */}
           {!isMerchant && (
-            <motion.span
-              onClick={onShare}
-              role="button"
-              tabIndex={0}
-              title="رصيدك من النقاط - اضغط للمشاركة وكسب المزيد"
+            <motion.button
+              onClick={onOpenPoints}
+              type="button"
+              aria-label="عرض تفاصيل رصيد النقاط والمكافآت"
+              title="رصيدك من النقاط - اضغط لعرض التفاصيل الكاملة وكيفية استخدامها"
               className="inline-flex items-center gap-1 sm:gap-1.5 bg-white/15 hover:bg-white/25 border border-white/25 rounded-xl sm:rounded-2xl px-2.5 sm:px-3.5 py-1 sm:py-1.5 font-black text-xs sm:text-sm transition cursor-pointer select-none"
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
@@ -199,7 +198,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate, onOpenFeedback, onSh
               </motion.div>
               <span className="text-sand-300 font-extrabold">{user?.points ?? 0}</span>
               <span className="hidden min-[480px]:inline text-[11px] sm:text-xs text-white/90">نقطة</span>
-            </motion.span>
+            </motion.button>
           )}
 
           {/* Theme Toggle Button */}
@@ -324,6 +323,25 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate, onOpenFeedback, onSh
                         </button>
                       </motion.div>
                     )}
+
+                    <motion.div variants={menuItemVariants}>
+                      <button
+                        onClick={() => {
+                          onOpenPoints();
+                          setMenuOpen(false);
+                        }}
+                        type="button"
+                        className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-sand-50 dark:bg-[#1a2739] text-ocean-900 dark:text-white font-bold text-sm hover:bg-sand-100 dark:hover:bg-[#22334a] transition"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                          <span>رصيد النقاط والمكافآت</span>
+                        </span>
+                        <span className="font-extrabold text-xs text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded-full">
+                          {user?.points || 0} نقطة
+                        </span>
+                      </button>
+                    </motion.div>
 
                     <motion.div variants={menuItemVariants}>
                       <button

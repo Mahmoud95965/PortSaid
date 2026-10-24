@@ -18,6 +18,7 @@ import { ExploreView } from '@/components/ExploreView';
 import { FeedbackView } from '@/components/FeedbackView';
 import { PartnerView } from '@/components/PartnerView';
 import { AccountView } from '@/components/AccountView';
+import { PointsDetailsView } from '@/components/PointsDetailsView';
 import { QRModal } from '@/components/QRModal';
 import { AssistantChat } from '@/components/AssistantChat';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
@@ -191,7 +192,7 @@ export default function HomePage() {
       <Header
         onNavigate={handleNavigate}
         onOpenFeedback={() => handleNavigate('feedback')}
-        onShare={handleShareApp}
+        onOpenPoints={() => handleNavigate('points')}
       />
 
       {/* Main Dynamic View Content with AnimatePresence */}
@@ -220,9 +221,9 @@ export default function HomePage() {
 
               {/* Quick Interactive Actions Grid (Mobile & Desktop) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-4 pt-1">
-                {/* Share & Earn Card */}
+                {/* Points & Rewards Card */}
                 <motion.button
-                  onClick={handleShareApp}
+                  onClick={() => handleNavigate('points')}
                   type="button"
                   whileHover={{ y: -6, scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
@@ -232,18 +233,18 @@ export default function HomePage() {
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="rounded-full bg-ocean-900 text-sand-300 px-3 py-0.5 text-[11px] font-black tracking-wide flex items-center gap-1">
                         <Sparkles className="w-3 h-3 text-sand-400" />
-                        <span>+40 نقطة هدية</span>
+                        <span>رصيدك: {user.points} نقطة</span>
                       </span>
                     </div>
                     <h4 className="font-black text-sm min-[400px]:text-base sm:text-lg leading-tight text-ocean-900">
-                      شير واكسب نقاط مجانية
+                      مكافآتك ونقاطك في بورسعيد
                     </h4>
                     <p className="text-[11px] min-[400px]:text-xs sm:text-sm text-ocean-900/85 font-bold mt-1 line-clamp-1">
-                      شارك الموقع مع أصحابك واكسب 40 نقطة واستبدلها بخصومات
+                      اضغط لمعرفة كيف تستخدم نقاطك للحصول على خصومات حقيقية وكوبونات
                     </p>
                   </div>
                   <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/40 backdrop-blur-md grid place-items-center shrink-0 shadow-inner group-hover:scale-110 transition-transform relative z-10">
-                    <Share2 className="w-5 h-5 sm:w-6 sm:h-6 text-ocean-900" />
+                    <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-ocean-900" />
                   </div>
                 </motion.button>
 
@@ -336,6 +337,16 @@ export default function HomePage() {
               <AccountView onBack={() => handleNavigate('home')} />
             </motion.div>
           )}
+
+          {currentView === 'points' && (
+            <motion.div key="points-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+              <PointsDetailsView
+                onBack={() => handleNavigate('home')}
+                onSelectPlace={(id) => handleNavigate('place', id)}
+                onOpenCouponModal={handleRequestCoupon}
+              />
+            </motion.div>
+          )}
         </AnimatePresence>
       </main>
 
@@ -384,7 +395,7 @@ export default function HomePage() {
       )}
 
       {/* Assistant AI Chatbot FAB */}
-      <AssistantChat />
+      <AssistantChat onOpenPoints={() => handleNavigate('points')} />
 
       {/* Footer */}
       <Footer />

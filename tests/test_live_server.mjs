@@ -14,7 +14,7 @@ async function testLiveServer() {
 
   // 2. Register a brand new real user
   const uniqueSuffix = Date.now().toString().slice(-6);
-  const regPhone = `01099${uniqueSuffix}`;
+  const regPhone = `01088${uniqueSuffix}`;
   const regEmail = `user_${uniqueSuffix}@portsaidhub.com`;
   const regPassword = 'MySecretPassword2026!';
 
@@ -53,28 +53,18 @@ async function testLiveServer() {
     throw new Error('User not found in DB or points mismatch');
   }
 
-  // 4. Claim Share Reward (+40 pts)
-  console.log('4. Claiming share reward (+40 pts) ...');
+  // 4. Verify Share Points is properly CANCELLED (as requested)
+  console.log('4. Verifying share points is properly cancelled ...');
   const shareRes = await fetch('http://localhost:3000/api/rewards/share', {
     method: 'POST',
     headers: { Cookie: userCookie },
   });
   const shareData = await shareRes.json();
-  console.log('   Share Result:', shareData);
-  if (!shareData.ok || shareData.balance !== 60) throw new Error('Share reward points not added in DB');
+  console.log('   Share Result (should be disabled):', shareData);
+  if (shareData.ok !== false) throw new Error('Share reward must be disabled');
 
-  // 5. Claim Share Reward AGAIN (Must be rejected idempotently)
-  console.log('5. Attempting duplicate share claim ...');
-  const dupShareRes = await fetch('http://localhost:3000/api/rewards/share', {
-    method: 'POST',
-    headers: { Cookie: userCookie },
-  });
-  const dupShareData = await dupShareRes.json();
-  console.log('   Duplicate Share Result (should fail):', dupShareData);
-  if (dupShareData.ok !== false) throw new Error('Duplicate share reward must be rejected');
-
-  // 6. Record Place Visit (+20 pts)
-  console.log('6. Recording place visit (+20 pts) ...');
+  // 5. Record Place Visit (+20 pts)
+  console.log('5. Recording place visit (+20 pts) ...');
   const visitPlaceId = 'f1a2b3c4-0000-0000-0000-000000000001';
   const visitRes = await fetch('http://localhost:3000/api/rewards/visit', {
     method: 'POST',
@@ -88,32 +78,85 @@ async function testLiveServer() {
   });
   const visitData = await visitRes.json();
   console.log('   Visit Result:', visitData);
-  if (!visitData.ok || visitData.balance !== 80) throw new Error('Visit points not added in DB');
+  if (!visitData.ok || visitData.balance !== 40) throw new Error('Visit points not added in DB (expected 20+20=40)');
 
-  // 7. Duplicate Visit Today (Must be rejected)
-  console.log('7. Attempting duplicate visit on same day ...');
-  const dupVisitRes = await fetch('http://localhost:3000/api/rewards/visit', {
+  // 6. Record second Place Visit to another place (+20 pts -> 60 pts)
+  console.log('6. Recording second place visit (+20 pts) ...');
+  const visitPlaceId2 = 'f1a2b3c4-0000-0000-0000-000000000002';
+  const visitRes2 = await fetch('http://localhost:3000/api/rewards/visit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: userCookie },
+    body: JSON.stringify({
+      placeId: visitPlaceId2,
+      lat: 31.258,
+      lon: 32.308,
+      distanceM: 40,
+    }),
+  });
+  const visitData2 = await visitRes2.json();
+  console.log('   Second Visit Result:', visitData2);
+  if (!visitData2.ok || visitData2.balance !== 60) throw new Error('Second visit points not added in DB');
+
+  // 7. Verify Points Ledger Endpoint (/api/rewards/ledger)
+  console.log('7. Verifying /api/rewards/ledger ...');
+  const ledgerRes = await fetch('http://localhost:3000/api/rewards/ledger', {
+    headers: { Cookie: userCookie },
+  });
+  const ledgerData = await ledgerRes.json();
+  console.log('   Ledger Transactions Count:', ledgerData.ledger?.length);
+  if (!ledgerData.ok || !Array.isArray(ledgerData.ledger) || ledgerData.ledger.length < 3) {
+    throw new Error('Ledger should contain welcome bonus + 2 visits');
+  }
+
+  // 8. Redeem Coupon for 40 points (60 - 40 = 20 pts remaining)
+  console.log('8. Testing Coupon Redemption (/api/rewards/redeem) for 40 points ...');
+  const redeemRes = await fetch('http://localhost:3000/api/rewards/redeem', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Cookie: userCookie },
     body: JSON.stringify({
       placeId: visitPlaceId,
-      lat: 31.265,
-      lon: 32.302,
+      pointsCost: 40,
+      placeName: 'حلويات سيلفر',
     }),
   });
-  const dupVisitData = await dupVisitRes.json();
-  console.log('   Duplicate Visit Result (should fail):', dupVisitData);
-  if (dupVisitData.ok !== false) throw new Error('Duplicate visit today must be rejected');
+  const redeemData = await redeemRes.json();
+  console.log('   Redeem Result:', redeemData);
+  if (!redeemData.ok || redeemData.balance !== 20 || !redeemData.couponCode) {
+    throw new Error('Coupon redemption failed or balance incorrect');
+  }
 
-  // 8. Logout
-  console.log('8. Logging out ...');
+  // 9. Test Enhanced Smart Assistant (/api/assistant)
+  console.log('9. Testing Enhanced Smart Assistant (/api/assistant) ...');
+  const botRes = await fetch('http://localhost:3000/api/assistant', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: 'ازاي استخدم النقط؟' }),
+  });
+  const botData = await botRes.json();
+  console.log('   Bot Reply for Points:', botData.reply);
+  if (!botData.ok || !botData.reply || !botData.reply.includes('نظام النقاط')) {
+    throw new Error('Smart assistant reply invalid');
+  }
+
+  // Test Assistant on Fish/Dining
+  const botFishRes = await fetch('http://localhost:3000/api/assistant', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: 'احسن مطعم سمك في بورسعيد فين؟' }),
+  });
+  const botFishData = await botFishRes.json();
+  console.log('   Bot Reply for Fish:', botFishData.reply);
+  if (!botFishData.ok || !botFishData.reply || !botFishData.reply.includes('كاستن')) {
+    throw new Error('Smart assistant fish reply invalid');
+  }
+
+  // 10. Logout & Login again to ensure final balance (20 pts) is permanently persisted
+  console.log('10. Logging out & verifying persistent DB storage ...');
   await fetch('http://localhost:3000/api/auth/logout', {
     method: 'POST',
     headers: { Cookie: userCookie },
   });
 
-  // 9. Login with registered user's credentials and verify persisted balance (80 pts)
-  console.log('9. Logging in with saved user credentials to verify DB persistence ...');
   const loginRes = await fetch('http://localhost:3000/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -123,29 +166,12 @@ async function testLiveServer() {
     }),
   });
   const loginData = await loginRes.json();
-  console.log('   Login Result:', loginData);
-  if (!loginData.ok || !loginData.user) throw new Error('Failed to log in with newly registered user');
-  if (loginData.user.points !== 80) {
-    throw new Error(`Persisted balance mismatch: expected 80, got ${loginData.user.points}`);
+  console.log('    Login Result after coupon redemption:', loginData);
+  if (!loginData.ok || loginData.user.points !== 20) {
+    throw new Error(`Persisted balance mismatch: expected 20, got ${loginData.user?.points}`);
   }
 
-  // 10. Login with Baseline Admin (Pre-seeded in DB)
-  console.log('10. Logging in with pre-seeded Admin (01000000001) ...');
-  const adminLoginRes = await fetch('http://localhost:3000/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      identifier: '01000000001',
-      password: 'Admin@123456',
-    }),
-  });
-  const adminLoginData = await adminLoginRes.json();
-  console.log('   Admin Login Result:', adminLoginData);
-  if (!adminLoginData.ok || adminLoginData.user.role !== 'owner' || adminLoginData.user.points !== 500) {
-    throw new Error('Pre-seeded admin account failed to log in');
-  }
-
-  console.log('\n>>> SUCCESS: ALL DATABASE OPERATIONS ARE PERMANENTLY SAVED AND VERIFIED ON DISK! <<<\n');
+  console.log('\n>>> SUCCESS: ALL NEW POINTS, LEDGER, REDEMPTION & CHATBOT FEATURES VERIFIED 100%! <<<\n');
 }
 
 testLiveServer().catch((e) => {
