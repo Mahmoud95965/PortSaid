@@ -51,11 +51,32 @@ function getDynamicReasoningReply(
   }).sort((a, b) => (a.distanceKm || 999) - (b.distanceKm || 999));
 
   // البحث الدلالي في قاعدة الأماكن بناءً على كلمات السؤال الفعلية
+  const wantsWaterfront = q.includes('بحر') || q.includes('البحر') || q.includes('شاطئ') || q.includes('قناة') || q.includes('ممشى');
+  const wantsCafe = q.includes('كافيه') || q.includes('قهوة') || q.includes('كوفي') || q.includes('مشروب');
+  const wantsFood = q.includes('مطعم') || q.includes('سمك') || q.includes('اكل') || q.includes('غدا') || q.includes('سي فود');
+
   const matchedPlaces = placesWithDist.filter((p) => {
     const name = p.n.toLowerCase();
     const desc = p.ds.toLowerCase();
     const cat = p.cat.toLowerCase();
     const area = p.a.toLowerCase();
+
+    // مطابقة التفضيلات المحددة
+    if (wantsCafe && p.cat === 'cafe') {
+      if (!wantsWaterfront || desc.includes('قناة') || desc.includes('ممشى') || desc.includes('بحر') || name.includes('بينوس')) {
+        return true;
+      }
+    }
+
+    if (wantsFood && (p.cat === 'food' || p.cat === 'shop')) {
+      if (!wantsWaterfront || desc.includes('قناة') || desc.includes('ممشى') || desc.includes('بحر') || name.includes('كاستن')) {
+        return true;
+      }
+    }
+
+    if (wantsWaterfront && (name.includes('ديليسبس') || name.includes('بينوس') || name.includes('فنار') || name.includes('كاستن') || desc.includes('قناة') || desc.includes('ممشى'))) {
+      if (!wantsCafe && !wantsFood) return true;
+    }
 
     return (
       q.includes(name) ||
@@ -68,8 +89,20 @@ function getDynamicReasoningReply(
 
   thinkingProcess.push(`🎯 تحليل السؤال: "${message}" واستخراج الكلمات المفتاحية والتفضيلات.`);
 
-  // 1. استفسارات الموقع الجغرافي والأقرب
-  if (q.includes('موقع') || q.includes('قريب') || q.includes('اقرب') || q.includes('جنبي') || q.includes('حوالي')) {
+  // 1. استفسارات الموقع الجغرافي للمستخدم نفسه ("قريب مني"، "جنبي"، "حوالي")
+  const isNearLandmark = q.includes('قريب من ') || q.includes('قريبة من ') || q.includes('اقرب ل') || q.includes('أقرب ل');
+  const isUserLocationQuery =
+    !isNearLandmark &&
+    (q.includes('قريب مني') ||
+      q.includes('اقرب مني') ||
+      q.includes('أقرب مني') ||
+      q.includes('قريبة مني') ||
+      q.includes('جنبي') ||
+      q.includes('حوالي') ||
+      q.includes('موقعي الحالي') ||
+      (q.includes('موقعي') && !q.includes('موقع ')));
+
+  if (isUserLocationQuery) {
     thinkingProcess.push(`📍 البحث عن الأماكن الأقرب لموقع المستخدم في ${userDistrict}.`);
     if (hasLocation) {
       const top3 = placesWithDist.slice(0, 3);

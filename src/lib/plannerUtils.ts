@@ -159,7 +159,7 @@ export function parseTripQuery(text: string): ExtractedQueryIntent {
   if (t.includes('كافيه') || t.includes('قهوة') || t.includes('كوفي') || t.includes('مشروب') || t.includes('شاي')) {
     categories.push('cafe');
   }
-  if (t.includes('معالم') || t.includes('زيارة') || t.includes('سياحة') || t.includes('فنار') || t.includes('ممشى') || t.includes('فسحة') || t.includes('خروج')) {
+  if (t.includes('معالم') || t.includes('زيارة') || t.includes('سياحة') || t.includes('فنار') || t.includes('ممشى')) {
     categories.push('fun');
   }
   if (t.includes('حلويات') || t.includes('كاساتا') || t.includes('سيلفر') || t.includes('حلو') || t.includes('ايس كريم') || t.includes('تمرية')) {
@@ -169,9 +169,11 @@ export function parseTripQuery(text: string): ExtractedQueryIntent {
     categories.push('shop');
   }
 
-  // إذا لم يحدد تصنيفات، نضع المزيج الكلاسيكي الممتع في بورسعيد (معالم + مطعم + كافيه + حلويات)
-  if (categories.length === 0) {
-    categories.push('fun', 'food', 'cafe', 'sweets');
+  // إذا لم يحدد تصنيفات محددة، أو كانت خروجة/فسحة عامة، نضع المزيج المتوازن (معالم + مطعم + كافيه)
+  if (categories.length === 0 || (categories.length === 1 && categories[0] === 'fun' && !t.includes('معالم فقط'))) {
+    if (!categories.includes('fun')) categories.push('fun');
+    if (!categories.includes('food')) categories.push('food');
+    if (!categories.includes('cafe')) categories.push('cafe');
   }
 
   // 5. استخراج الطابع العام (Vibe)
@@ -355,7 +357,8 @@ export function buildDeterministicPortSaidPlan(params: {
 
   // 2. المأكولات والأسماك (Lunch / Dining)
   if (intent.categories.includes('food') || intent.categories.includes('shop')) {
-    if (intent.vibe === 'budget') {
+    const budgetPerPerson = intent.budgetEgp / (intent.partySize || 1);
+    if (intent.vibe === 'budget' || budgetPerPerson <= 160) {
       const gendy = available.find((p) => p.n.includes('الجندي'));
       if (gendy) selectedPlaceIds.push(gendy.id);
     } else if (intent.categories.includes('shop')) {
@@ -379,11 +382,19 @@ export function buildDeterministicPortSaidPlan(params: {
     if (binos) selectedPlaceIds.push(binos.id);
   }
 
-  // 5. إذا كانت المدة طويلة (5 ساعات فأكثر)، نضمن إضافة ممشى ديليسبس
-  if (intent.durationHours >= 5) {
+  // 5. ضمان أن أي برنامج خروجة يحتوي على محطتين على الأقل
+  if (selectedPlaceIds.length < 2) {
     const delesseps = available.find((p) => p.n.includes('ديليسبس'));
     if (delesseps && !selectedPlaceIds.includes(delesseps.id)) {
       selectedPlaceIds.push(delesseps.id);
+    }
+  }
+
+  // 6. إذا كانت المدة 3 ساعات فأكثر ولم يكتمل البرنامج لـ 3 محطات
+  if (intent.durationHours >= 3 && selectedPlaceIds.length < 3) {
+    const binos = available.find((p) => p.n.includes('بينوس'));
+    if (binos && !selectedPlaceIds.includes(binos.id)) {
+      selectedPlaceIds.push(binos.id);
     }
   }
 
@@ -493,6 +504,58 @@ export function buildDeterministicPortSaidPlan(params: {
   return planStops;
 }
 
+export function createStopFromPlace(
+  place: (typeof INITIAL_PLACES)[0],
+  order: number,
+  partySize: number,
+  customReason?: string
+): PlanStop {
+  const meta = PLACES_METADATA[place.id] || {
+    estimatedCostPerPerson: 50,
+    costRange: '30 - 70 ج.م',
+    recommendedDurationMinutes: 45,
+    tags: [],
+  };
+  const costPerPerson = meta.estimatedCostPerPerson;
+  const totalCost = costPerPerson * partySize;
+
+  let reason = customReason || '';
+  if (!reason) {
+    if (place.cat === 'fun') reason = 'زيارة واستكشاف معلم بورسعيدي مميز والتقاط أجمل الصور.';
+    else if (place.cat === 'food' || place.cat === 'shop') reason = 'تناول وجبة بورسعيدية طازجة ومميزة تناسب الميزانية.';
+    else if (place.cat === 'sweets') reason = 'تحلية بورسعيدية كلاسيكية بكاساتا سيلفر الشهيرة.';
+    else if (place.cat === 'cafe') reason = 'جلسة رايقة ومشروب أمام سفن المجرى الملاحي لقناة السويس.';
+  }
+
+  return {
+    order,
+    placeId: place.id,
+    name: place.n,
+    category: place.cat,
+    categoryLabel:
+      place.cat === 'food'
+        ? 'مطعم أسماك'
+        : place.cat === 'cafe'
+        ? 'كافيه وقناة السويس'
+        : place.cat === 'sweets'
+        ? 'حلويات وتحلية'
+        : 'معلم سياحي',
+    area: place.a,
+    lat: place.lat,
+    lon: place.lon,
+    arrivalTime: `${(11 + order - 1) % 12 || 12}:00 ${(11 + order - 1) >= 12 ? 'م' : 'ص'}`,
+    departureTime: `${(11 + order) % 12 || 12}:00 ${(11 + order) >= 12 ? 'م' : 'ص'}`,
+    stayDurationMinutes: meta.recommendedDurationMinutes || 45,
+    estimatedCostPerPerson: costPerPerson,
+    totalCost,
+    costRange: meta.costRange,
+    reason,
+    tips: place.disc > 0 ? `خصم ${place.disc}% بكوبونات Port Said Hub` : '',
+    hasDiscount: place.disc > 0,
+    discountPercent: place.disc,
+  };
+}
+
 /**
  * تعديل الخطة الحالية تفاعلياً بالمحادثة دون إعادة بنائها من الصفر
  */
@@ -502,8 +565,66 @@ export function applyRefinementToPlan(
 ): PlanResult {
   const inst = (instruction || '').toLowerCase().trim();
   let updatedStops = [...currentPlan.stops];
+  const partySize = currentPlan.partySize || 2;
 
-  // 1. طلب حذف محطة معينة
+  // 1. فحص طلب الحذف بالترتيب والموقع (المكان التاني، الأول، الأخير...)
+  let targetIndexToRemove: number | null = null;
+  if (
+    inst.includes('المكان التاني') ||
+    inst.includes('تاني مكان') ||
+    inst.includes('المحطة التانية') ||
+    inst.includes('رقم 2') ||
+    inst.includes('تاني واحد')
+  ) {
+    targetIndexToRemove = 1;
+  } else if (
+    inst.includes('المكان الاول') ||
+    inst.includes('المكان الأول') ||
+    inst.includes('اول مكان') ||
+    inst.includes('أول مكان') ||
+    inst.includes('المحطة الاولى') ||
+    inst.includes('المحطة الأولى') ||
+    inst.includes('رقم 1') ||
+    inst.includes('اول واحد')
+  ) {
+    targetIndexToRemove = 0;
+  } else if (
+    inst.includes('المكان التالت') ||
+    inst.includes('تالت مكان') ||
+    inst.includes('المحطة التالتة') ||
+    inst.includes('رقم 3') ||
+    inst.includes('تالت واحد')
+  ) {
+    targetIndexToRemove = 2;
+  } else if (
+    inst.includes('المكان الاخير') ||
+    inst.includes('المكان الأخير') ||
+    inst.includes('اخر مكان') ||
+    inst.includes('آخر مكان') ||
+    inst.includes('المحطة الاخيرة') ||
+    inst.includes('المحطة الأخيرة') ||
+    inst.includes('اخر محطة') ||
+    inst.includes('آخر محطة')
+  ) {
+    targetIndexToRemove = updatedStops.length - 1;
+  }
+
+  // إذا تم طلب حذف مكاني محدد بالرقم
+  if (targetIndexToRemove !== null && targetIndexToRemove >= 0 && targetIndexToRemove < updatedStops.length) {
+    if (
+      inst.includes('شيل') ||
+      inst.includes('احذف') ||
+      inst.includes('إلغاء') ||
+      inst.includes('امسح') ||
+      inst.includes('بدل') ||
+      inst.includes('غير') ||
+      inst.includes('استبدل')
+    ) {
+      updatedStops.splice(targetIndexToRemove, 1);
+    }
+  }
+
+  // 2. طلب حذف محطة بنوعها أو اسمها
   if (inst.includes('احذف') || inst.includes('شيل') || inst.includes('إلغاء') || inst.includes('امسح') || inst.includes('بدون')) {
     if (inst.includes('كافيه') || inst.includes('قهوة') || inst.includes('بينوس')) {
       updatedStops = updatedStops.filter((s) => s.category !== 'cafe');
@@ -520,29 +641,48 @@ export function applyRefinementToPlan(
     }
   }
 
-  // 2. طلب استبدال مكان بمكان آخر
+  // 3. طلب تفضيل مكان أقرب للبحر أو قناة السويس (مثلاً: "شيل المكان التاني وحط مكان أقرب للبحر")
+  const wantsSeaPlace =
+    inst.includes('بحر') ||
+    inst.includes('البحر') ||
+    inst.includes('قناة') ||
+    inst.includes('الممشى') ||
+    inst.includes('الشاطئ') ||
+    inst.includes('مائي');
+
+  if (wantsSeaPlace && (inst.includes('حط') || inst.includes('ضيف') || inst.includes('بدل') || inst.includes('مكان أقرب') || inst.includes('مكان اقرب'))) {
+    // الأماكن المطلة على البحر وقناة السويس
+    const seaCandidates = INITIAL_PLACES.filter(
+      (p) =>
+        p.n.includes('ديليسبس') ||
+        p.n.includes('بينوس') ||
+        p.n.includes('فنار') ||
+        p.n.includes('كاستن')
+    );
+    const candidateToAdd = seaCandidates.find((c) => !updatedStops.some((s) => s.placeId === c.id));
+    if (candidateToAdd) {
+      const newStop = createStopFromPlace(
+        candidateToAdd,
+        updatedStops.length + 1,
+        partySize,
+        'إضافة مكان بإطلالة ساحرة ومباشرة على قناة السويس والبحر بناءً على طلبك.'
+      );
+      if (targetIndexToRemove !== null && targetIndexToRemove <= updatedStops.length) {
+        updatedStops.splice(targetIndexToRemove, 0, newStop);
+      } else {
+        updatedStops.push(newStop);
+      }
+    }
+  }
+
+  // 4. طلب استبدال مكان بمكان آخر بالاسم
   if (inst.includes('بدل') || inst.includes('غير') || inst.includes('استبدل')) {
     if (inst.includes('الجندي')) {
       const gendy = INITIAL_PLACES.find((p) => p.n.includes('الجندي'));
       if (gendy) {
         updatedStops = updatedStops.map((s) =>
           s.category === 'food' || s.category === 'shop'
-            ? {
-                ...s,
-                placeId: gendy.id,
-                name: gendy.n,
-                category: gendy.cat,
-                lat: gendy.lat,
-                lon: gendy.lon,
-                area: gendy.a,
-                estimatedCostPerPerson: 100,
-                totalCost: 100 * currentPlan.partySize,
-                costRange: '75 - 130 ج.م',
-                reason: 'تم الاستبدال لمطعم الجندي لتناول أسماك بلدية مميزة وأسعار اقتصادية تناسب ميزانيتكم.',
-                tips: 'استمتع بالجمبري المقلي وطاجن السبيط البلدي.',
-                hasDiscount: gendy.disc > 0,
-                discountPercent: gendy.disc,
-              }
+            ? createStopFromPlace(gendy, s.order, partySize, 'استبدال لمطعم الجندي لتناول أسماك بلدية مميزة وأسعار اقتصادية تناسب ميزانيتكم.')
             : s
         );
       }
@@ -551,22 +691,7 @@ export function applyRefinementToPlan(
       if (market) {
         updatedStops = updatedStops.map((s) =>
           s.category === 'food' || s.category === 'shop'
-            ? {
-                ...s,
-                placeId: market.id,
-                name: market.n,
-                category: market.cat,
-                lat: market.lat,
-                lon: market.lon,
-                area: market.a,
-                estimatedCostPerPerson: 130,
-                totalCost: 130 * currentPlan.partySize,
-                costRange: '90 - 170 ج.م',
-                reason: 'تم الاستبدال لسوق السمك الحضاري لشراء واختيار الأسماك الطازجة وشيّها فوراً.',
-                tips: 'اشترِ السمك البوري أو الدنيس واطلب شوائه ردة على الفحم.',
-                hasDiscount: market.disc > 0,
-                discountPercent: market.disc,
-              }
+            ? createStopFromPlace(market, s.order, partySize, 'استبدال لسوق السمك الحضاري لشراء واختيار الأسماك الطازجة وشيّها فوراً.')
             : s
         );
       }
@@ -575,59 +700,66 @@ export function applyRefinementToPlan(
       if (kasten) {
         updatedStops = updatedStops.map((s) =>
           s.category === 'food' || s.category === 'shop'
-            ? {
-                ...s,
-                placeId: kasten.id,
-                name: kasten.n,
-                category: kasten.cat,
-                lat: kasten.lat,
-                lon: kasten.lon,
-                area: kasten.a,
-                estimatedCostPerPerson: 160,
-                totalCost: 160 * currentPlan.partySize,
-                costRange: '130 - 220 ج.م',
-                reason: 'تم الاستبدال لمطعم كاستن العريق لتجربة راقية بإطلالة على الممشى وقناة السويس.',
-                tips: 'اطلب شوربة السي فود وطاجن الجمبري بالخلطة البورسعيدية.',
-                hasDiscount: kasten.disc > 0,
-                discountPercent: kasten.disc,
-              }
+            ? createStopFromPlace(kasten, s.order, partySize, 'استبدال لمطعم كاستن العريق لتجربة راقية بإطلالة على ممشى قناة السويس.')
             : s
         );
       }
     }
   }
 
-  // 3. طلب إضافة تحلية بكاساتا سيلفر
-  if (inst.includes('ضيف') || inst.includes('عايز احلي') || inst.includes('كاساتا') || inst.includes('سيلفر') || inst.includes('حلويات')) {
-    const hasSweets = updatedStops.some((s) => s.category === 'sweets');
-    if (!hasSweets) {
-      const silver = INITIAL_PLACES.find((p) => p.n.includes('سيلفر'));
-      if (silver) {
-        updatedStops.push({
-          order: updatedStops.length + 1,
-          placeId: silver.id,
-          name: silver.n,
-          category: silver.cat,
-          categoryLabel: 'حلويات وكاساتا',
-          area: silver.a,
-          lat: silver.lat,
-          lon: silver.lon,
-          arrivalTime: '03:30 م',
-          departureTime: '04:10 م',
-          stayDurationMinutes: 40,
-          estimatedCostPerPerson: 40,
-          totalCost: 40 * currentPlan.partySize,
-          costRange: '30 - 60 ج.م',
-          reason: 'إضافة محطة التحلية بكاساتا بورسعيد الشهيرة بناءً على رغبتك.',
-          tips: 'جرب طبق الكاساتا التقليدي بالمكسرات الطبيعية.',
-          hasDiscount: true,
-          discountPercent: silver.disc,
-        });
+  // 5. طلب إضافة تحلية أو كافيه أو مكان معين بالاسم
+  if (inst.includes('ضيف') || inst.includes('حط') || inst.includes('عايز احلي') || inst.includes('كاساتا') || inst.includes('سيلفر')) {
+    if (inst.includes('سيلفر') || inst.includes('كاساتا') || inst.includes('حلويات')) {
+      const hasSweets = updatedStops.some((s) => s.category === 'sweets');
+      if (!hasSweets) {
+        const silver = INITIAL_PLACES.find((p) => p.n.includes('سيلفر'));
+        if (silver) {
+          updatedStops.push(createStopFromPlace(silver, updatedStops.length + 1, partySize, 'إضافة محطة التحلية بكاساتا بورسعيد الشهيرة بناءً على رغبتك.'));
+        }
+      }
+    } else if (inst.includes('بينوس') || inst.includes('كافيه')) {
+      const hasCafe = updatedStops.some((s) => s.category === 'cafe');
+      if (!hasCafe) {
+        const cafe = INITIAL_PLACES.find((p) => p.n.includes('بينوس'));
+        if (cafe) {
+          updatedStops.push(createStopFromPlace(cafe, updatedStops.length + 1, partySize, 'إضافة كافيه بينوس للاسترخاء أمام المجرى الملاحي لقناة السويس.'));
+        }
+      }
+    } else {
+      // فحص هل ذُكر اسم مكان محدد من INITIAL_PLACES
+      for (const p of INITIAL_PLACES) {
+        if (inst.includes(p.n.toLowerCase()) && !updatedStops.some((s) => s.placeId === p.id)) {
+          updatedStops.push(createStopFromPlace(p, updatedStops.length + 1, partySize, `إضافة "${p.n}" إلى برنامج الخروجة بناءً على طلبك.`));
+          break;
+        }
       }
     }
   }
 
-  // 4. تعديل الميزانية إذا تم ذكر رقم جديد
+  // 6. طلب إعادة الترتيب وخلي أقرب مكان الأول ("غيّر ترتيب الأماكن وخلي أقرب مكان الأول")
+  const wantsReorderNearest =
+    inst.includes('أقرب مكان الأول') ||
+    inst.includes('اقرب مكان الاول') ||
+    inst.includes('خلي أقرب') ||
+    inst.includes('خلي اقرب') ||
+    inst.includes('رتب حسب الأقرب') ||
+    inst.includes('رتب حسب الاقرب') ||
+    inst.includes('ترتيب الأماكن');
+
+  if (wantsReorderNearest && updatedStops.length > 2) {
+    // الترتيب الجغرافي من نقطة مرجعية (أول محطة) لتقليل مسافات التنقل
+    const refLat = updatedStops[0].lat;
+    const refLon = updatedStops[0].lon;
+    const first = updatedStops[0];
+    const rest = updatedStops.slice(1).sort((a, b) => {
+      const distA = calculateDistanceKm(refLat, refLon, a.lat, a.lon);
+      const distB = calculateDistanceKm(refLat, refLon, b.lat, b.lon);
+      return distA - distB;
+    });
+    updatedStops = [first, ...rest];
+  }
+
+  // 7. تعديل الميزانية إذا تم ذكر رقم جديد
   let newBudget = currentPlan.budgetEgp;
   const newBudgetMatch = inst.match(/(\d+)\s*(جنيه|جنية|ج\.م)/);
   if (newBudgetMatch && newBudgetMatch[1]) {
@@ -635,10 +767,10 @@ export function applyRefinementToPlan(
     if (parsed >= 50) newBudget = parsed;
   }
 
-  // إعادة ترقيم المحطات
+  // إعادة ترقيم المحطات بالتسلسل 1, 2, 3...
   updatedStops = updatedStops.map((s, idx) => ({ ...s, order: idx + 1 }));
 
-  // إعادة حساب التكلفة
+  // إعادة حساب التكلفة الإجمالية
   const newTotalCost = updatedStops.reduce((sum, s) => sum + s.totalCost, 0);
 
   return {
