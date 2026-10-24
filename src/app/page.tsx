@@ -17,6 +17,7 @@ import { HousingView } from '@/components/HousingView';
 import { ExploreView } from '@/components/ExploreView';
 import { MapView } from '@/components/MapView';
 import { GeminiChatView } from '@/components/GeminiChatView';
+import { PlannerStudio } from '@/components/SmartPlanner/PlannerStudio';
 import { FeedbackView } from '@/components/FeedbackView';
 import { PartnerView } from '@/components/PartnerView';
 import { AccountView } from '@/components/AccountView';
@@ -125,6 +126,10 @@ export default function HomePage() {
 
   const handleNavigate = (view: string, arg?: string | null) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (view === 'planner') {
+      setCurrentView('planner');
+      return;
+    }
     if (view === 'chat') {
       setTargetChatInitialPrompt(arg || null);
       setCurrentView('chat');
@@ -396,6 +401,15 @@ export default function HomePage() {
                 onBack={() => handleNavigate('home')}
                 onSelectPlace={(id) => handleNavigate('place', id)}
                 onOpenCouponModal={handleRequestCoupon}
+              />
+            </motion.div>
+          )}
+
+          {currentView === 'planner' && (
+            <motion.div key="planner-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+              <PlannerStudio
+                onViewPlaceDetails={(id) => handleNavigate('place', id)}
+                onBackToHome={() => handleNavigate('home')}
               />
             </motion.div>
           )}
