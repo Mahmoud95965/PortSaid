@@ -28,7 +28,7 @@ interface PlaceDetailProps {
 }
 
 export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onRequestCoupon }) => {
-  const { user, updatePoints } = useAuth();
+  const { user, recordVisit } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [fromStop, setFromStop] = useState(HOME_STOP);
@@ -130,38 +130,37 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
     }
 
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         const userLat = pos.coords.latitude;
         const userLon = pos.coords.longitude;
-        const ptsAwarded = place.p || 20;
-        updatePoints(ptsAwarded, `زيارة وتسجيل حضور في ${place.n}`);
-        setVisited(true);
-        setCheckinLoading(false);
-        setCheckinMsg(`مبروك! اتسجلت زيارتك ونزلك +${ptsAwarded} نقطة 🎉`);
+        const dist = calcDistanceMeters(userLat, userLon, place.lat, place.lon);
 
-        if (isSupabaseConfigured() && supabase && user?.id && place?.id) {
-          (async () => {
-            try {
-              await supabase.from('visits').insert({
-                user_id: user.id,
-                place_id: place.id,
-                lat: userLat,
-                lon: userLon,
-                points_awarded: ptsAwarded,
-              });
-            } catch (e) {
-              console.warn('Supabase visit insert notice:', e);
-            }
-          })();
+        if (!user) {
+          setCheckinLoading(false);
+          setCheckinMsg('يرجى تسجيل الدخول أولاً لتسجيل الحضور.');
+          return;
         }
 
-        try {
-          confetti({
-            particleCount: 90,
-            spread: 70,
-            origin: { y: 0.6 },
-          });
-        } catch (err) {}
+        const res = await recordVisit({
+          placeId: place.id,
+          lat: userLat,
+          lon: userLon,
+          distanceM: Math.round(dist),
+        });
+
+        setCheckinLoading(false);
+        setCheckinMsg(res.message);
+
+        if (res.ok) {
+          setVisited(true);
+          try {
+            confetti({
+              particleCount: 90,
+              spread: 70,
+              origin: { y: 0.6 },
+            });
+          } catch (err) {}
+        }
       },
       (err) => {
         setCheckinLoading(false);

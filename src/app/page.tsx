@@ -33,7 +33,7 @@ const pageVariants: Variants = {
 };
 
 export default function HomePage() {
-  const { user, loading, hasSeenWelcome, setHasSeenWelcome, updatePoints } = useAuth();
+  const { user, loading, hasSeenWelcome, setHasSeenWelcome, claimShareReward } = useAuth();
 
   const [currentView, setCurrentView] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState<string>('fun');
@@ -103,7 +103,7 @@ export default function HomePage() {
     setCurrentView(view);
   };
 
-  const handleShareApp = () => {
+  const handleShareApp = async () => {
     const shareText =
       '🌊 بورسعيد في جيبك!\n\nلقيت موقع Port Said Hub هيفرق معاك جداً:\n' +
       '🚌 مواصلات من السكن للكلية\n' +
@@ -116,11 +116,13 @@ export default function HomePage() {
     const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     window.open(waUrl, '_blank');
 
-    showToast('جارٍ المشاركة على واتساب.. نزلنالك +40 نقطة مكافأة! 🎉');
-    updatePoints(40);
-    try {
-      confetti({ particleCount: 75, spread: 65, origin: { y: 0.6 } });
-    } catch (e) {}
+    const res = await claimShareReward();
+    showToast(res.message);
+    if (res.ok) {
+      try {
+        confetti({ particleCount: 75, spread: 65, origin: { y: 0.6 } });
+      } catch (e) {}
+    }
   };
 
   const handleRequestCoupon = (place: Place) => {

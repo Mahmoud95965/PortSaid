@@ -37,6 +37,13 @@ interface AuthContextType {
   }) => Promise<{ ok: boolean; message?: string }>;
   logout: () => void;
   updatePoints: (delta: number, reason?: string) => void;
+  claimShareReward: () => Promise<{ ok: boolean; message: string; pointsAwarded?: number }>;
+  recordVisit: (params: {
+    placeId: string;
+    lat: number;
+    lon: number;
+    distanceM?: number;
+  }) => Promise<{ ok: boolean; message: string; pointsAwarded?: number }>;
   updateAvatar: (avatarUrl: string) => void;
   changePassword: (oldPass: string, newPass: string) => Promise<{ ok: boolean; message?: string }>;
 }
@@ -467,31 +474,146 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   /**
-   * تحديث رصيد النقاط وحفظه في جدول users و points_ledger على Supabase
+   * استلام مكافأة مشاركة التطبيق بأمان عبر دالة خادمية ذرية في Supabase
+   */
+  const claimShareReward = async (): Promise<{ ok: boolean; message: string; pointsAwarded?: number }> => {
+    if (!user) {
+      return { ok: false, message: 'يجب تسجيل الدخول أولاً للحصول على النقاط.' };
+    }
+
+    const idempKey = `share_${user.id}`;
+
+    if (isSupabaseConfigured() && supabase && user.id) {
+      try {
+        const { data, error } = await supabase.rpc('rpc_claim_share_reward', {
+          p_user_id: user.id,
+          p_idempotency_key: idempKey,
+        });
+
+        if (error) {
+          console.warn('RPC share reward error, checking fallback:', error);
+          return { ok: false, message: error.message || 'حدث خطأ أثناء معالجة الطلب.' };
+        }
+
+        if (data && data.ok) {
+          if (typeof data.balance === 'number') {
+            const updated = { ...user, points: data.balance };
+            saveUserSession(updated);
+          }
+          return {
+            ok: true,
+            message: data.message || 'مبروك! تمت إضافة +40 نقطة لمشاركة التطبيق.',
+            pointsAwarded: data.points_awarded || 0,
+          };
+        } else {
+          return {
+            ok: false,
+            message: data?.message || 'تم الحصول على مكافأة المشاركة مسبقاً.',
+          };
+        }
+      } catch (e: any) {
+        console.warn('Share reward network error:', e);
+      }
+    }
+
+    // Offline / Fallback mode: Check local cache to prevent repeated rewards
+    try {
+      const shareKey = `ps_shared_${user.id}`;
+      if (typeof window !== 'undefined' && localStorage.getItem(shareKey)) {
+        return { ok: false, message: 'تم الحصول على مكافأة المشاركة مسبقاً.' };
+      }
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(shareKey, 'true');
+      }
+      const newBal = user.points + 40;
+      const updated = { ...user, points: newBal };
+      saveUserSession(updated);
+      return { ok: true, message: 'مبروك! تمت إضافة +40 نقطة لمشاركة التطبيق.', pointsAwarded: 40 };
+    } catch (e) {
+      return { ok: false, message: 'تعذر حفظ المكافأة محلياً.' };
+    }
+  };
+
+  /**
+   * تسجيل زيارة مكان والحصول على نقاطها ذرياً عبر دالة خادمية في Supabase
+   */
+  const recordVisit = async (params: {
+    placeId: string;
+    lat: number;
+    lon: number;
+    distanceM?: number;
+  }): Promise<{ ok: boolean; message: string; pointsAwarded?: number }> => {
+    if (!user) {
+      return { ok: false, message: 'يجب تسجيل الدخول أولاً لتسجيل الحضور.' };
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const idempKey = `visit_${user.id}_${params.placeId}_${today}`;
+
+    if (isSupabaseConfigured() && supabase && user.id) {
+      try {
+        const { data, error } = await supabase.rpc('rpc_record_visit', {
+          p_user_id: user.id,
+          p_place_id: params.placeId,
+          p_latitude: params.lat,
+          p_longitude: params.lon,
+          p_distance_m: params.distanceM || null,
+          p_idempotency_key: idempKey,
+        });
+
+        if (error) {
+          console.warn('RPC record visit error:', error);
+          return { ok: false, message: error.message || 'فشل تسجيل الزيارة.' };
+        }
+
+        if (data && data.ok) {
+          if (typeof data.balance === 'number') {
+            const updated = { ...user, points: data.balance };
+            saveUserSession(updated);
+          }
+          return {
+            ok: true,
+            message: data.message || `مبروك! تم تسجيل الزيارة وحصلت على +${data.points_awarded || 20} نقطة 🎉`,
+            pointsAwarded: data.points_awarded || 20,
+          };
+        } else {
+          return {
+            ok: false,
+            message: data?.message || 'لقد سجلت زيارتك لهذا المكان اليوم بالفعل.',
+          };
+        }
+      } catch (e: any) {
+        console.warn('Record visit network error:', e);
+      }
+    }
+
+    // Offline / Fallback mode: Check daily local cache
+    try {
+      const visitKey = `ps_visit_${user.id}_${params.placeId}_${today}`;
+      if (typeof window !== 'undefined' && localStorage.getItem(visitKey)) {
+        return { ok: false, message: 'لقد سجلت زيارتك لهذا المكان اليوم بالفعل.' };
+      }
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(visitKey, 'true');
+      }
+      const pts = 20;
+      const newBal = user.points + pts;
+      const updated = { ...user, points: newBal };
+      saveUserSession(updated);
+      return { ok: true, message: `مبروك! تم تسجيل الزيارة وحصلت على +${pts} نقطة 🎉`, pointsAwarded: pts };
+    } catch (e) {
+      return { ok: false, message: 'تعذر تسجيل الزيارة محلياً.' };
+    }
+  };
+
+  /**
+   * تحديث رصيد النقاط محلياً (محمية ومقيدة خادمياً عبر دوال RPC الذرية)
    */
   const updatePoints = async (delta: number, reason: string = 'مكافأة نقاط من نشاط الموقع') => {
     if (!user) return;
     const newBal = Math.max(0, user.points + delta);
     const updated = { ...user, points: newBal };
     saveUserSession(updated);
-
-    if (isSupabaseConfigured() && supabase && user.id) {
-      try {
-        await supabase
-          .from('users')
-          .update({ points_balance: newBal })
-          .eq('id', user.id);
-
-        await supabase.from('points_ledger').insert({
-          user_id: user.id,
-          delta,
-          balance_after: newBal,
-          reason,
-        });
-      } catch (e) {
-        console.warn('Points sync to Supabase notice:', e);
-      }
-    }
   };
 
   /**
@@ -590,6 +712,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         registerMerchant,
         logout,
         updatePoints,
+        claimShareReward,
+        recordVisit,
         updateAvatar,
         changePassword,
       }}
