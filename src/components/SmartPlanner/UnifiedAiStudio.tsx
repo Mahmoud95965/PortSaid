@@ -35,7 +35,6 @@ import {
   Car,
   Footprints,
   Check,
-  Brain,
   Settings,
   Cpu,
   Key,
@@ -156,22 +155,14 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
       id: 'welcome-1',
       role: 'bot',
       text:
-        'أهلاً بك في مركز الذكاء الاصطناعي والتخطيط الذكي لـ Port Said Hub 🌊\n\n' +
+        'أهلاً بك في مركز الذكاء الاصطناعي والتخطيط لـ Port Said Hub 🌊\n\n' +
         'أنا مساعدك ومخطط رحلاتك المتصل بالخريطة الحية ومسارات شوارع بورسعيد:\n' +
         '• اطلب أي خروجة بميزانيتك ووقتك ➔ هصمم لك الخطة والمسار الفعلي فوراً 🧭\n' +
-        '• الموديل يفكر ويحلل خطوات المسار والميزانية جغرافياً بدقة 🧠\n' +
-        '• عدّل أي محطة بالكلام المباشر أو اسأل عن أي مكان ومواصلاته 🗺️',
-      thinkingProcess: [
-        '⚡ تهيئة محرك التحليل الجغرافي لبورسعيد وبورفؤاد.',
-        '🗺️ تحميل قاعدة بيانات الأماكن المعتمدة وحساب المسافات.',
-        '🟢 جاهز لاستقبال طلبات التخطيط والاستفسارات الحية.',
-      ],
+        '• اسألني عن أفضل الأماكن والمطاعم والكافيهات والمعالم السياحية 💬\n' +
+        '• عدّل أي محطة بالكلام المباشر أو استفسر عن خطوط المواصلات 🗺️',
       timestamp: 'الآن',
     },
   ]);
-  const [expandedThinking, setExpandedThinking] = useState<Record<string, boolean>>({
-    'welcome-1': false,
-  });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; district?: string } | null>(null);
@@ -234,11 +225,6 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               id: 'shared-' + Date.now(),
               role: 'bot',
               text: `تم فتح خطة الرحلة المشتركة: "${decoded.title}". تفاصيل المحطات ومسار الشوارع معروضة مباشرة في الخريطة على يسارك 🧭`,
-              thinkingProcess: [
-                '📥 استيراد خطة الرحلة المشتركة والتحقق من سلامة البيانات.',
-                `📍 عدد المحطات: ${decoded.stops.length} محطات بتكلفة ${decoded.totalCost} ج.م.`,
-                '🛣️ عرض المسار الواقعي على الخريطة التفاعلية.',
-              ],
               timestamp: now,
               isPlanUpdate: true,
               planSummary: {
@@ -285,11 +271,6 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               id: 'loc-' + Date.now(),
               role: 'bot',
               text: `📍 تم تحديد موقعك الحالي بنجاح في ${district}! يمكنك الآن طلب خروجة تنطلق من مكانك مباشرة أو السؤال عن أقرب الأماكن إليك.`,
-              thinkingProcess: [
-                `📡 استقبال إحداثيات الـ GPS: (${lat.toFixed(4)}, ${lng.toFixed(4)}).`,
-                `🏛️ التحقق من النطاق الإداري: الموقع يقع داخل حدود ${district}.`,
-                '🎯 تعيين الموقع كنقطة انطلاق افتراضية لحساب المسافات ومسارات الشوارع.',
-              ],
               timestamp: now,
             },
           ]);
@@ -419,11 +400,6 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               id: newBotId,
               role: 'bot',
               text: `تمام يا غالي! تم تعديل الخطة بناءً على طلبك: "${textToSend}". تم تحديث مسار الشوارع والتكلفة الإجمالية أصبحت (${data.plan.totalCost} ج.م من أصل ${data.plan.budgetEgp} ج.م) والجدول والخريطة اتحدثوا على يسارك مباشرة 🧭`,
-              thinkingProcess: data.thinkingProcess || [
-                `🔄 تطبيق تعديل المستخدم: "${textToSend}".`,
-                '🛣️ إعادة حساب مسارات الشوارع الواقعية والمسافات.',
-                '💰 تحديث الميزانية والإجماليات.',
-              ],
               timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
               isPlanUpdate: true,
               planSummary: {
@@ -434,7 +410,6 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               },
             },
           ]);
-          setExpandedThinking((prev) => ({ ...prev, [newBotId]: true }));
         } else {
           throw new Error(data.error || 'تعذر تعديل الخطة');
         }
@@ -473,12 +448,6 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                 `⏳ المدة: **${data.plan.totalDurationHours} ساعات** • **${data.plan.partySize} أفراد** • المسافة: **${data.plan.totalDistanceKm} كم**\n` +
                 `🛣️ خط السير: ${stopsNames}\n\n` +
                 `الخريطة ومسار الشوارع الفعلي وجدول المواعيد جاهزين على يسارك. تقدر تسألني عن أي تفاصيل أو تقولي أعدل أي محطة! 👇`,
-              thinkingProcess: data.thinkingProcess || [
-                `🎯 تحليل نية المستخدم: استخراج المعايير والتفضيلات.`,
-                `🗺️ فحص ومطابقة أماكن بورسعيد المعتمدة جغرافياً.`,
-                `🛣️ حساب مسارات الشوارع الواقعية عبر OSRM.`,
-                `💰 التحقق من ملاءمة الميزانية والتوقيت.`,
-              ],
               timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
               isPlanUpdate: true,
               planSummary: {
@@ -489,7 +458,6 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               },
             },
           ]);
-          setExpandedThinking((prev) => ({ ...prev, [newBotId]: true }));
 
           if (window.innerWidth < 1024) {
             setMobileView('canvas');
@@ -523,14 +491,10 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               id: newBotId,
               role: 'bot',
               text: data.reply,
-              thinkingProcess: data.thinkingProcess || [],
               timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
               suggestedPlaces: data.suggestedPlaces || [],
             },
           ]);
-          if (data.thinkingProcess && data.thinkingProcess.length > 0) {
-            setExpandedThinking((prev) => ({ ...prev, [newBotId]: true }));
-          }
         } else {
           throw new Error(data.error || 'تعذر معالجة الرسالة');
         }
@@ -586,11 +550,6 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
         id: 'bot-' + Date.now(),
         role: 'bot',
         text: `تم حذف محطة "${removedStop?.name || order}" وتحديث المسار. التكلفة أصبحت ${newTotalCost} ج.م من أصل ${currentPlan.budgetEgp} ج.م.`,
-        thinkingProcess: [
-          `🗑️ حذف محطة: "${removedStop?.name}".`,
-          `📊 إعادة تسلسل المحطات المتبقية (${remaining.length} محطات).`,
-          `💰 إعادة حساب التكلفة الإجمالية: ${newTotalCost} ج.م.`,
-        ],
         timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
       },
     ]);
@@ -678,13 +637,6 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
     } catch (e) {}
   };
 
-  const toggleThinking = (id: string) => {
-    setExpandedThinking((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  };
-
   const isCurrentSaved = currentPlan ? savedTrips.some((t) => t.id === currentPlan.id) : false;
   const activeModelObj = POPULAR_MODELS.find((m) => m.id === selectedModel) || {
     id: selectedModel,
@@ -698,7 +650,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
       <header className="p-3 sm:p-4 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-md flex flex-col md:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-3 w-full md:w-auto text-right">
           <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-cyan-500 via-teal2-600 to-indigo-600 text-white grid place-items-center shrink-0 shadow-md">
-            <Brain className="w-5 h-5 text-white animate-pulse" />
+            <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -710,7 +662,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-ocean-700/80 dark:text-white/70 font-medium">
-              شات تفاعلي يفكر ويحلل بالذكاء الاصطناعي مع خريطة حية لمسارات بورسعيد
+              شات تفاعلي لتخطيط الخروجات واستكشاف معالم ومطاعم بورسعيد
             </p>
           </div>
         </div>
@@ -827,7 +779,6 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
           <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-3.5 scrollbar-thin">
             {messages.map((m) => {
               const isBot = m.role === 'bot';
-              const isThinkingOpen = expandedThinking[m.id] ?? false;
 
               return (
                 <div
@@ -837,7 +788,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                   {/* Avatar */}
                   {isBot ? (
                     <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-cyan-600 to-indigo-600 text-white grid place-items-center shrink-0 mt-0.5 shadow-sm text-xs font-black">
-                      <Brain className="w-3.5 h-3.5" />
+                      <Sparkles className="w-3.5 h-3.5" />
                     </div>
                   ) : (
                     <div className="w-7 h-7 rounded-xl bg-teal2-600 text-white grid place-items-center shrink-0 mt-0.5 shadow-sm text-xs font-black">
@@ -853,45 +804,6 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                         : 'bg-gradient-to-r from-ocean-900 to-teal2-700 text-white rounded-tl-sm'
                     }`}
                   >
-                    {/* Collapsible Thinking Block */}
-                    {isBot && m.thinkingProcess && m.thinkingProcess.length > 0 && (
-                      <div className="mb-2.5 rounded-xl border border-indigo-500/20 bg-indigo-950/20 dark:bg-indigo-950/40 p-2 text-xs">
-                        <button
-                          type="button"
-                          onClick={() => toggleThinking(m.id)}
-                          className="w-full flex items-center justify-between font-bold text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 dark:hover:text-indigo-200 transition text-right"
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <Brain className="w-3.5 h-3.5 text-indigo-500 animate-pulse" />
-                            <span>تفكير وتحليل النموذج ({m.thinkingProcess.length} خطوات)</span>
-                          </div>
-                          {isThinkingOpen ? (
-                            <ChevronUp className="w-3.5 h-3.5 text-indigo-400" />
-                          ) : (
-                            <ChevronDown className="w-3.5 h-3.5 text-indigo-400" />
-                          )}
-                        </button>
-
-                        <AnimatePresence>
-                          {isThinkingOpen && (
-                            <motion.ul
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="mt-2 space-y-1.5 border-t border-indigo-500/15 pt-2 text-[11px] text-slate-700 dark:text-slate-300 overflow-hidden font-normal"
-                            >
-                              {m.thinkingProcess.map((step, sIdx) => (
-                                <li key={sIdx} className="flex items-start gap-1.5 leading-relaxed">
-                                  <span className="text-indigo-400 select-none">•</span>
-                                  <span>{step}</span>
-                                </li>
-                              ))}
-                            </motion.ul>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    )}
-
                     {/* Main Text Content */}
                     <div className="whitespace-pre-line font-medium leading-relaxed">{m.text}</div>
 
@@ -948,11 +860,11 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               );
             })}
 
-            {/* Active Thinking Shimmer */}
+            {/* Active Writing Indicator */}
             {loading && (
-              <div className="flex items-center gap-2 p-3 rounded-2xl bg-indigo-50 dark:bg-[#121f2f] text-indigo-900 dark:text-indigo-200 text-xs font-bold w-fit border border-indigo-200 dark:border-indigo-900/40 shadow-sm animate-pulse">
-                <Brain className="w-4 h-4 text-indigo-500 animate-spin" />
-                <span>الذكاء الاصطناعي يفكر ويحلل النطاق الجغرافي والميزانية...</span>
+              <div className="flex items-center gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-[#121f2f] text-slate-700 dark:text-slate-300 text-xs font-bold w-fit border border-slate-200 dark:border-[#1d2d3e] shadow-xs">
+                <Sparkles className="w-4 h-4 text-teal2-500 animate-spin" />
+                <span>مساعد بورسعيد يكتب الرد ويجهز التفاصيل...</span>
               </div>
             )}
             <div ref={chatEndRef} />
@@ -1420,10 +1332,6 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               id: 'restored-' + Date.now(),
               role: 'bot',
               text: `تم استرجاع رحلة "${trip.title}" بنجاح! الخريطة ومسار الشوارع معروضة الآن على يسارك 🧭`,
-              thinkingProcess: [
-                `📂 فتح الرحلة المحفوظة: "${trip.title}".`,
-                `🗺️ تجهيز محطات الرحلة (${trip.stops.length} محطات) ومسار الشوارع.`,
-              ],
               timestamp: now,
             },
           ]);

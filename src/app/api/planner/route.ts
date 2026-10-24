@@ -133,12 +133,6 @@ ${PLACES_AI_CATALOG}
 3. التزم بالمعرفات IDs المذكورة تماماً.
 4. يجب أن يكون الرد بتنسيق JSON حصراً كالتالي:
 {
-  "thinkingSteps": [
-    "تحليل الطلب وتحديد نوع الخروجة...",
-    "فحص الأماكن المتاحة ومطابقتها للميزانية والوقت...",
-    "ترتيب المحطات جغرافياً لتقليل وقت الشوارع...",
-    "التأكد من التكلفة والمواعيد..."
-  ],
   "title": "عنوان جذاب للخروجة",
   "summary": "ملخص مشوق ودافئ للخروجة باللهجة المصرية البورسعيدية الودودة في سطرين إلى ثلاثة مع نصيحة حصرية",
   "selectedStops": [
@@ -215,13 +209,7 @@ ${PLACES_AI_CATALOG}
                 rawStops = matchedStops;
                 customTitle = parsed.title || customTitle;
                 smartSummary = parsed.summary || smartSummary;
-                thinkingProcess = Array.isArray(parsed.thinkingSteps) && parsed.thinkingSteps.length > 0
-                  ? parsed.thinkingSteps
-                  : [
-                      `🤖 خططها موديل: ${openRouterModel}.`,
-                      `🗺️ تم اختيار ${matchedStops.length} محطات بناءً على الميزانية (${finalBudget} ج.م) والمدة (${finalDuration} ساعات).`,
-                      `🛣️ جرى التحقق من الترتيب الجغرافي الواقعي.`,
-                    ];
+                thinkingProcess = [];
                 aiPlanSuccess = true;
               }
             }

@@ -13,11 +13,10 @@ const SYSTEM_PROMPT = `
 أنت "مساعد بورسعيد الذكي ومخطط الرحلات"، مرشد سياحي ومعرفي محترف وودود متخصص في محافظة بورسعيد داخل منصة Port Said Hub.
 تحدث باللهجة المصرية البورسعيدية الدافئة والذكية والمباشرة.
 
-قواعد مهمة جداً للتفكير والإجابة:
-1. قبل كتابة الرد النهائي، فكر في خطوات الحل والترشيحات واكتب تفكيرك الداخلي بدقة داخل وسم <think>...</think>.
-2. بعد إغلاق وسم </think>، اكتب ردك النهائي المنظم والودود والمباشر للمستخدم دون تكرار الوسم.
-3. التزم حصرياً بالأماكن والمعالم الحقيقية في بورسعيد المذكورة في قاعدة البيانات بالأسفل، ولا تختلق أماكن وهمية.
-4. إذا سأل المستخدم عن مكان أو مطعم، اذكر اسمه الدقيق كما في القائمة لكي تظهره الخريطة التفاعلية له فوراً.
+قواعد الإجابة:
+1. اكتب ردك المنظم والودود والمباشر للمستخدم فوراً دون أي وسوم تفكير.
+2. التزم حصرياً بالأماكن والمعالم الحقيقية في بورسعيد المذكورة في قاعدة البيانات بالأسفل، ولا تختلق أماكن وهمية.
+3. إذا سأل المستخدم عن مكان أو مطعم، اذكر اسمه الدقيق كما في القائمة لكي تظهره الخريطة التفاعلية له فوراً.
 
 قاعدة بيانات الأماكن المعتمدة في بورسعيد:
 ${PLACES_KNOWLEDGE}
@@ -267,26 +266,8 @@ export async function POST(req: Request) {
         const data = await openRouterRes.json();
         const rawReply = data.choices?.[0]?.message?.content;
         if (rawReply && typeof rawReply === 'string' && rawReply.trim()) {
-          let thinkingProcess: string[] = [];
-          let cleanReply = rawReply.trim();
-
-          // استخراج التفكير الداخلي من وسم <think> إن وُجد (مثل DeepSeek R1 و Gemini Thinking)
-          const thinkMatch = rawReply.match(/<think>([\s\S]*?)<\/think>/i);
-          if (thinkMatch) {
-            thinkingProcess = thinkMatch[1]
-              .trim()
-              .split('\n')
-              .map((s) => s.replace(/^[•\-\*\d\.]+\s*/, '').trim())
-              .filter(Boolean);
-            cleanReply = rawReply.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
-          } else {
-            thinkingProcess = [
-              `🤖 تمت المعالجة والتوليد المباشر عبر نموذج: ${openRouterModel}.`,
-              `🗺️ فحص ومطابقة أماكن بورسعيد المعتمدة مع تفضيلاتك.`,
-              `✨ صياغة التوصيات الذكية باللهجة البورسعيدية الودودة.`,
-            ];
-          }
-
+          // تنظيف الرد وإزالة أي وسوم تفكير داخلية
+          const cleanReply = rawReply.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
           const suggestedPlaces = extractMentionedPlaces(cleanReply, userLocation);
           return NextResponse.json({
             ok: true,
@@ -294,7 +275,6 @@ export async function POST(req: Request) {
             provider: 'openrouter',
             model: openRouterModel,
             reply: cleanReply,
-            thinkingProcess,
             suggestedPlaces,
             userDistrict,
           });
