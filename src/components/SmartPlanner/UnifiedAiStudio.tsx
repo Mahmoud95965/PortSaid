@@ -83,11 +83,13 @@ const OPENROUTER_KEY_STORAGE = 'portsaid_openrouter_key';
 const OPENROUTER_MODEL_STORAGE = 'portsaid_openrouter_model';
 
 const POPULAR_MODELS = [
-  { id: 'built-in', name: 'محرك التفكير لبورسعيد (مدمج فائق السرعة)', tag: 'Built-in ⚡' },
-  { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1 (تفكير متعمق)', tag: 'Reasoning 🧠' },
-  { id: 'google/gemini-2.0-flash-thinking-exp:free', name: 'Gemini 2.0 Flash Thinking (مجاني)', tag: 'Thinking 💡' },
-  { id: 'google/gemini-2.0-flash-001', name: 'Gemini 2.0 Flash (سريع ودقيق)', tag: 'Recommended ⭐' },
-  { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', tag: 'High Intelligence 🎯' },
+  { id: 'google/gemini-2.0-flash-001', name: 'Gemini 2.0 Flash (سريع ودقيق وموصى به)', tag: 'Recommended ⭐' },
+  { id: 'google/gemini-2.0-flash-thinking-exp:free', name: 'Gemini 2.0 Flash Thinking (مجاني ويفكر)', tag: 'Free 💡' },
+  { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1 (تفكير متعمق واستدلال كامل)', tag: 'Reasoning 🧠' },
+  { id: 'deepseek/deepseek-chat', name: 'DeepSeek V3 (ذكاء عالي وسريع)', tag: 'Fast ⚡' },
+  { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B (مجاني وقوي)', tag: 'Free 🦙' },
+  { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet (فائق الذكاء)', tag: 'Premium 🎯' },
+  { id: 'built-in', name: 'المحرك المحلي الافتراضي (بدون مفتاح)', tag: 'Offline 🏠' },
 ];
 
 const QUICK_PROMPTS = [
@@ -143,7 +145,9 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
   // إعدادات الموديل و OpenRouter
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [customKey, setCustomKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState('built-in');
+  const [selectedModel, setSelectedModel] = useState('google/gemini-2.0-flash-001');
+  const [isTestingKey, setIsTestingKey] = useState(false);
+  const [keyTestFeedback, setKeyTestFeedback] = useState<{ ok: boolean; message: string } | null>(null);
 
   // 2. حالة الشات والمحادثة المدمجة
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -304,13 +308,41 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     const savedKey = typeof window !== 'undefined' ? localStorage.getItem(OPENROUTER_KEY_STORAGE) : null;
     const savedModel = typeof window !== 'undefined' ? localStorage.getItem(OPENROUTER_MODEL_STORAGE) : null;
-    if (savedKey && savedKey.trim().length > 8) {
+    if (savedKey && savedKey.trim().length > 5) {
       headers['x-openrouter-key'] = savedKey.trim();
     }
     if (savedModel && savedModel !== 'built-in') {
       headers['x-openrouter-model'] = savedModel.trim();
+    } else if (savedKey && savedKey.trim().length > 5) {
+      headers['x-openrouter-model'] = 'google/gemini-2.0-flash-001';
     }
     return headers;
+  };
+
+  const handleTestKey = async () => {
+    if (!customKey.trim()) {
+      setKeyTestFeedback({ ok: false, message: 'يرجى لصق المفتاح أولاً لاختباره.' });
+      return;
+    }
+    setIsTestingKey(true);
+    setKeyTestFeedback(null);
+    try {
+      const res = await fetch('/api/ai-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: customKey.trim(), model: selectedModel }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setKeyTestFeedback({ ok: true, message: data.message || 'المفتاح يعمل بنجاح ومستعد للتفكير!' });
+      } else {
+        setKeyTestFeedback({ ok: false, message: data.error || 'فشل الاتصال بالمفتاح' });
+      }
+    } catch (err: any) {
+      setKeyTestFeedback({ ok: false, message: `تعذر الاتصال بالخادم: ${err.message}` });
+    } finally {
+      setIsTestingKey(false);
+    }
   };
 
   // إرسال ومعالجة الرسالة في المكان الموحد
@@ -707,11 +739,15 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
           <button
             onClick={() => setShowSettingsModal(true)}
             type="button"
-            className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#152332] text-ocean-900 dark:text-white hover:bg-slate-200 text-xs font-bold transition flex items-center gap-1.5 border border-slate-200 dark:border-[#1d2d3e]"
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border ${
+              customKey
+                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-400/30'
+                : 'bg-slate-100 dark:bg-[#152332] text-ocean-900 dark:text-white hover:bg-slate-200 border-slate-200 dark:border-[#1d2d3e]'
+            }`}
             title="إعدادات الموديل ومفتاح AI"
           >
-            <Settings className="w-3.5 h-3.5 text-indigo-500" />
-            <span className="hidden sm:inline">الموديل والمفتاح</span>
+            <Settings className={`w-3.5 h-3.5 ${customKey ? 'text-emerald-500 animate-spin' : 'text-indigo-500'}`} style={{ animationDuration: '6s' }} />
+            <span>{customKey ? 'AI مفعّل 🟢' : 'إضافة مفتاح AI'}</span>
           </button>
 
           <button
@@ -1298,23 +1334,50 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               </div>
 
               {/* Custom OpenRouter Key */}
-              <div className="space-y-1 text-xs">
+              <div className="space-y-1.5 text-xs">
                 <label className="font-bold text-ocean-950 dark:text-white flex items-center justify-between">
-                  <span>مفتاح OpenRouter API (اختياري):</span>
+                  <span>مفتاح OpenRouter API:</span>
                   <span className="text-[10px] text-slate-400 font-normal">محفوظ محلياً فقط في متصفحك</span>
                 </label>
-                <div className="relative">
-                  <input
-                    type="password"
-                    value={customKey}
-                    onChange={(e) => setCustomKey(e.target.value)}
-                    placeholder="sk-or-v1-..."
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#121f2f] border border-slate-200 dark:border-[#1d2d3e] text-ocean-950 dark:text-white text-xs outline-none focus:border-indigo-500 font-mono"
-                  />
-                  <Key className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="password"
+                      value={customKey}
+                      onChange={(e) => {
+                        setCustomKey(e.target.value);
+                        setKeyTestFeedback(null);
+                      }}
+                      placeholder="sk-or-v1-..."
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#121f2f] border border-slate-200 dark:border-[#1d2d3e] text-ocean-950 dark:text-white text-xs outline-none focus:border-indigo-500 font-mono"
+                    />
+                    <Key className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleTestKey}
+                    disabled={isTestingKey || !customKey.trim()}
+                    className="px-3 py-2 rounded-xl bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-400/30 text-[11px] font-bold hover:bg-indigo-500/25 transition disabled:opacity-40 shrink-0"
+                  >
+                    {isTestingKey ? 'جارٍ الفحص...' : 'فحص المفتاح 🔍'}
+                  </button>
                 </div>
-                <p className="text-[10px] text-slate-500 leading-relaxed pt-1">
-                  إذا لم تضع مفتاحاً، سيعمل تلقائياً المحرك الفكري الذكي السريع المدمج لـ Port Said Hub بدون أي قيود!
+
+                {keyTestFeedback && (
+                  <div
+                    className={`p-2.5 rounded-xl text-xs font-semibold leading-relaxed border ${
+                      keyTestFeedback.ok
+                        ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/30'
+                        : 'bg-rose-500/10 text-rose-800 dark:text-rose-300 border-rose-500/30'
+                    }`}
+                  >
+                    {keyTestFeedback.ok ? '✅ ' : '❌ '}
+                    {keyTestFeedback.message}
+                  </div>
+                )}
+
+                <p className="text-[10px] text-slate-500 leading-relaxed pt-0.5">
+                  احصل على مفتاح مجاني من <a href="https://openrouter.ai" target="_blank" rel="noreferrer" className="text-teal2-600 underline">openrouter.ai</a> وستتمكن من استخدام أقوى نماذج الذكاء التوليدي الحقيقي في العالم!
                 </p>
               </div>
 

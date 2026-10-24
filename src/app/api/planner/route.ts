@@ -13,6 +13,11 @@ import {
 
 export const runtime = 'nodejs';
 
+// بناء ملخص الأماكن المعتمدة للذكاء الاصطناعي
+const PLACES_AI_CATALOG = INITIAL_PLACES.map((p) => {
+  return `ID: "${p.id}" | اسم: "${p.n}" | تصنيف: "${p.cat}" | منطقة: "${p.a}" | تكلفة فرد: ${p.cost || 40} ج.م | خصم: ${p.disc}% | إحداثيات: lat=${p.lat}, lon=${p.lon} | وصف: ${p.ds}`;
+}).join('\n');
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -33,7 +38,7 @@ export async function POST(req: Request) {
     // قراءة مفاتيح OpenRouter إن تم تمريرها من العميل أو البيئة
     const headerKey = req.headers.get('x-openrouter-key');
     const headerModel = req.headers.get('x-openrouter-model');
-    const openRouterKey = (headerKey && headerKey.trim().length > 10) ? headerKey.trim() : (process.env.OPENROUTER_API_KEY || '');
+    const openRouterKey = (headerKey && headerKey.trim().length > 5) ? headerKey.trim() : (process.env.OPENROUTER_API_KEY || '').trim();
     const openRouterModel = (headerModel && headerModel.trim()) || process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001';
 
     // 1. معالجة تعديل خطة حالية (Refinement Action)
@@ -79,13 +84,9 @@ export async function POST(req: Request) {
       });
     }
 
-    // 2. تحليل النص واستخراج النوايا (Intent Parsing)
-    const thinkingProcess: string[] = [];
-    thinkingProcess.push(`🎯 تحليل استفسار المستخدم: "${prompt || 'خطة تلقائية متوازنة'}"`);
-
+    // 2. تحليل النص واستخراج النوايا
     const extracted = parseTripQuery(prompt || '');
 
-    // دمج الحقول الصريحة من النموذج إن وُجدت
     const finalPartySize = partySize && partySize > 0 ? partySize : extracted.partySize;
     const finalDuration = durationHours && durationHours > 0 ? durationHours : extracted.durationHours;
     const finalBudget = budgetEgp && budgetEgp > 0 ? budgetEgp : extracted.budgetEgp;
@@ -93,10 +94,6 @@ export async function POST(req: Request) {
       Array.isArray(selectedCategories) && selectedCategories.length > 0
         ? selectedCategories
         : extracted.categories;
-
-    thinkingProcess.push(
-      `📊 استخراج المعايير: الميزانية = ${finalBudget} ج.م | المدة = ${finalDuration} ساعات | الأفراد = ${finalPartySize} | وسيلة النقل = ${transportMode === 'walking' ? 'سيراً على الأقدام' : 'بالسيارة / التاكسي'}.`
-    );
 
     const mergedIntent: ExtractedQueryIntent = {
       ...extracted,
@@ -106,14 +103,156 @@ export async function POST(req: Request) {
       categories: finalCategories,
     };
 
-    // 3. بناء المحطات الأساسية باستخدام الخوارزمية المتخصصة لبورسعيد
-    thinkingProcess.push(`🗺️ فحص ومطابقة أماكن بورسعيد المعتمدة جغرافياً مع التصنيفات وتفادي التكرار.`);
-    const rawStops = buildDeterministicPortSaidPlan({
-      intent: mergedIntent,
-      startPoint,
-      endPoint,
-      transportMode,
-    });
+    let rawStops: PlanStop[] = [];
+    let customTitle = `خروجة بورسعيد (${finalDuration} ساعات • ${finalPartySize} أفراد)`;
+    let smartSummary = `خطة خروجة متكاملة وممتعة في بورسعيد لـ ${finalPartySize} أفراد لمدة ${finalDuration} ساعات بميزانية ${finalBudget} ج.م.`;
+    let thinkingProcess: string[] = [];
+
+    // 3. تخطيط حقيقي وتفكير عبر OpenRouter إذا كان المفتاح متوفراً
+    let aiPlanSuccess = false;
+
+    if (openRouterKey && openRouterKey.length > 5) {
+      try {
+        const aiPrompt = `
+أنت المخطط ومصمم الرحلات الذكي لمنصة Port Said Hub.
+المطلوب منك: تخطيط برنامج خروجة بورسعيدية واقعية ومتناسقة جغرافياً بناءً على طلب المستخدم:
+"${prompt || 'خروجة سياحية وترفيهية متوازنة'}"
+
+المعايير المحددة:
+- الميزانية الإجمالية: ${finalBudget} جنيه مصري
+- المدة الإجمالية: ${finalDuration} ساعات
+- عدد الأفراد: ${finalPartySize}
+- وسيلة الانتقال: ${transportMode === 'walking' ? 'مشياً على الأقدام' : 'بالسيارة / التاكسي'}
+
+قائمة الأماكن المعتمدة في بورسعيد (اختر حصرياً من معرفات IDs التالية فقط):
+${PLACES_AI_CATALOG}
+
+شروط الخطة الإلزامية:
+1. اختر من 2 إلى 5 محطات بالترتيب الزمني والجغرافي الأمثل لتقليل التنقل.
+2. احرص أن تكون التكلفة الإجمالية قريبة من ميزانية المستخدم أو أقل منها.
+3. التزم بالمعرفات IDs المذكورة تماماً.
+4. يجب أن يكون الرد بتنسيق JSON حصراً كالتالي:
+{
+  "thinkingSteps": [
+    "تحليل الطلب وتحديد نوع الخروجة...",
+    "فحص الأماكن المتاحة ومطابقتها للميزانية والوقت...",
+    "ترتيب المحطات جغرافياً لتقليل وقت الشوارع...",
+    "التأكد من التكلفة والمواعيد..."
+  ],
+  "title": "عنوان جذاب للخروجة",
+  "summary": "ملخص مشوق ودافئ للخروجة باللهجة المصرية البورسعيدية الودودة في سطرين إلى ثلاثة مع نصيحة حصرية",
+  "selectedStops": [
+    {
+      "placeId": "معرف المكان الدقيق مثل kasten أو delesseps_walk",
+      "reason": "سبب اختيار هذا المكان تحديداً لهذه الخروجة"
+    }
+  ]
+}
+`;
+
+        const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${openRouterKey}`,
+            'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+            'X-Title': 'Port Said Hub AI Planner',
+          },
+          body: JSON.stringify({
+            model: openRouterModel,
+            messages: [{ role: 'user', content: aiPrompt }],
+            max_tokens: 950,
+            temperature: 0.7,
+            response_format: { type: 'json_object' },
+          }),
+        });
+
+        if (openRouterRes.ok) {
+          const aiData = await openRouterRes.json();
+          const content = aiData.choices?.[0]?.message?.content;
+          if (content) {
+            const parsed = JSON.parse(content);
+            if (Array.isArray(parsed.selectedStops) && parsed.selectedStops.length >= 2) {
+              const matchedStops: PlanStop[] = [];
+              let currentHour = 11;
+
+              parsed.selectedStops.forEach((item: any, idx: number) => {
+                const place = INITIAL_PLACES.find((p) => p.id === item.placeId || p.n.includes(item.placeId));
+                if (place) {
+                  const arrH = currentHour % 12 || 12;
+                  const arrPeriod = currentHour >= 12 ? 'م' : 'ص';
+                  const depH = (currentHour + 1) % 12 || 12;
+                  const depPeriod = (currentHour + 1) >= 12 ? 'م' : 'ص';
+                  currentHour += 1;
+
+                  const costPerPerson = place.cost || 40;
+                  const totalCost = costPerPerson * finalPartySize;
+
+                  matchedStops.push({
+                    order: idx + 1,
+                    placeId: place.id,
+                    name: place.n,
+                    category: place.cat,
+                    categoryLabel: place.cat,
+                    area: place.a,
+                    lat: place.lat,
+                    lon: place.lon,
+                    arrivalTime: `${arrH}:00 ${arrPeriod}`,
+                    departureTime: `${depH}:00 ${depPeriod}`,
+                    stayDurationMinutes: 60,
+                    estimatedCostPerPerson: costPerPerson,
+                    totalCost,
+                    costRange: costPerPerson > 0 ? `${costPerPerson} ج.م` : 'مجاني',
+                    reason: item.reason || place.ds,
+                    tips: place.ds,
+                    hasDiscount: Boolean(place.disc && place.disc > 0),
+                    discountPercent: place.disc || 0,
+                  });
+                }
+              });
+
+              if (matchedStops.length >= 2) {
+                rawStops = matchedStops;
+                customTitle = parsed.title || customTitle;
+                smartSummary = parsed.summary || smartSummary;
+                thinkingProcess = Array.isArray(parsed.thinkingSteps) && parsed.thinkingSteps.length > 0
+                  ? parsed.thinkingSteps
+                  : [
+                      `🤖 خططها موديل: ${openRouterModel}.`,
+                      `🗺️ تم اختيار ${matchedStops.length} محطات بناءً على الميزانية (${finalBudget} ج.م) والمدة (${finalDuration} ساعات).`,
+                      `🛣️ جرى التحقق من الترتيب الجغرافي الواقعي.`,
+                    ];
+                aiPlanSuccess = true;
+              }
+            }
+          }
+        } else {
+          const errData = await openRouterRes.json().catch(() => null);
+          console.warn('OpenRouter Planner returned error, falling back to local heuristic:', openRouterRes.status, errData);
+        }
+      } catch (aiErr) {
+        console.warn('AI Planning parsing failed, falling back to heuristic:', aiErr);
+      }
+    }
+
+    // 4. إذا لم يتوفر مفتاح أو لم تنجح الاستجابة، استخدم الخوارزمية الجغرافية المحلية
+    if (!aiPlanSuccess || rawStops.length === 0) {
+      thinkingProcess = [
+        `🎯 تحليل استفسار المستخدم: "${prompt || 'خطة تلقائية متوازنة'}"`,
+        `📊 استخراج المعايير: الميزانية = ${finalBudget} ج.م | المدة = ${finalDuration} ساعات | الأفراد = ${finalPartySize}.`,
+        `🗺️ فحص ومطابقة أماكن بورسعيد المعتمدة جغرافياً مع التصنيفات.`,
+      ];
+
+      rawStops = buildDeterministicPortSaidPlan({
+        intent: mergedIntent,
+        startPoint,
+        endPoint,
+        transportMode,
+      });
+
+      thinkingProcess.push(`📍 تم اختيار ${rawStops.length} محطات رئيسية: ${rawStops.map((s) => s.name).join(' ➔ ')}.`);
+      thinkingProcess.push(`⚡ تم استخدام محرك التحليل الجغرافي والزمني الفائق لـ Port Said Hub.`);
+    }
 
     if (rawStops.length === 0) {
       return NextResponse.json(
@@ -122,54 +261,7 @@ export async function POST(req: Request) {
       );
     }
 
-    thinkingProcess.push(
-      `📍 تم اختيار ${rawStops.length} محطات رئيسية مرتبة تسلسلياً: ${rawStops.map((s) => s.name).join(' ➔ ')}.`
-    );
-
-    // 4. استدعاء OpenRouter لتوليد نصائح وتفاصيل ذكية وشخصية إذا كان المفتاح متوفراً
-    let smartSummary = `خطة خروجة متكاملة وممتعة في بورسعيد لـ ${finalPartySize} أفراد لمدة ${finalDuration} ساعات بميزانية ${finalBudget} ج.م تشمل ${rawStops.map((s) => s.name).join(' و ')}.`;
-
-    if (openRouterKey && prompt && prompt.length > 5) {
-      thinkingProcess.push(`🤖 تفعيل نموذج الذكاء الاصطناعي (${openRouterModel}) لتوليد التوصيات الشخصية والنصائح الحصرية.`);
-      try {
-        const aiPrompt = `أنت المساعد الذكي لمخطط رحلات Port Said Hub. تم اختيار المحطات التالية للخروجة بناءً على طلب المستخدم ("${prompt}"):
-${rawStops.map((s, i) => `${i + 1}. ${s.name} (${s.categoryLabel}) - ${s.area}`).join('\n')}
-الميزانية: ${finalBudget} ج.م، الأفراد: ${finalPartySize}، المدة: ${finalDuration} ساعات.
-قدم ملخصاً حماسياً دافئاً للخروجة باللهجة المصرية البورسعيدية الودودة في سطرين فقط، مع نصيحة واحدة سرية لأفضل تجربة.`;
-
-        const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openRouterKey}`,
-            'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-            'X-Title': 'Port Said Hub Smart Planner',
-          },
-          body: JSON.stringify({
-            model: openRouterModel,
-            messages: [{ role: 'user', content: aiPrompt }],
-            max_tokens: 220,
-            temperature: 0.7,
-          }),
-        });
-
-        if (openRouterRes.ok) {
-          const aiData = await openRouterRes.json();
-          const reply = aiData.choices?.[0]?.message?.content?.trim();
-          if (reply) {
-            smartSummary = reply;
-            thinkingProcess.push(`✨ تم دمج رؤى وتوصيات النموذج الذكي بنجاح.`);
-          }
-        }
-      } catch (aiErr) {
-        console.warn('OpenRouter enrichment skipped, using standard summary:', aiErr);
-      }
-    } else {
-      thinkingProcess.push(`⚡ تم استخدام محرك التحليل الجغرافي والزمني الفائق لـ Port Said Hub.`);
-    }
-
     // 5. حساب المسار الفعلي بشوارع بورسعيد عبر OSRM
-    thinkingProcess.push(`🛣️ استدعاء محرك مسارات شوارع بورسعيد الفعلي OSRM لحساب المسافات والزمن الواقعي.`);
     const routeCoords: Array<{ lat: number; lon: number }> = [];
 
     if (startPoint && typeof startPoint.lat === 'number' && typeof startPoint.lon === 'number') {
@@ -217,7 +309,7 @@ ${rawStops.map((s, i) => `${i + 1}. ${s.name} (${s.categoryLabel}) - ${s.area}`)
 
     const planResult: PlanResult = {
       id: 'plan-' + Date.now(),
-      title: `خروجة بورسعيد (${finalDuration} ساعات • ${finalPartySize} أفراد)`,
+      title: customTitle,
       summary: smartSummary,
       startTime: rawStops[0]?.arrivalTime || '11:00 ص',
       endTime: rawStops[rawStops.length - 1]?.departureTime || '04:00 م',
@@ -246,6 +338,7 @@ ${rawStops.map((s, i) => `${i + 1}. ${s.name} (${s.categoryLabel}) - ${s.area}`)
       plan: planResult,
       thinkingProcess,
       intent: mergedIntent,
+      ai_powered: aiPlanSuccess,
     });
   } catch (error: any) {
     console.error('Smart Planner API error:', error);
