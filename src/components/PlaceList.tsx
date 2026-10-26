@@ -9,6 +9,7 @@ import { SightsView } from '@/components/SightsView';
 import { RestaurantsView } from '@/components/RestaurantsView';
 import { CafesView } from '@/components/CafesView';
 import { SweetsView } from '@/components/SweetsView';
+import { ShoppingView } from '@/components/ShoppingView';
 
 interface PlaceListProps {
   categoryKey: string;
@@ -90,6 +91,18 @@ export const PlaceList: React.FC<PlaceListProps> = ({
   if (categoryKey === 'sweets') {
     return (
       <SweetsView
+        places={places}
+        onSelectPlace={onSelectPlace}
+        onNavigate={onNavigate}
+        onBack={onBack}
+        onRequestCoupon={onRequestCoupon}
+      />
+    );
+  }
+
+  if (categoryKey === 'shop' || categoryKey === 'shopping') {
+    return (
+      <ShoppingView
         places={places}
         onSelectPlace={onSelectPlace}
         onNavigate={onNavigate}

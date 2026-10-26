@@ -178,6 +178,11 @@ export default function HomePage() {
       setCurrentView('list');
       return;
     }
+    if (view === 'shop' || view === 'shopping') {
+      setSelectedCategory('shop');
+      setCurrentView('list');
+      return;
+    }
     if (view === 'list' && arg) {
       setSelectedCategory(arg);
       setCurrentView('list');
