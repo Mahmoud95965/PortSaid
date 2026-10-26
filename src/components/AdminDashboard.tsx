@@ -454,7 +454,7 @@ export const AdminDashboard: React.FC = () => {
               <form onSubmit={handleRedeemCoupon} className="space-y-3">
                 <input
                   type="text"
-                  placeholder="مثال: PSC.11111111-1111......."
+                  placeholder="مثال: PSC.20000000-0000......."
                   value={redeemCode}
                   onChange={(e) => setRedeemCode(e.target.value)}
                   className="w-full rounded-xl border border-sand-200 dark:border-[#2a2a2a] bg-sand-50 dark:bg-[#1a242d] px-3.5 py-2.5 text-xs font-mono"

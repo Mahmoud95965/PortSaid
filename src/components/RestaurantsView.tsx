@@ -36,12 +36,22 @@ const FAVORITES_KEY = 'portsaid_favorite_places';
 
 // ربط المطاعم بالصور الأصلية الحقيقية المتوفرة في المشروع
 const RESTAURANT_PHOTOS: Record<string, string> = {
-  // مطعم كاستن للأسماك
-  '11111111-1111-1111-1111-111111111104': '/assets/port-said/hero-02.webp',
-  // مطعم ومأكولات الجندي البحرية
-  '11111111-1111-1111-1111-111111111105': '/assets/port-said/hero-03.webp',
+  // مطعم وكافيه كاستن
+  '20000000-0000-0000-0000-000000000001': '/assets/port-said/hero-02.webp',
+  // مجمع الجراج
+  '20000000-0000-0000-0000-000000000002': '/assets/port-said/gallery/balconies-street.webp',
+  // مطعم ابن حميدو
+  '20000000-0000-0000-0000-000000000005': '/assets/port-said/hero-02.webp',
+  // سوق الأسماك الحضاري
+  '20000000-0000-0000-0000-000000000031': '/assets/port-said/gallery/ship.webp',
+  // مطعم الجندي
+  '20000000-0000-0000-0000-000000000075': '/assets/port-said/hero-03.webp',
   // سوق السمك الحضاري الجديد
-  '11111111-1111-1111-1111-111111111108': '/assets/port-said/gallery/balconies-street.webp',
+  '20000000-0000-0000-0000-000000000084': '/assets/port-said/gallery/ship.webp',
+  // Cap d'Or
+  '20000000-0000-0000-0000-000000000138': '/assets/port-said/gallery/balconies-street.webp',
+  // مطعم الجندي للأسماك بورفؤاد
+  '20000000-0000-0000-0000-000000000191': '/assets/port-said/hero-03.webp',
 };
 
 function getRestaurantPhoto(place: Place): string {

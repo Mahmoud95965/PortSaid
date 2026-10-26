@@ -35,12 +35,14 @@ const FAVORITES_KEY = 'portsaid_favorite_places';
 
 // ربط المعالم بالصور الأصلية المتوفرة في المشروع
 const SIGHTS_PHOTOS: Record<string, string> = {
-  // فنار بورسعيد التاريخي
-  '11111111-1111-1111-1111-111111111101': '/assets/port-said/port-said-lighthouse.webp',
-  // ممشى ديليسبس وقناة السويس
-  '11111111-1111-1111-1111-111111111102': '/assets/port-said/hero-01.webp',
-  // مسجد السلام الكبير
-  '11111111-1111-1111-1111-111111111103': '/assets/port-said/port-said-mosque.webp',
+  // قاعدة تمثال ديليسبس
+  '20000000-0000-0000-0000-000000000100': '/assets/port-said/hero-01.webp',
+  // De Lesseps Bay
+  '20000000-0000-0000-0000-000000000128': '/assets/port-said/port-said-port-night.webp',
+  // الممشى السياحي
+  '20000000-0000-0000-0000-000000000253': '/assets/port-said/hero-01.webp',
+  // متحف النصر للفن الحديث
+  '20000000-0000-0000-0000-000000000256': '/assets/port-said/gallery/martyrs-square.webp',
   // ميناء بورسعيد وقناة السويس
   'default-port': '/assets/port-said/port-said-port-night.webp',
   // ميدان الشهداء

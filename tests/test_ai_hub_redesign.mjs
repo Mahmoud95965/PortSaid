@@ -116,7 +116,7 @@ async function testAiHubRedesign() {
 }
 
 function ref3DataHasSilver(stops) {
-  return stops.some(s => s.name.includes('سيلفر') || s.name.includes('كاساتا'));
+  return stops.some(s => s.category === 'sweets' || s.categoryLabel?.includes('حلويات') || s.name.includes('سيلفر') || s.name.includes('كاساتا') || s.name.includes('حلواني') || s.name.includes('Sweets'));
 }
 
 testAiHubRedesign().catch(err => {

@@ -45,6 +45,7 @@ export interface Place {
     expires_at: string;
     discount: number;
   } | null;
+  maps_url?: string;
 }
 
 export interface Review {

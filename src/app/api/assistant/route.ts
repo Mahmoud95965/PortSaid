@@ -81,7 +81,7 @@ function getDynamicReasoningReply(
       }
     }
 
-    if (wantsWaterfront && (name.includes('ديليسبس') || name.includes('بينوس') || name.includes('فنار') || name.includes('كاستن') || desc.includes('قناة') || desc.includes('ممشى'))) {
+    if (wantsWaterfront && (name.includes('ديليسبس') || name.includes('شاطئ') || name.includes('بحر') || name.includes('كاستن') || area.includes('طرح البحر') || desc.includes('قناة') || desc.includes('ممشى'))) {
       if (!wantsCafe && !wantsFood) return true;
     }
 
@@ -172,7 +172,7 @@ function getDynamicReasoningReply(
         `\n\n---\n\n` +
         `### 💡 نصائح بورسعيدية حصرية\n` +
         `• **للقعدات البحرية:** أفضل توقيت هو وقت الغروب، حيث تشاهد مرور السفن العملاقة في المجرى الملاحي لقناة السويس في منظر لا يتكرر.\n` +
-        `• **بعد وجبة السمك أو الكافيه:** ننصحك دائماً بالمرور على كاساتا سيلفر أو المشي على ممشى ديليسبس التاريخي.\n\n` +
+        '• **بعد وجبة السمك أو الكافيه:** ننصحك دائماً بتجربة حلويات سامي سالم أو حلواني لورد أو المشي على ممشى ديليسبس التاريخي.\n\n' +
         `### 🚌 التوصيل والمواصلات\n` +
         `جميع هذه الأماكن في نطاق حي الشرق وحي العرب، ويمكنك ركوب مينى باص خط "الأمين" أو "الـ 5000" أو تاكسي داخلي للوصول بسهولة.`,
       thinkingProcess,

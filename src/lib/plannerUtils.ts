@@ -9,89 +9,102 @@ export interface PlaceCostInfo {
   tags: string[];
 }
 
-// بيانات التكاليف والمدة الموصى بها لكل مكان معتمد في بورسعيد
-export const PLACES_METADATA: Record<string, PlaceCostInfo> = {
-  '11111111-1111-1111-1111-111111111101': {
-    // فنار بورسعيد التاريخي
-    estimatedCostPerPerson: 0,
-    costRange: 'مجاني تماماً',
-    recommendedDurationMinutes: 40,
-    bestTimeOfDay: 'morning',
-    tags: ['معالم', 'تاريخ', 'تصوير', 'فنار', 'حي الشرق'],
-  },
-  '11111111-1111-1111-1111-111111111102': {
-    // ممشى ديليسبس وقناة السويس
-    estimatedCostPerPerson: 0,
-    costRange: 'مجاني تماماً',
-    recommendedDurationMinutes: 50,
-    bestTimeOfDay: 'evening',
-    tags: ['ممشى', 'بحر', 'قناة السويس', 'سفن', 'فسحة', 'تصوير'],
-  },
-  '11111111-1111-1111-1111-111111111103': {
-    // مسجد السلام الكبير
-    estimatedCostPerPerson: 0,
-    costRange: 'مجاني تماماً',
-    recommendedDurationMinutes: 30,
-    bestTimeOfDay: 'any',
-    tags: ['معالم', 'إسلامي', 'هدوء', 'حي الشرق'],
-  },
-  '11111111-1111-1111-1111-111111111104': {
-    // مطعم كاستن للأسماك
-    estimatedCostPerPerson: 160,
-    costRange: '130 - 220 ج.م',
-    recommendedDurationMinutes: 75,
-    bestTimeOfDay: 'midday',
-    tags: ['مطعم', 'سمك', 'سي فود', 'عريق', 'إطلالة', 'حي الشرق'],
-  },
-  '11111111-1111-1111-1111-111111111105': {
-    // مطعم ومأكولات الجندي البحرية
-    estimatedCostPerPerson: 100,
-    costRange: '75 - 130 ج.م',
-    recommendedDurationMinutes: 60,
-    bestTimeOfDay: 'midday',
-    tags: ['مطعم', 'سمك', 'بلدي', 'اقتصادي', 'طلبة', 'حي العرب'],
-  },
-  '11111111-1111-1111-1111-111111111106': {
-    // كافيه بينوس ممشى القناة
-    estimatedCostPerPerson: 50,
-    costRange: '35 - 75 ج.م',
-    recommendedDurationMinutes: 60,
-    bestTimeOfDay: 'evening',
-    tags: ['كافيه', 'قهوة', 'ممشى القناة', 'سفن', 'قعدة رايقة'],
-  },
-  '11111111-1111-1111-1111-111111111107': {
-    // حلويات سيلفر وكاساتا بورسعيد
-    estimatedCostPerPerson: 40,
-    costRange: '30 - 60 ج.م',
-    recommendedDurationMinutes: 35,
-    bestTimeOfDay: 'afternoon',
-    tags: ['حلويات', 'كاساتا', 'ايس كريم', 'تحلية', 'حي العرب'],
-  },
-  '11111111-1111-1111-1111-111111111108': {
-    // سوق السمك الحضاري الجديد
-    estimatedCostPerPerson: 130,
-    costRange: '90 - 170 ج.م',
-    recommendedDurationMinutes: 75,
-    bestTimeOfDay: 'midday',
-    tags: ['سوق', 'سمك طازة', 'شوي', 'تجربة شعبية', 'حي العرب'],
-  },
-  '11111111-1111-1111-1111-111111111109': {
-    // سكن طلبة حي الشرق
-    estimatedCostPerPerson: 0,
-    costRange: 'زيارة استرشادية',
-    recommendedDurationMinutes: 30,
-    bestTimeOfDay: 'any',
-    tags: ['سكن', 'طلبة', 'حي الشرق'],
-  },
-  '11111111-1111-1111-1111-111111111110': {
-    // سكن طالبات حي الزهور
-    estimatedCostPerPerson: 0,
-    costRange: 'زيارة استرشادية',
-    recommendedDurationMinutes: 30,
-    bestTimeOfDay: 'any',
-    tags: ['سكن', 'طالبات', 'حي الزهور'],
-  },
-};
+// بناء بيانات التكاليف والمدة الموصى بها لكل مكان معتمد في بورسعيد
+function buildPlacesMetadata(): Record<string, PlaceCostInfo> {
+  const meta: Record<string, PlaceCostInfo> = {};
+  for (const p of INITIAL_PLACES) {
+    let cost = p.cost > 0 ? p.cost : 0;
+    let costRange = cost > 0 ? `${cost} - ${Math.round(cost * 1.5)} ج.م` : 'مجاني تماماً';
+    let duration = 60;
+    let bestTime: 'morning' | 'midday' | 'afternoon' | 'evening' | 'any' = 'any';
+    const tags: string[] = [p.a];
+
+    if (p.cat === 'food') {
+      cost = cost || (p.n.includes('سمك') ? 140 : 90);
+      costRange = `${Math.round(cost * 0.8)} - ${Math.round(cost * 1.4)} ج.م`;
+      duration = 70;
+      bestTime = 'midday';
+      tags.push('مطعم', 'مأكولات');
+      if (p.n.includes('سمك')) tags.push('أسماك', 'سي فود');
+    } else if (p.cat === 'cafe') {
+      cost = cost || 45;
+      costRange = '30 - 65 ج.م';
+      duration = 60;
+      bestTime = 'evening';
+      tags.push('كافيه', 'مشروبات', 'جلسات');
+    } else if (p.cat === 'sweets') {
+      cost = cost || 35;
+      costRange = '25 - 50 ج.م';
+      duration = 30;
+      bestTime = 'afternoon';
+      tags.push('حلويات', 'تحلية', 'آيس كريم');
+    } else if (p.cat === 'fun') {
+      cost = 0;
+      costRange = 'مجاني تماماً';
+      duration = 50;
+      bestTime = 'afternoon';
+      tags.push('معالم', 'سياحة', 'فسحة', 'تصوير');
+    } else if (p.cat === 'shop') {
+      cost = cost || 40;
+      costRange = 'تسوق حر';
+      duration = 45;
+      bestTime = 'any';
+      tags.push('تسوق', 'أسواق');
+    } else if (p.cat === 'sport') {
+      cost = cost || 60;
+      costRange = '50 - 100 ج.م';
+      duration = 60;
+      bestTime = 'morning';
+      tags.push('رياضة', 'لياقة', 'نشاط');
+    } else if (p.cat === 'housing') {
+      cost = 0;
+      costRange = 'حسب الإقامة';
+      duration = 30;
+      bestTime = 'any';
+      tags.push('سكن', 'فندق');
+    } else if (p.cat === 'bus') {
+      cost = 0;
+      costRange = 'زيارة تعليمية';
+      duration = 45;
+      bestTime = 'morning';
+      tags.push('تعليم', 'جامعة');
+    }
+
+    if (p.n.includes('كاستن')) {
+      cost = 160;
+      costRange = '130 - 220 ج.م';
+      duration = 75;
+      tags.push('عريق', 'إطلالة بحرية');
+    } else if (p.n.includes('الجندي')) {
+      cost = 100;
+      costRange = '75 - 130 ج.م';
+      duration = 60;
+      tags.push('بلدي', 'اقتصادي', 'طلبة');
+    } else if (p.n.includes('سوق السمك') || p.n.includes('سوق الأسماك')) {
+      cost = 130;
+      costRange = '90 - 170 ج.م';
+      duration = 75;
+      tags.push('سمك طازة', 'شوي');
+    } else if (p.n.includes('ديليسبس') || p.n.includes('الممشى السياحي')) {
+      cost = 0;
+      costRange = 'مجاني تماماً';
+      duration = 60;
+      bestTime = 'evening';
+      tags.push('ممشى', 'قناة السويس', 'سفن');
+    }
+
+    meta[p.id] = {
+      estimatedCostPerPerson: cost,
+      costRange,
+      recommendedDurationMinutes: duration,
+      bestTimeOfDay: bestTime,
+      tags,
+    };
+  }
+  return meta;
+}
+
+export const PLACES_METADATA: Record<string, PlaceCostInfo> = buildPlacesMetadata();
 
 export interface ExtractedQueryIntent {
   partySize: number;
@@ -348,53 +361,56 @@ export function buildDeterministicPortSaidPlan(params: {
 
   const selectedPlaceIds: string[] = [];
 
-  // 1. المعالم والأنشطة التاريخية (Sightseeing)
+  // 1. المعالم والأنشطة السياحية والتاريخية (Sightseeing)
   if (intent.categories.includes('fun')) {
-    // اختيار الفنار أولاً
-    const fanar = available.find((p) => p.n.includes('فنار'));
-    if (fanar) selectedPlaceIds.push(fanar.id);
+    const sight =
+      available.find((p) => p.cat === 'fun' && (p.n.includes('ديليسبس') || p.n.includes('الممشى'))) ||
+      available.find((p) => p.cat === 'fun');
+    if (sight) selectedPlaceIds.push(sight.id);
   }
 
   // 2. المأكولات والأسماك (Lunch / Dining)
   if (intent.categories.includes('food') || intent.categories.includes('shop')) {
     const budgetPerPerson = intent.budgetEgp / (intent.partySize || 1);
     if (intent.vibe === 'budget' || budgetPerPerson <= 160) {
-      const gendy = available.find((p) => p.n.includes('الجندي'));
+      const gendy = available.find((p) => p.n.includes('الجندي')) || available.find((p) => p.cat === 'food');
       if (gendy) selectedPlaceIds.push(gendy.id);
     } else if (intent.categories.includes('shop')) {
-      const market = available.find((p) => p.n.includes('سوق السمك'));
+      const market = available.find((p) => p.n.includes('سوق السمك') || p.n.includes('سوق الأسماك')) || available.find((p) => p.cat === 'shop');
       if (market) selectedPlaceIds.push(market.id);
     } else {
-      const kasten = available.find((p) => p.n.includes('كاستن'));
+      const kasten = available.find((p) => p.n.includes('كاستن')) || available.find((p) => p.cat === 'food');
       if (kasten) selectedPlaceIds.push(kasten.id);
     }
   }
 
-  // 3. التحلية والكاساتا (Sweets)
+  // 3. التحلية والحلويات (Sweets)
   if (intent.categories.includes('sweets') && intent.durationHours >= 3) {
-    const silver = available.find((p) => p.n.includes('سيلفر'));
-    if (silver) selectedPlaceIds.push(silver.id);
+    const sweet = available.find((p) => p.cat === 'sweets');
+    if (sweet) selectedPlaceIds.push(sweet.id);
   }
 
-  // 4. كافيه وإطلالة القناة (Cafe / Promenade)
+  // 4. كافيه وإطلالة القناة أو الشاطئ (Cafe)
   if (intent.categories.includes('cafe')) {
-    const binos = available.find((p) => p.n.includes('بينوس'));
-    if (binos) selectedPlaceIds.push(binos.id);
+    const cafe =
+      available.find((p) => p.cat === 'cafe' && (p.n.includes('المنارة') || p.n.includes('الشاطئ') || p.a.includes('الممشى') || p.a.includes('طرح البحر'))) ||
+      available.find((p) => p.cat === 'cafe');
+    if (cafe && !selectedPlaceIds.includes(cafe.id)) selectedPlaceIds.push(cafe.id);
   }
 
   // 5. ضمان أن أي برنامج خروجة يحتوي على محطتين على الأقل
   if (selectedPlaceIds.length < 2) {
-    const delesseps = available.find((p) => p.n.includes('ديليسبس'));
-    if (delesseps && !selectedPlaceIds.includes(delesseps.id)) {
-      selectedPlaceIds.push(delesseps.id);
+    const backup = available.find((p) => !selectedPlaceIds.includes(p.id) && (p.cat === 'fun' || p.cat === 'cafe'));
+    if (backup) {
+      selectedPlaceIds.push(backup.id);
     }
   }
 
   // 6. إذا كانت المدة 3 ساعات فأكثر ولم يكتمل البرنامج لـ 3 محطات
   if (intent.durationHours >= 3 && selectedPlaceIds.length < 3) {
-    const binos = available.find((p) => p.n.includes('بينوس'));
-    if (binos && !selectedPlaceIds.includes(binos.id)) {
-      selectedPlaceIds.push(binos.id);
+    const extra = available.find((p) => !selectedPlaceIds.includes(p.id) && (p.cat === 'cafe' || p.cat === 'sweets' || p.cat === 'fun'));
+    if (extra) {
+      selectedPlaceIds.push(extra.id);
     }
   }
 
@@ -655,9 +671,10 @@ export function applyRefinementToPlan(
     const seaCandidates = INITIAL_PLACES.filter(
       (p) =>
         p.n.includes('ديليسبس') ||
-        p.n.includes('بينوس') ||
-        p.n.includes('فنار') ||
-        p.n.includes('كاستن')
+        p.n.includes('كاستن') ||
+        p.n.includes('الشاطئ') ||
+        p.a === 'طرح البحر' ||
+        p.a === 'الممشى السياحي'
     );
     const candidateToAdd = seaCandidates.find((c) => !updatedStops.some((s) => s.placeId === c.id));
     if (candidateToAdd) {
@@ -709,20 +726,20 @@ export function applyRefinementToPlan(
 
   // 5. طلب إضافة تحلية أو كافيه أو مكان معين بالاسم
   if (inst.includes('ضيف') || inst.includes('حط') || inst.includes('عايز احلي') || inst.includes('كاساتا') || inst.includes('سيلفر')) {
-    if (inst.includes('سيلفر') || inst.includes('كاساتا') || inst.includes('حلويات')) {
+    if (inst.includes('سيلفر') || inst.includes('كاساتا') || inst.includes('حلويات') || inst.includes('حلو') || inst.includes('تحلية')) {
       const hasSweets = updatedStops.some((s) => s.category === 'sweets');
       if (!hasSweets) {
-        const silver = INITIAL_PLACES.find((p) => p.n.includes('سيلفر'));
-        if (silver) {
-          updatedStops.push(createStopFromPlace(silver, updatedStops.length + 1, partySize, 'إضافة محطة التحلية بكاساتا بورسعيد الشهيرة بناءً على رغبتك.'));
+        const sweetCandidate = INITIAL_PLACES.find((p) => p.cat === 'sweets' || p.n.includes('سامي سالم') || p.n.includes('لورد') || p.n.includes('سلسبيل'));
+        if (sweetCandidate) {
+          updatedStops.push(createStopFromPlace(sweetCandidate, updatedStops.length + 1, partySize, `إضافة محطة التحلية في "${sweetCandidate.n}" بناءً على رغبتك.`));
         }
       }
-    } else if (inst.includes('بينوس') || inst.includes('كافيه')) {
+    } else if (inst.includes('كافيه') || inst.includes('قهوة') || inst.includes('المنارة')) {
       const hasCafe = updatedStops.some((s) => s.category === 'cafe');
       if (!hasCafe) {
-        const cafe = INITIAL_PLACES.find((p) => p.n.includes('بينوس'));
+        const cafe = INITIAL_PLACES.find((p) => p.cat === 'cafe');
         if (cafe) {
-          updatedStops.push(createStopFromPlace(cafe, updatedStops.length + 1, partySize, 'إضافة كافيه بينوس للاسترخاء أمام المجرى الملاحي لقناة السويس.'));
+          updatedStops.push(createStopFromPlace(cafe, updatedStops.length + 1, partySize, `إضافة كافيه "${cafe.n}" للاسترخاء وقضاء وقت ممتع.`));
         }
       }
     } else {

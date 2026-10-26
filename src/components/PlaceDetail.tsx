@@ -40,26 +40,34 @@ const FAVORITES_KEY = 'portsaid_favorite_places';
 
 // ربط المعالم والمطاعم والأماكن بالصور الأصلية المتوفرة في المشروع
 const PLACE_HERO_PHOTOS: Record<string, string> = {
-  // فنار بورسعيد التاريخي
-  '11111111-1111-1111-1111-111111111101': '/assets/port-said/port-said-lighthouse.webp',
-  // ممشى ديليسبس وقناة السويس
-  '11111111-1111-1111-1111-111111111102': '/assets/port-said/hero-01.webp',
-  // مسجد السلام الكبير
-  '11111111-1111-1111-1111-111111111103': '/assets/port-said/port-said-mosque.webp',
-  // مطعم كاستن للأسماك
-  '11111111-1111-1111-1111-111111111104': '/assets/port-said/hero-02.webp',
-  // مطعم ومأكولات الجندي البحرية
-  '11111111-1111-1111-1111-111111111105': '/assets/port-said/hero-03.webp',
-  // كافيه بينوس
-  '11111111-1111-1111-1111-111111111106': '/assets/port-said/port-said-port-night.webp',
-  // حلويات سيلفر
-  '11111111-1111-1111-1111-111111111107': '/assets/port-said/gallery/balconies-street.webp',
-  // سوق البازار
-  '11111111-1111-1111-1111-111111111108': '/assets/port-said/gallery/balconies-street.webp',
-  // ميدان الشهداء والمسلة
-  '11111111-1111-1111-1111-111111111109': '/assets/port-said/gallery/martyrs-square.webp',
-  // سكن طالبات حي الزهور
-  '11111111-1111-1111-1111-111111111110': '/assets/port-said/gallery/balconies-street.webp',
+  // مطعم وكافيه كاستن
+  '20000000-0000-0000-0000-000000000001': '/assets/port-said/hero-02.webp',
+  // مجمع الجراج
+  '20000000-0000-0000-0000-000000000002': '/assets/port-said/gallery/balconies-street.webp',
+  // كافيه ومطعم الشاطئ
+  '20000000-0000-0000-0000-000000000004': '/assets/port-said/port-said-port-night.webp',
+  // مطعم ابن حميدو
+  '20000000-0000-0000-0000-000000000005': '/assets/port-said/hero-02.webp',
+  // ديليسبس الممشى السياحي
+  '20000000-0000-0000-0000-000000000009': '/assets/port-said/hero-01.webp',
+  // سوق الأسماك الحضاري
+  '20000000-0000-0000-0000-000000000031': '/assets/port-said/gallery/ship.webp',
+  // مطعم الجندي
+  '20000000-0000-0000-0000-000000000075': '/assets/port-said/hero-03.webp',
+  // سوق السمك الحضاري الجديد
+  '20000000-0000-0000-0000-000000000084': '/assets/port-said/gallery/ship.webp',
+  // قاعدة تمثال ديليسبس
+  '20000000-0000-0000-0000-000000000100': '/assets/port-said/hero-01.webp',
+  // De Lesseps Bay
+  '20000000-0000-0000-0000-000000000128': '/assets/port-said/port-said-port-night.webp',
+  // Cap d'Or
+  '20000000-0000-0000-0000-000000000138': '/assets/port-said/gallery/balconies-street.webp',
+  // مطعم الجندي للأسماك بورفؤاد
+  '20000000-0000-0000-0000-000000000191': '/assets/port-said/hero-03.webp',
+  // الممشى السياحي
+  '20000000-0000-0000-0000-000000000253': '/assets/port-said/hero-01.webp',
+  // متحف النصر للفن الحديث
+  '20000000-0000-0000-0000-000000000256': '/assets/port-said/gallery/martyrs-square.webp',
 };
 
 function getPlaceHeroPhoto(place: Place): string {
