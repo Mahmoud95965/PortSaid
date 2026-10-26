@@ -211,7 +211,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome
             </ul>
           </div>
           <div className="text-white/70 text-xs font-semibold relative z-10">
-            الموقع مصمم من قبل TOLZY Team &copy; 2026
+            فريق Alpha Team · بالشراكة مع TOLZY Team &copy; 2026
           </div>
         </aside>
 
@@ -542,7 +542,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-bold mb-1">عمولة TOLZY (جنيه)</label>
+                          <label className="block text-xs font-bold mb-1">عمولة Alpha (جنيه)</label>
                           <input
                             type="number"
                             min="0"

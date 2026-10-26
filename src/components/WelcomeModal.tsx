@@ -328,7 +328,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart }) => {
             animate={{ opacity: 1 }}
             transition={{ delay: 2, duration: 0.5 }}
           >
-            بورسعيد .. المدينة الباسلة &middot; الموقع مصمم من قبل TOLZY Team &copy; 2026
+            بورسعيد .. المدينة الباسلة &middot; فريق Alpha Team بالشراكة مع TOLZY Team &copy; 2026
           </motion.p>
         </div>
       )}

@@ -153,7 +153,7 @@ export const AdminDashboard: React.FC = () => {
   const handleRedeemCoupon = (e: React.FormEvent) => {
     e.preventDefault();
     if (!redeemCode.trim()) return;
-    setRedeemResult('تمت تسوية الكوبون بنجاح! خصم 15% - تم تسجيل العمولة لفريق TOLZY.');
+    setRedeemResult('تمت تسوية الكوبون بنجاح! خصم 15% - تم تسجيل العمولة لفريق Alpha.');
     setRedeemCode('');
   };
 
@@ -434,7 +434,7 @@ export const AdminDashboard: React.FC = () => {
                   </p>
                   <div className="flex gap-4 text-xs font-bold pt-2 border-t border-sand-200/60 dark:border-[#2a2a2a]">
                     <span>خصم العميل: {app.discount}%</span>
-                    <span>عمولة TOLZY: {app.commission} ج</span>
+                    <span>عمولة Alpha: {app.commission} ج</span>
                   </div>
                 </div>
               ))}
