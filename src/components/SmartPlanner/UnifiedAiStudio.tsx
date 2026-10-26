@@ -28,29 +28,20 @@ import {
   Share2,
   Bookmark,
   Trash2,
-  ArrowUp,
-  ArrowDown,
   RotateCcw,
-  ExternalLink,
-  Car,
-  Footprints,
   Check,
   Settings,
-  Key,
   X,
   Compass,
   Copy,
-  ChevronLeft,
-  ChevronRight,
   Maximize2,
-  Minimize2,
-  Layers,
   Map as MapIcon,
-  MessageSquare,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-interface ChatMessage {
+export interface ChatMessage {
   id: string;
   role: 'bot' | 'me';
   text: string;
@@ -63,6 +54,9 @@ interface ChatMessage {
     stopsCount: number;
   };
   suggestedPlaces?: SuggestedMapPlace[];
+  plan?: PlanResult;
+  showInlineMap?: boolean;
+  isInlineMapCollapsed?: boolean;
 }
 
 interface UnifiedAiStudioProps {
@@ -72,7 +66,7 @@ interface UnifiedAiStudioProps {
   onBackToHome?: () => void;
 }
 
-const CHAT_STORAGE_KEY = 'portsaid_unified_ai_chat_v2';
+const CHAT_STORAGE_KEY = 'portsaid_unified_ai_chat_v3';
 const SAVED_TRIPS_STORAGE = 'portsaid_hub_saved_itineraries_v1';
 const OPENROUTER_KEY_STORAGE = 'portsaid_openrouter_key';
 const OPENROUTER_MODEL_STORAGE = 'portsaid_openrouter_model';
@@ -85,24 +79,23 @@ const POPULAR_MODELS = [
   { id: 'built-in', name: 'المحرك المحلي الافتراضي (بدون مفتاح)', tag: 'Offline 🏠' },
 ];
 
-// الاقتراحات الأربعة الأساسية لترحيب البداية (بأسلوب ChatGPT البسيط)
 const WELCOME_SUGGESTIONS = [
   {
-    title: 'أماكن للخروج',
-    desc: 'أهم المعالم والأنشطة السياحية والفسح',
-    prompt: 'رشح لي أفضل أماكن للخروج والفسحة في بورسعيد مع تفاصيل كل مكان',
+    title: 'أماكن للخروج والفسحة',
+    desc: 'أهم المعالم والأنشطة التاريخية والسياحية',
+    prompt: 'رشح لي أفضل أماكن للخروج والفسحة في بورسعيد مع تفاصيل كل مكان والأسعار',
     icon: '🧭',
   },
   {
-    title: 'مطاعم وكافيهات',
+    title: 'مطاعم سمك وكافيهات القناة',
     desc: 'أكلات بحرية وقعدات رايقة على قناة السويس',
     prompt: 'عايز ترشيحات لأحسن مطاعم سمك وكافيهات هادية قريبة من البحر',
     icon: '☕',
   },
   {
-    title: 'خطط يوم كامل',
+    title: 'خطط خروجة بميزانية معينة',
     desc: 'برنامج خروجة منظم بالمواعيد والميزانية',
-    prompt: 'خططلي خروجة يوم كامل في بورسعيد بميزانية 400 جنيه لـ 2 أفراد',
+    prompt: 'خططلي خروجة بميزانية 300 جنيه تشمل كافيه وممشى وزيارة معلم تاريخي',
     icon: '📅',
   },
   {
@@ -112,6 +105,117 @@ const WELCOME_SUGGESTIONS = [
     icon: '📍',
   },
 ];
+
+/**
+ * دالة تنسيق وترتيب نصوص الإجابات وتحويل الماركداون لواجهة بصرية منظمة
+ */
+function renderFormattedMessage(text: string) {
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  let listBuffer: React.ReactNode[] = [];
+
+  const flushList = () => {
+    if (listBuffer.length > 0) {
+      elements.push(
+        <ul key={`list-${elements.length}`} className="space-y-1.5 my-2">
+          {listBuffer}
+        </ul>
+      );
+      listBuffer = [];
+    }
+  };
+
+  const formatInline = (str: string) => {
+    const parts = str.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return (
+          <strong key={i} className="font-black text-ocean-950 dark:text-teal2-300">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+      return part;
+    });
+  };
+
+  lines.forEach((rawLine, idx) => {
+    const line = rawLine.trim();
+
+    if (!line) {
+      flushList();
+      elements.push(<div key={`space-${idx}`} className="h-2" />);
+      return;
+    }
+
+    if (line === '---') {
+      flushList();
+      elements.push(
+        <hr key={`hr-${idx}`} className="my-3 border-slate-200 dark:border-white/10" />
+      );
+      return;
+    }
+
+    if (line.startsWith('### ')) {
+      flushList();
+      elements.push(
+        <h3
+          key={`h3-${idx}`}
+          className="text-sm sm:text-base font-black text-ocean-950 dark:text-white mt-3.5 mb-1.5 flex items-center gap-1.5 border-b border-slate-200/60 dark:border-white/10 pb-1"
+        >
+          {formatInline(line.slice(4))}
+        </h3>
+      );
+      return;
+    }
+
+    if (line.startsWith('#### ')) {
+      flushList();
+      elements.push(
+        <h4
+          key={`h4-${idx}`}
+          className="text-xs sm:text-sm font-black text-blue-700 dark:text-blue-300 mt-2.5 mb-1"
+        >
+          {formatInline(line.slice(5))}
+        </h4>
+      );
+      return;
+    }
+
+    if (line.startsWith('• ') || line.startsWith('- ') || line.startsWith('* ')) {
+      listBuffer.push(
+        <li key={`li-${idx}`} className="flex items-start gap-2 text-xs sm:text-[13px] leading-relaxed">
+          <span className="w-1.5 h-1.5 rounded-full bg-teal2-600 dark:bg-teal2-400 mt-2 shrink-0" />
+          <span className="flex-1">{formatInline(line.slice(2))}</span>
+        </li>
+      );
+      return;
+    }
+
+    const numMatch = line.match(/^(\d+)\.\s+(.*)$/);
+    if (numMatch) {
+      listBuffer.push(
+        <li key={`num-${idx}`} className="flex items-start gap-2 text-xs sm:text-[13px] leading-relaxed">
+          <span className="w-5 h-5 rounded-lg bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 font-black text-[11px] grid place-items-center shrink-0 mt-0.5 border border-blue-300/40">
+            {numMatch[1]}
+          </span>
+          <span className="flex-1">{formatInline(numMatch[2])}</span>
+        </li>
+      );
+      return;
+    }
+
+    flushList();
+    elements.push(
+      <p key={`p-${idx}`} className="text-xs sm:text-[13px] leading-relaxed font-medium">
+        {formatInline(line)}
+      </p>
+    );
+  });
+
+  flushList();
+  return <div className="space-y-1">{elements}</div>;
+}
 
 export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
   initialPrompt,
@@ -128,17 +232,19 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
   const [showSavedModal, setShowSavedModal] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
 
-  // إعدادات المسار والنقاط
+  // إعدادات المسار
   const [transportMode, setTransportMode] = useState<'driving' | 'walking'>('driving');
   const [startPoint, setStartPoint] = useState<{ name: string; lat: number; lon: number } | null>(null);
   const [endPoint, setEndPoint] = useState<{ name: string; lat: number; lon: number } | null>(null);
   const [isRoundTrip, setIsRoundTrip] = useState(true);
-  const [pickingPointFor, setPickingPointFor] = useState<'start' | 'end' | null>(null);
 
-  // التحكم بعرض الخريطة وتوسيعها
-  const [showMapPanel, setShowMapPanel] = useState(true);
-  const [isMapExpanded, setIsMapExpanded] = useState(false);
-  const [mobileTab, setMobileTab] = useState<'chat' | 'map'>('chat');
+  // الخريطة الموسعة بالكامل (Modal)
+  const [showFullScreenMap, setShowFullScreenMap] = useState(false);
+  const [fullScreenMapData, setFullScreenMapData] = useState<{
+    plan: PlanResult | null;
+    suggestedPlaces: SuggestedMapPlace[];
+    title: string;
+  } | null>(null);
 
   // إعدادات الموديل و OpenRouter
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -156,7 +262,6 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
   const [locationNotice, setLocationNotice] = useState<string | null>(null);
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
 
-  // قائمة الأماكن المقترحة المجمعة من آخر رسائل المساعد لعرضها على الخريطة
   const [activeSuggestedPlaces, setActiveSuggestedPlaces] = useState<SuggestedMapPlace[]>([]);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -179,7 +284,6 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
         const parsed = JSON.parse(storedChat);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setMessages(parsed);
-          // استخراج الأماكن المقترحة من آخر رسائل
           const latestSuggested: SuggestedMapPlace[] = [];
           parsed.forEach((m: ChatMessage) => {
             if (m.suggestedPlaces && m.suggestedPlaces.length > 0) {
@@ -208,7 +312,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
     } catch (e) {}
   }, [messages]);
 
-  // فك شفرة الخطة المشتركة أو البدء بطلب أولي من الرابط
+  // فك شفرة الخطة المشتركة أو البدء بطلب أولي
   useEffect(() => {
     if (initialPlanData) {
       try {
@@ -230,6 +334,8 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                 budgetEgp: decoded.budgetEgp,
                 stopsCount: decoded.stops.length,
               },
+              plan: decoded,
+              showInlineMap: true,
             },
           ]);
         }
@@ -239,7 +345,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
     }
   }, [initialPlanData, initialPrompt]);
 
-  // تحديد الموقع الجغرافي بالـ GPS مع التحقق
+  // تحديد الموقع الجغرافي بالـ GPS
   const handleLocateUser = (afterLocatePrompt?: string) => {
     if (!navigator.geolocation) {
       setLocationNotice('تحديد الموقع غير مدعوم في متصفحك.');
@@ -251,163 +357,114 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setLocatingUser(false);
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
+        setLocatingUser(false);
 
         if (isPointInPortSaid(lat, lng)) {
           const district = identifyPortSaidDistrict(lat, lng);
-          const loc = { lat, lng, district };
-          setUserLocation(loc);
-          setStartPoint({ name: `موقعي الحالي (${district})`, lat, lon: lng });
-          if (isRoundTrip) setEndPoint({ name: `موقعي الحالي (${district})`, lat, lon: lng });
-          setLocationNotice(`تم تحديد موقعك في: ${district}`);
-
-          const now = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: 'loc-' + Date.now(),
-              role: 'bot',
-              text: `📍 تم تحديد موقعك الحالي بنجاح في **${district}**! يمكنك الآن طلب ترشيحات قريبة أو الانطلاق من مكانك مباشرة على الخريطة.`,
-              timestamp: now,
-            },
-          ]);
+          setUserLocation({ lat, lng, district });
+          setLocationNotice(`تم تحديد موقعك في: ${district} 📍`);
 
           if (afterLocatePrompt) {
-            handleProcessUserMessage(afterLocatePrompt, loc);
+            handleProcessUserMessage(afterLocatePrompt, { lat, lng, district });
           }
         } else {
-          setLocationNotice('موقعك خارج النطاق الإداري لمحافظة بورسعيد.');
-          const now = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: 'loc-outside-' + Date.now(),
-              role: 'bot',
-              text: '📍 موقعك الحالي خارج نطاق بورسعيد. قمت بضبط مركز الانطلاق على وسط بورسعيد لتتمكن من التخطيط بحرية!',
-              timestamp: now,
-            },
-          ]);
+          setUserLocation({ lat, lng, district: 'خارج بورسعيد' });
+          setLocationNotice('موقعك خارج بورسعيد. سنستخدم معالم وسط المدينة في الترشيحات.');
           if (afterLocatePrompt) {
             handleProcessUserMessage(afterLocatePrompt);
           }
         }
       },
-      () => {
+      (err) => {
         setLocatingUser(false);
-        setLocationNotice('يرجى السماح بصلاحية الـ GPS لحساب المسافات بدقة.');
-        const now = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 'loc-err-' + Date.now(),
-            role: 'bot',
-            text: '📍 تعذر الوصول لموقعك عبر الـ GPS. يمكنك النقر على زر **«نقطة البداية»** في الخريطة لتحديد مكانك يدوياً.',
-            timestamp: now,
-          },
-        ]);
-        if (afterLocatePrompt) {
-          handleProcessUserMessage(afterLocatePrompt);
-        }
+        setLocationNotice('يرجى السماح بتحديد الموقع في المتصفح لحساب الكيلومترات بدقة.');
       },
-      { enableHighAccuracy: true, timeout: 9000, maximumAge: 60000 }
+      { timeout: 10000, enableHighAccuracy: true }
     );
   };
 
   const getAiHeaders = () => {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    const savedKey = typeof window !== 'undefined' ? localStorage.getItem(OPENROUTER_KEY_STORAGE) : null;
-    const savedModel = typeof window !== 'undefined' ? localStorage.getItem(OPENROUTER_MODEL_STORAGE) : null;
-    if (savedKey && savedKey.trim().length > 5) {
-      headers['x-openrouter-key'] = savedKey.trim();
+    if (customKey && customKey.trim().length > 5) {
+      headers['x-openrouter-key'] = customKey.trim();
     }
-    if (savedModel && savedModel !== 'built-in') {
-      headers['x-openrouter-model'] = savedModel.trim();
-    } else if (savedKey && savedKey.trim().length > 5) {
-      headers['x-openrouter-model'] = 'openai/gpt-4.1-nano';
+    if (selectedModel) {
+      headers['x-openrouter-model'] = selectedModel;
     }
     return headers;
   };
 
-  const handleCopyMessage = async (msgId: string, text: string) => {
+  const handleTestApiKey = async () => {
+    if (!customKey.trim()) {
+      setKeyTestFeedback({ ok: false, message: 'برجاء إدخال المفتاح أولاً.' });
+      return;
+    }
+    setIsTestingKey(true);
+    setKeyTestFeedback(null);
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
+      const res = await fetch('/api/assistant', {
+        method: 'POST',
+        headers: getAiHeaders(),
+        body: JSON.stringify({ message: 'مرحبا' }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setKeyTestFeedback({
+          ok: true,
+          message: `المفتاح يعمل بنجاح! المزود: ${data.provider || 'OpenRouter'} (${data.model || selectedModel})`,
+        });
+        localStorage.setItem(OPENROUTER_KEY_STORAGE, customKey.trim());
+        localStorage.setItem(OPENROUTER_MODEL_STORAGE, selectedModel);
       } else {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
+        setKeyTestFeedback({ ok: false, message: data.error || 'فشل الاتصال بالمفتاح' });
       }
-      setCopiedMsgId(msgId);
-      setTimeout(() => setCopiedMsgId(null), 2000);
-    } catch (e) {}
+    } catch (e: any) {
+      setKeyTestFeedback({ ok: false, message: e.message || 'خطأ أثناء فحص المفتاح' });
+    } finally {
+      setIsTestingKey(false);
+    }
   };
 
-  // إرسال ومعالجة الرسالة في المكان الموحد بذكاء وفهم النوايا
-  const handleProcessUserMessage = async (rawText?: string, overrideLoc?: any) => {
-    const textToSend = (rawText || input).trim();
-    if (!textToSend || loading) return;
-
-    setInput('');
-    const now = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+  // معالجة رسائل المستخدم الذكية
+  const handleProcessUserMessage = async (
+    overrideText?: string,
+    passedLocation?: { lat: number; lng: number; district?: string } | null
+  ) => {
+    const textToSend = overrideText || input;
+    if (!textToSend.trim() || loading) return;
 
     const userMsg: ChatMessage = {
-      id: 'usr-' + Date.now(),
+      id: 'me-' + Date.now(),
       role: 'me',
-      text: textToSend,
-      timestamp: now,
+      text: textToSend.trim(),
+      timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
     };
+
     setMessages((prev) => [...prev, userMsg]);
+    if (!overrideText) setInput('');
     setLoading(true);
 
     try {
       const lower = textToSend.toLowerCase();
-      const currentLoc = overrideLoc || userLocation;
+      const currentLoc = passedLocation !== undefined ? passedLocation : userLocation;
 
-      // 1. فحص نية فتح أو عرض الخريطة مباشرة
-      if (
-        lower === 'وريني الخريطة' ||
-        lower === 'افتح الخريطة' ||
-        lower === 'عرض الخريطة' ||
-        lower.includes('وريني الخريطه') ||
-        lower.includes('افتح الخريطه') ||
-        lower.includes('مكان الخريطة')
-      ) {
-        setShowMapPanel(true);
-        setMobileTab('map');
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 'bot-' + Date.now(),
-            role: 'bot',
-            text: 'فتحت لك الخريطة التفاعلية لبورسعيد 🗺️\nيمكنك تحريكها والتكبير، النقر على أي علامة لمعرفة التفاصيل، أو تحديد نقطة بداية ونهاية لمسارك.',
-            timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-          },
-        ]);
-        setLoading(false);
-        return;
-      }
-
-      // 2. فحص نية طلب أماكن قريبة مع عدم توفر الموقع بعد
       const isNearbyQuery =
         lower.includes('قريب مني') ||
         lower.includes('اقرب مني') ||
-        lower.includes('حوالي') ||
+        lower.includes('أقرب مني') ||
+        lower.includes('قريبة مني') ||
         lower.includes('جنبي') ||
         lower.includes('موقعي الحالي');
 
       if (isNearbyQuery && !currentLoc) {
-        // تشجيع المستخدم وطلب إذن الموقع
         handleLocateUser(textToSend);
         setLoading(false);
         return;
       }
 
-      // 3. فحص نية تعديل خطة حالية
+      // فحص نية تعديل خطة حالية
       const isRefineRequest =
         Boolean(currentPlan) &&
         (lower.includes('شيل') ||
@@ -426,7 +483,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
           lower.includes('أقرب مكان') ||
           lower.includes('ميزانية'));
 
-      // 4. فحص هل هو طلب تخطيط رحلة جديدة
+      // فحص هل هو طلب تخطيط رحلة جديدة
       const isPlanningRequest =
         lower.includes('خطط') ||
         lower.includes('خروجة') ||
@@ -439,8 +496,17 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
         lower.includes('يوم كامل') ||
         (lower.includes('جنيه') && (lower.includes('ساعات') || lower.includes('أفراد')));
 
+      const explicitlyWantsMap =
+        lower.includes('خريطة') ||
+        lower.includes('الخريطة') ||
+        lower.includes('وريني') ||
+        lower.includes('مسار') ||
+        lower.includes('خط السير') ||
+        lower.includes('أروح ازاي') ||
+        lower.includes('ازاي اروح') ||
+        isNearbyQuery;
+
       if (isRefineRequest && currentPlan) {
-        // تعديل الخطة الحالية عبر الـ Planner API
         const res = await fetch('/api/planner', {
           method: 'POST',
           headers: getAiHeaders(),
@@ -462,7 +528,12 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
             {
               id: 'bot-' + Date.now(),
               role: 'bot',
-              text: `تمام يا غالي! تم تحديث الخطة بناءً على طلبك: "${textToSend}". تم تعديل المحطات ومسار الشوارع الفعلي (${data.plan.totalCost} ج.م من أصل ${data.plan.budgetEgp} ج.م) والجدول والخريطة اتحدثوا فوراً 🧭`,
+              text:
+                `### ✅ تم تحديث الخطة بنجاح!\n\n` +
+                `عدّلت لك المحطات ومسار الشوارع الفعلي بناءً على طلبك: "${textToSend}".\n\n` +
+                `• **الميزانية المحدثة:** ${data.plan.totalCost} ج.م (من أصل ${data.plan.budgetEgp} ج.م)\n` +
+                `• **عدد المحطات:** ${data.plan.stops.length} محطات بورسعيدية\n\n` +
+                `الخريطة المضمنة بالأسفل تم تحديثها تلقائياً بالمسار الجديد. يمكنك استعراضها بالكامل أو طلب أي تعديل آخر! 👇`,
               timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
               isPlanUpdate: true,
               planSummary: {
@@ -471,13 +542,14 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                 budgetEgp: data.plan.budgetEgp,
                 stopsCount: data.plan.stops.length,
               },
+              plan: data.plan,
+              showInlineMap: true,
             },
           ]);
         } else {
           throw new Error(data.error || 'تعذر تعديل الخطة');
         }
       } else if (isPlanningRequest) {
-        // تخطيط رحلة جديدة بالذكاء الاصطناعي
         const res = await fetch('/api/planner', {
           method: 'POST',
           headers: getAiHeaders(),
@@ -504,12 +576,15 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               id: 'bot-' + Date.now(),
               role: 'bot',
               text:
-                `صممت لك خطة خروجة بورسعيدية متكاملة! 🧭\n\n` +
-                `📌 **${data.plan.title}**\n` +
-                `💰 التكلفة المقدرة: **${data.plan.totalCost} ج.م** (الميزانية: ${data.plan.budgetEgp} ج.م)\n` +
-                `⏳ المدة: **${data.plan.totalDurationHours} ساعات** • **${data.plan.partySize} أفراد** • المسافة: **${data.plan.totalDistanceKm} كم**\n` +
-                `🛣️ خط السير: ${stopsNames}\n\n` +
-                `الخريطة ومسار الشوارع الفعلي وجدول المواعيد جاهزين. تقدر تطلب تعديل أي محطة بالكلام المباشر! 👇`,
+                `### 🧭 صممت لك برنامج خروجة بورسعيدي متكامل ومحسوب:\n\n` +
+                `📌 **${data.plan.title}**\n\n` +
+                `• 💰 **التكلفة الإجمالية التقديرية:** ${data.plan.totalCost} ج.م (الميزانية المتاحة: ${data.plan.budgetEgp} ج.م)\n` +
+                `• ⏳ **المدة الإجمالية:** ${data.plan.totalDurationHours} ساعات • لعدد **${data.plan.partySize} أفراد**\n` +
+                `• 🛣️ **المسافة بين المحطات:** ${data.plan.totalDistanceKm} كم مسار شوارع حقيقي\n` +
+                `• 📍 **خط السير المقترح:** ${stopsNames}\n\n` +
+                `---\n\n` +
+                `### 💡 نصائح للتنفيذ\n` +
+                `يمكنك بدء الجولة في أي وقت، وتم تفعيل الخريطة المضمنة بالأسفل مع المسارات وأوقات السير. يمكنك تعديل أي محطة بالكتابة مباشرة!`,
               timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
               isPlanUpdate: true,
               planSummary: {
@@ -518,17 +593,14 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                 budgetEgp: data.plan.budgetEgp,
                 stopsCount: data.plan.stops.length,
               },
+              plan: data.plan,
+              showInlineMap: true,
             },
           ]);
-
-          if (window.innerWidth < 1024) {
-            setMobileTab('map');
-          }
         } else {
           throw new Error(data.error || 'تعذر بناء الخطة');
         }
       } else {
-        // محادثة معرفية وترشيحات ذكية مع المساعد
         const historyTurns = messages.slice(-6).map((m) => ({
           role: m.role,
           text: m.text,
@@ -554,6 +626,8 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
             setActiveSuggestedPlaces(suggestedList);
           }
 
+          const shouldShowMap = suggestedList.length > 0 || explicitlyWantsMap;
+
           setMessages((prev) => [
             ...prev,
             {
@@ -562,6 +636,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               text: data.reply,
               timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
               suggestedPlaces: suggestedList,
+              showInlineMap: shouldShowMap,
             },
           ]);
         } else {
@@ -583,991 +658,588 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
     }
   };
 
-  // تفاعل الخريطة مع الشات: إضافة مكان من الخريطة إلى الخطة
-  const handleAddPlaceToPlan = async (place: SuggestedMapPlace) => {
-    const rawPlace = INITIAL_PLACES.find((p) => p.id === place.id) || {
-      id: place.id,
-      n: place.n,
-      cat: place.cat,
-      a: place.a,
-      lat: place.lat,
-      lon: place.lon,
-      disc: place.disc || 0,
-      p: 50,
-      ds: '',
-      cost: 50,
-    };
-
-    if (!currentPlan) {
-      // إنشاء خطة أولية تحتوي هذا المكان
-      const newStop = createStopFromPlace(rawPlace, 1, 2, 'إضافة المكان المختار إلى مسارك الأول.');
-      const initialPlan: PlanResult = {
-        id: 'plan-' + Date.now(),
-        title: `زيارة ${place.n}`,
-        summary: `خطة زيارة مباشرة إلى ${place.n}`,
-        startTime: '11:00 ص',
-        endTime: '12:00 م',
-        totalDurationHours: 2,
-        totalTravelMinutes: 15,
-        totalDistanceKm: 2,
-        totalCost: newStop.totalCost,
-        budgetEgp: 300,
-        partySize: 2,
-        transportMode,
-        budgetStatus: 'within',
-        stops: [newStop],
-        isRealStreetRoute: false,
-        practicalTips: ['استمتع بزيارة المكان وتفاصيل معالمه.'],
-      };
-      setCurrentPlan(initialPlan);
-      setActiveStopIndex(0);
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: 'bot-' + Date.now(),
-          role: 'bot',
-          text: `تمت إضافة **"${place.n}"** كأول محطة في خطتك الجديدة على الخريطة 🗺️! يمكنك طلب إضافة أماكن أخرى أو سؤال المساعد عما حوله.`,
-          timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-          isPlanUpdate: true,
-          planSummary: {
-            title: initialPlan.title,
-            totalCost: initialPlan.totalCost,
-            budgetEgp: initialPlan.budgetEgp,
-            stopsCount: 1,
-          },
-        },
-      ]);
-      return;
-    }
-
-    // إضافة المكان للخطة الحالية وإعادة حساب المسار الحقيقي بـ OSRM
-    const newStop = createStopFromPlace(
-      rawPlace,
-      currentPlan.stops.length + 1,
-      currentPlan.partySize,
-      'إضافة مباشرة من الخريطة بناءً على اختيارك.'
+  const toggleInlineMapCollapse = (msgId: string) => {
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.id === msgId) {
+          return { ...m, isInlineMapCollapsed: !m.isInlineMapCollapsed };
+        }
+        return m;
+      })
     );
-
-    const updatedStops = [...currentPlan.stops, newStop];
-    const newTotalCost = updatedStops.reduce((sum, s) => sum + s.totalCost, 0);
-
-    let routeGeoJSON = currentPlan.routeGeoJSON;
-    let isRealStreetRoute = currentPlan.isRealStreetRoute;
-    let totalDistanceKm = currentPlan.totalDistanceKm;
-
-    if (updatedStops.length >= 2) {
-      try {
-        const waypoints = updatedStops.map((s) => ({ lat: s.lat, lon: s.lon }));
-        const osrm = await fetchOSRMRoute(waypoints, transportMode);
-        routeGeoJSON = osrm.geometry;
-        isRealStreetRoute = osrm.isRealStreetRoute;
-        totalDistanceKm = Number((osrm.totalDistanceMeters / 1000).toFixed(2));
-      } catch (e) {}
-    }
-
-    const updatedPlan: PlanResult = {
-      ...currentPlan,
-      stops: updatedStops,
-      totalCost: newTotalCost,
-      totalDistanceKm,
-      routeGeoJSON,
-      isRealStreetRoute,
-      budgetStatus: newTotalCost <= currentPlan.budgetEgp ? 'within' : 'exceeded',
-    };
-
-    setCurrentPlan(updatedPlan);
-    setActiveStopIndex(updatedStops.length - 1);
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: 'bot-' + Date.now(),
-        role: 'bot',
-        text: `تمت إضافة **"${place.n}"** إلى مسار رحلتك وتحديث مسارات الشوارع على الخريطة مباشرة 🧭 (أصبح لديك ${updatedStops.length} محطات بإجمالي ${newTotalCost} ج.م).`,
-        timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-        isPlanUpdate: true,
-        planSummary: {
-          title: updatedPlan.title,
-          totalCost: newTotalCost,
-          budgetEgp: updatedPlan.budgetEgp,
-          stopsCount: updatedStops.length,
-        },
-      },
-    ]);
   };
 
-  // تفاعل الخريطة مع الشات: حذف محطة من الخطة
-  const handleRemoveStop = async (order: number) => {
-    if (!currentPlan) return;
-    const removedStop = currentPlan.stops.find((s) => s.order === order);
-    const remaining = currentPlan.stops
-      .filter((s) => s.order !== order)
-      .map((s, idx) => ({ ...s, order: idx + 1 }));
-
-    if (remaining.length === 0) {
-      setCurrentPlan(null);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: 'bot-' + Date.now(),
-          role: 'bot',
-          text: `تم حذف "${removedStop?.name || 'المحطة'}" ومسح الخطة. يمكنك في أي وقت طلب خروجة جديدة وسأصممها لك فوراً 🧭`,
-          timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-        },
-      ]);
-      return;
-    }
-
-    const newTotalCost = remaining.reduce((sum, s) => sum + s.totalCost, 0);
-
-    let routeGeoJSON = undefined;
-    let isRealStreetRoute = false;
-    let totalDistanceKm = 0;
-
-    if (remaining.length >= 2) {
-      try {
-        const waypoints = remaining.map((s) => ({ lat: s.lat, lon: s.lon }));
-        const osrm = await fetchOSRMRoute(waypoints, transportMode);
-        routeGeoJSON = osrm.geometry;
-        isRealStreetRoute = osrm.isRealStreetRoute;
-        totalDistanceKm = Number((osrm.totalDistanceMeters / 1000).toFixed(2));
-      } catch (e) {}
-    }
-
-    const updatedPlan: PlanResult = {
-      ...currentPlan,
-      stops: remaining,
-      totalCost: newTotalCost,
-      routeGeoJSON,
-      isRealStreetRoute,
-      totalDistanceKm,
-      budgetStatus: newTotalCost <= currentPlan.budgetEgp ? 'within' : 'exceeded',
-    };
-
-    setCurrentPlan(updatedPlan);
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: 'bot-' + Date.now(),
-        role: 'bot',
-        text: `تم حذف **"${removedStop?.name || 'المحطة'}"** من الخطة، وتحديث مسار الشوارع والتكلفة أصبحت (${newTotalCost} ج.م) 🗺️.`,
-        timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-        isPlanUpdate: true,
-        planSummary: {
-          title: updatedPlan.title,
-          totalCost: newTotalCost,
-          budgetEgp: updatedPlan.budgetEgp,
-          stopsCount: remaining.length,
-        },
-      },
-    ]);
-  };
-
-  // تفاعل الخريطة مع الشات: تعيين نقطة بداية
-  const handleSetStartPoint = (point: { name: string; lat: number; lon: number }) => {
-    setStartPoint(point);
-    if (isRoundTrip) setEndPoint(point);
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: 'bot-' + Date.now(),
-        role: 'bot',
-        text: `🏁 تم تعيين **"${point.name}"** كنقطة انطلاق لمسار الرحلة على الخريطة!`,
-        timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-      },
-    ]);
-  };
-
-  // تغيير ترتيب المحطات (تقديم أو تأخير)
-  const handleMoveStop = async (fromIdx: number, toIdx: number) => {
-    if (!currentPlan) return;
-    const stopsCopy = [...currentPlan.stops];
-    const [moved] = stopsCopy.splice(fromIdx, 1);
-    stopsCopy.splice(toIdx, 0, moved);
-    const reordered = stopsCopy.map((s, idx) => ({ ...s, order: idx + 1 }));
-
-    let routeGeoJSON = currentPlan.routeGeoJSON;
-    let isRealStreetRoute = currentPlan.isRealStreetRoute;
-    let totalDistanceKm = currentPlan.totalDistanceKm;
-
-    if (reordered.length >= 2) {
-      try {
-        const waypoints = reordered.map((s) => ({ lat: s.lat, lon: s.lon }));
-        const osrm = await fetchOSRMRoute(waypoints, transportMode);
-        routeGeoJSON = osrm.geometry;
-        isRealStreetRoute = osrm.isRealStreetRoute;
-        totalDistanceKm = Number((osrm.totalDistanceMeters / 1000).toFixed(2));
-      } catch (e) {}
-    }
-
-    setCurrentPlan({
-      ...currentPlan,
-      stops: reordered,
-      routeGeoJSON,
-      isRealStreetRoute,
-      totalDistanceKm,
-    });
-    setActiveStopIndex(toIdx);
-  };
-
-  // بدء محادثة جديدة نظيفة
-  const handleResetChat = () => {
-    setMessages([]);
-    setCurrentPlan(null);
-    setActiveSuggestedPlaces([]);
-    setInput('');
+  const handleCopyMessage = async (msgId: string, text: string) => {
     try {
-      localStorage.removeItem(CHAT_STORAGE_KEY);
+      await navigator.clipboard.writeText(text);
+      setCopiedMsgId(msgId);
+      setTimeout(() => setCopiedMsgId(null), 2000);
     } catch (e) {}
   };
 
-  // حفظ الخطة الحالية
+  const handleClearChat = () => {
+    if (confirm('هل تريد مسح سجل المحادثة وبدء محادثة جديدة؟')) {
+      setMessages([]);
+      setCurrentPlan(null);
+      localStorage.removeItem(CHAT_STORAGE_KEY);
+    }
+  };
+
   const handleSavePlan = () => {
     if (!currentPlan) return;
-    const alreadySaved = savedTrips.some((t) => t.id === currentPlan.id);
-    if (alreadySaved) return;
-
-    const updated = [currentPlan, ...savedTrips];
-    setSavedTrips(updated);
     try {
+      const existing = savedTrips.filter((t) => t.id !== currentPlan.id);
+      const updated = [currentPlan, ...existing];
+      setSavedTrips(updated);
       localStorage.setItem(SAVED_TRIPS_STORAGE, JSON.stringify(updated));
+      confetti({ particleCount: 30, spread: 50, origin: { y: 0.8 } });
+      alert('تم حفظ خطة الرحلة في رحلاتك المحفوظة بنجاح! ⭐');
     } catch (e) {}
-    confetti({ particleCount: 30, spread: 60 });
   };
 
-  // مشاركة الخطة كرابط
-  const handleSharePlan = () => {
+  const handleSharePlan = async () => {
     if (!currentPlan) return;
     try {
       const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(currentPlan))));
       const shareUrl = `${window.location.origin}/ai?plan=${encoded}`;
-      navigator.clipboard.writeText(shareUrl);
-      setCopiedShare(true);
-      setTimeout(() => setCopiedShare(false), 2500);
+
+      if (navigator.share) {
+        await navigator.share({
+          title: currentPlan.title,
+          text: `شوف خطة رحلتي لبورسعيد (${currentPlan.totalCost} ج.م): ${currentPlan.title}`,
+          url: shareUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopiedShare(true);
+        setTimeout(() => setCopiedShare(false), 2500);
+        alert('تم نسخ رابط الخطة للمشاركة بنجاح! 📋');
+      }
     } catch (e) {}
   };
-
-  const handleSaveSettings = () => {
-    try {
-      if (customKey.trim()) {
-        localStorage.setItem(OPENROUTER_KEY_STORAGE, customKey.trim());
-      } else {
-        localStorage.removeItem(OPENROUTER_KEY_STORAGE);
-      }
-      localStorage.setItem(OPENROUTER_MODEL_STORAGE, selectedModel);
-      setShowSettingsModal(false);
-      confetti({ particleCount: 20, spread: 40 });
-    } catch (e) {}
-  };
-
-  const handleTestKey = async () => {
-    if (!customKey.trim()) {
-      setKeyTestFeedback({ ok: false, message: 'يرجى لصق المفتاح أولاً لاختباره.' });
-      return;
-    }
-    setIsTestingKey(true);
-    setKeyTestFeedback(null);
-    try {
-      const res = await fetch('/api/ai-test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: customKey.trim(), model: selectedModel }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        setKeyTestFeedback({ ok: true, message: data.message || 'المفتاح يعمل بنجاح ومستعد للتفكير!' });
-      } else {
-        setKeyTestFeedback({ ok: false, message: data.error || 'فشل الاتصال بالمفتاح' });
-      }
-    } catch (err: any) {
-      setKeyTestFeedback({ ok: false, message: `تعذر الاتصال بالخادم: ${err.message}` });
-    } finally {
-      setIsTestingKey(false);
-    }
-  };
-
-  const isCurrentSaved = currentPlan ? savedTrips.some((t) => t.id === currentPlan.id) : false;
-  const activeModelObj = POPULAR_MODELS.find((m) => m.id === selectedModel) || {
-    id: selectedModel,
-    name: selectedModel,
-    tag: 'Custom AI',
-  };
-
-  const isChatEmpty = messages.length === 0;
 
   return (
-    <div className="space-y-3 max-w-7xl mx-auto pb-6" dir="rtl">
-      {/* 1. Header: Sleek, Minimal, ChatGPT-style */}
-      <header className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-xs flex items-center justify-between gap-3">
-        {/* Brand & Assistant Status */}
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600 via-teal2-600 to-indigo-600 text-white grid place-items-center shrink-0 shadow-xs">
-            <Sparkles className="w-4 h-4 text-white" />
+    <div className="max-w-4xl mx-auto w-full min-h-[82vh] flex flex-col justify-between relative pb-6" dir="rtl">
+      {/* 1. Header Bar: Title, Model Badge, Clear & Settings */}
+      <div className="p-3 sm:p-4 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-xs flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-blue-600 via-teal2-600 to-indigo-600 text-white grid place-items-center shrink-0 shadow-xs">
+            <Sparkles className="w-5 h-5" />
           </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <h1 className="text-sm font-black text-ocean-950 dark:text-white leading-tight">
-                مساعد بورسعيد الذكي ومخطط الرحلات
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="font-black text-sm sm:text-base text-ocean-950 dark:text-white truncate">
+                مساعد بورسعيد ومخطط الرحلات الذكي
               </h1>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="متصل وجاهز" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" title="جاهز للمساعدة" />
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-              استكشاف وتخطيط معالم بورسعيد • {activeModelObj.name.split(' ')[0]}
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate">
+              {userLocation?.district ? `📍 موقعك: ${userLocation.district}` : 'استكشف بورسعيد، خطط الخروجات، واسأل عن أي مكان'}
             </p>
           </div>
         </div>
 
-        {/* Clean Header Action Controls */}
-        <div className="flex items-center gap-1.5">
-          {/* Mobile Tab Switcher Pill */}
-          <div className="flex lg:hidden rounded-xl bg-slate-100 dark:bg-[#152332] p-0.5 border border-slate-200 dark:border-[#22354a]">
-            <button
-              type="button"
-              onClick={() => setMobileTab('chat')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
-                mobileTab === 'chat'
-                  ? 'bg-white dark:bg-[#1d2f44] text-ocean-950 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400'
-              }`}
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>المحادثة</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setMobileTab('map')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
-                mobileTab === 'map'
-                  ? 'bg-white dark:bg-[#1d2f44] text-ocean-950 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400'
-              }`}
-            >
-              <MapIcon className="w-3.5 h-3.5 text-teal2-600" />
-              <span>الخريطة {currentPlan ? `(${currentPlan.stops.length})` : ''}</span>
-            </button>
-          </div>
-
-          {/* Desktop Map Toggle */}
+        {/* Action Controls */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Model Selector Pill */}
           <button
-            onClick={() => setShowMapPanel(!showMapPanel)}
             type="button"
-            className="hidden lg:inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#152332] text-ocean-900 dark:text-white hover:bg-slate-200 text-xs font-bold transition border border-slate-200 dark:border-[#1d2d3e]"
-            title="تبديل عرض لوحة الخريطة"
+            onClick={() => setShowSettingsModal(true)}
+            className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-[#152332] text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-200 dark:hover:bg-[#1d2d3e] transition flex items-center gap-1 border border-slate-200 dark:border-[#22354a]"
+            title="تغيير الموديل أو إضافة مفتاح"
           >
-            <MapIcon className="w-3.5 h-3.5 text-teal2-600" />
-            <span>{showMapPanel ? 'إخفاء الخريطة' : 'عرض الخريطة 🗺️'}</span>
-          </button>
-
-          {/* New Chat Button */}
-          <button
-            onClick={handleResetChat}
-            type="button"
-            className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-[#152332] text-ocean-700 dark:text-white/80 hover:bg-slate-200 text-xs font-bold transition flex items-center gap-1 border border-slate-200 dark:border-[#1d2d3e]"
-            title="بدء محادثة جديدة"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">محادثة جديدة</span>
+            <Settings className="w-3.5 h-3.5 text-blue-600" />
+            <span className="hidden sm:inline">الموديل:</span>
+            <span className="text-[11px] font-black text-blue-600 dark:text-blue-400">
+              {selectedModel.includes('gpt-4.1') ? 'GPT-4.1' : selectedModel.split('/')[1] || selectedModel}
+            </span>
           </button>
 
           {/* Saved Trips Button */}
-          <button
-            onClick={() => setShowSavedModal(true)}
-            type="button"
-            className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-[#152332] text-ocean-700 dark:text-white/80 hover:bg-slate-200 text-xs font-bold transition flex items-center gap-1 border border-slate-200 dark:border-[#1d2d3e]"
-            title="الرحلات المحفوظة"
-          >
-            <Bookmark className="w-3.5 h-3.5 text-amber-500" />
-            <span className="hidden sm:inline">({savedTrips.length})</span>
-          </button>
-
-          {/* Settings / AI Key */}
-          <button
-            onClick={() => setShowSettingsModal(true)}
-            type="button"
-            className="p-1.5 rounded-xl bg-slate-100 dark:bg-[#152332] text-slate-600 dark:text-slate-300 hover:bg-slate-200 text-xs transition border border-slate-200 dark:border-[#1d2d3e]"
-            title="إعدادات الموديل ومفتاح AI"
-          >
-            <Settings className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </header>
-
-      {/* 2. Main Workspace Layout: Conversational Centerpiece + Interactive Map */}
-      <div className={`grid gap-3 items-start transition-all duration-300 ${showMapPanel ? 'grid-cols-1 lg:grid-cols-12' : 'grid-cols-1 max-w-4xl mx-auto'}`}>
-        {/* Chat Space (Primary Focus) */}
-        <div
-          className={`flex flex-col h-[680px] sm:h-[730px] rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-md overflow-hidden relative ${
-            showMapPanel ? 'lg:col-span-5' : 'w-full'
-          } ${mobileTab === 'chat' ? 'flex' : 'hidden lg:flex'}`}
-        >
-          {/* Messages Container */}
-          <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-3.5 scrollbar-thin">
-            {/* Empty State / Welcome (When conversation is fresh) */}
-            {isChatEmpty ? (
-              <div className="h-full flex flex-col justify-center items-center text-center p-4 max-w-md mx-auto space-y-4 my-auto">
-                <div className="w-12 h-12 rounded-2xl bg-teal2-500/10 dark:bg-teal2-500/20 text-teal2-600 grid place-items-center shadow-xs">
-                  <Sparkles className="w-6 h-6" />
-                </div>
-
-                <div className="space-y-1">
-                  <h2 className="text-lg font-black text-ocean-950 dark:text-white">
-                    عايز تكتشف إيه في بورسعيد؟
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                    مرشدك ومخطط رحلاتك الذكي. اسألني عن أي معلم أو مطعم، أو اطلب تخطيط خروجة متكاملة على الخريطة.
-                  </p>
-                </div>
-
-                {/* 4 Clean Quick Suggestion Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full pt-2">
-                  {WELCOME_SUGGESTIONS.map((item, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleProcessUserMessage(item.prompt)}
-                      type="button"
-                      className="p-3 rounded-2xl bg-slate-50 dark:bg-[#121f2f] border border-slate-200 dark:border-[#1d2d3e] hover:border-teal2-500 hover:bg-teal2-50/50 dark:hover:bg-teal2-950/20 text-right transition flex flex-col justify-between group shadow-2xs"
-                    >
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-base">{item.icon}</span>
-                        <h3 className="font-bold text-xs text-ocean-950 dark:text-white group-hover:text-teal2-600 transition">
-                          {item.title}
-                        </h3>
-                      </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 font-normal">
-                        {item.desc}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              /* Message Stream */
-              messages.map((m) => {
-                const isBot = m.role === 'bot';
-
-                return (
-                  <div
-                    key={m.id}
-                    className={`flex items-start gap-2.5 ${isBot ? 'self-start' : 'self-end flex-row-reverse'}`}
-                  >
-                    {/* Avatar */}
-                    {isBot ? (
-                      <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-cyan-600 to-indigo-600 text-white grid place-items-center shrink-0 mt-0.5 shadow-xs text-xs font-black">
-                        <Sparkles className="w-3.5 h-3.5" />
-                      </div>
-                    ) : (
-                      <div className="w-7 h-7 rounded-xl bg-teal2-600 text-white grid place-items-center shrink-0 mt-0.5 shadow-xs text-xs font-black">
-                        {user?.name?.[0] || 'أنت'}
-                      </div>
-                    )}
-
-                    {/* Message Bubble */}
-                    <div
-                      className={`p-3.5 rounded-2xl text-xs sm:text-[13px] leading-relaxed max-w-[88%] shadow-xs ${
-                        isBot
-                          ? 'bg-slate-50 dark:bg-[#121f2f] text-ocean-950 dark:text-white rounded-tr-xs border border-slate-200 dark:border-[#1d2d3e]'
-                          : 'bg-ocean-900 text-white rounded-tl-xs'
-                      }`}
-                    >
-                      {/* Text */}
-                      <div className="whitespace-pre-line font-medium leading-relaxed">{m.text}</div>
-
-                      {/* Plan Summary Card inside Chat */}
-                      {m.isPlanUpdate && m.planSummary && (
-                        <div className="mt-2.5 p-2.5 rounded-xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-teal2-500/30 text-ocean-900 dark:text-white flex items-center justify-between gap-2 shadow-2xs">
-                          <div className="min-w-0">
-                            <p className="font-black text-xs truncate">{m.planSummary.title}</p>
-                            <p className="text-[10px] text-teal2-700 dark:text-teal2-300 font-bold">
-                              {m.planSummary.totalCost} ج.م • {m.planSummary.stopsCount} محطات
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => {
-                              setShowMapPanel(true);
-                              if (window.innerWidth < 1024) setMobileTab('map');
-                            }}
-                            type="button"
-                            className="px-2.5 py-1 rounded-lg bg-teal2-600 text-white text-[10px] font-black shrink-0 hover:bg-teal2-500 transition"
-                          >
-                            عرض الخريطة 🗺️
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Suggested Places interactive chips */}
-                      {isBot && m.suggestedPlaces && m.suggestedPlaces.length > 0 && (
-                        <div className="mt-2.5 pt-2 border-t border-slate-200 dark:border-white/10 space-y-1.5">
-                          <span className="text-[10px] font-bold text-teal2-700 dark:text-teal2-300 block">
-                            معالم ومطاعم مقترحة على الخريطة:
-                          </span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {m.suggestedPlaces.map((pl) => (
-                              <button
-                                key={pl.id}
-                                onClick={() => {
-                                  setShowMapPanel(true);
-                                  if (window.innerWidth < 1024) setMobileTab('map');
-                                  setActiveSuggestedPlaces([pl]);
-                                }}
-                                type="button"
-                                className="px-2 py-1 rounded-lg bg-white dark:bg-[#152332] border border-slate-200 dark:border-[#22354a] text-[11px] font-bold text-ocean-900 dark:text-white hover:border-teal2-500 transition flex items-center gap-1 shadow-2xs"
-                              >
-                                <MapPin className="w-3 h-3 text-rose-500" />
-                                <span>{pl.n}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Bubble Footer: Timestamp & Copy Button */}
-                      <div className="flex items-center justify-between gap-2 mt-2 pt-1 border-t border-black/5 dark:border-white/5 text-[10px] opacity-70">
-                        <span dir="ltr">{m.timestamp}</span>
-
-                        {isBot && (
-                          <button
-                            type="button"
-                            onClick={() => handleCopyMessage(m.id, m.text)}
-                            className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition flex items-center gap-1 text-[10px]"
-                            title="نسخ الإجابة"
-                          >
-                            {copiedMsgId === m.id ? (
-                              <>
-                                <Check className="w-3 h-3 text-emerald-500" />
-                                <span className="text-emerald-600 dark:text-emerald-400">تم النسخ</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-3 h-3" />
-                                <span>نسخ</span>
-                              </>
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-
-            {/* Active Writing Shimmer Indicator */}
-            {loading && (
-              <div className="flex items-center gap-2 p-2.5 px-3 rounded-2xl bg-slate-50 dark:bg-[#121f2f] text-slate-700 dark:text-slate-300 text-xs font-bold w-fit border border-slate-200 dark:border-[#1d2d3e] shadow-2xs">
-                <Sparkles className="w-3.5 h-3.5 text-teal2-600 animate-spin" />
-                <span>مساعد بورسعيد يكتب الرد ويجهز التفاصيل...</span>
-              </div>
-            )}
-            <div ref={chatEndRef} />
-          </div>
-
-          {/* 3. Fixed Input Bar (ChatGPT Simplicity) */}
-          <div className="p-3 bg-white dark:bg-[#0c1622] border-t border-slate-200 dark:border-[#1d2d3e]">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleProcessUserMessage();
-              }}
-              className="relative flex items-center gap-2 rounded-2xl bg-slate-50 dark:bg-[#121f2f] border border-slate-300 dark:border-[#1d2d3e] p-1.5 focus-within:border-teal2-500 focus-within:ring-1 focus-within:ring-teal2-500/20 transition shadow-xs"
+          {savedTrips.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowSavedModal(true)}
+              className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300/40 transition hover:bg-amber-100"
+              title="الرحلات المحفوظة"
             >
-              {/* GPS Geolocation Button */}
-              <button
-                type="button"
-                onClick={() => handleLocateUser()}
-                disabled={locatingUser}
-                title={userLocation ? `موقعي محدد في ${userLocation.district || 'بورسعيد'}` : 'تحديد موقعي الحالي بالـ GPS'}
-                className={`p-2 rounded-xl transition shrink-0 ${
-                  userLocation
-                    ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
-                    : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'
-                }`}
-              >
-                <MapPin className={`w-4 h-4 ${locatingUser ? 'animate-bounce text-rose-500' : ''}`} />
-              </button>
+              <Bookmark className="w-4 h-4 fill-current" />
+            </button>
+          )}
 
-              {/* Chat Input Text Field */}
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={
-                  currentPlan
-                    ? 'اطلب تعديل الخطة (مثلاً: شيل المكان التاني، حط مكان أقرب للبحر)...'
-                    : 'اسأل عن أي مكان، أو اطلب خروجة بميزانيتك...'
-                }
-                className="flex-1 bg-transparent text-ocean-950 dark:text-white outline-none text-xs sm:text-sm font-semibold px-1 py-1.5 placeholder:text-slate-400"
-              />
-
-              {/* Send Button */}
-              <button
-                type="submit"
-                disabled={!input.trim() || loading}
-                className="p-2 rounded-xl bg-ocean-900 text-white disabled:opacity-30 hover:opacity-90 transition shrink-0 shadow-xs"
-                title="إرسال"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </form>
-
-            {locationNotice && (
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 px-2 font-medium">
-                {locationNotice}
-              </p>
-            )}
-          </div>
+          {/* Clear Chat Button */}
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearChat}
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white transition hover:bg-slate-100 dark:hover:bg-[#121f2f]"
+              title="محادثة جديدة"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          )}
         </div>
+      </div>
 
-        {/* 4. Interactive Map Panel & Route Canvas */}
-        {showMapPanel && (
-          <div
-            className={`space-y-3 ${isMapExpanded ? 'fixed inset-4 z-50 bg-white dark:bg-[#071322] p-4 rounded-3xl shadow-2xl overflow-y-auto' : 'lg:col-span-7'} ${
-              mobileTab === 'map' ? 'block' : 'hidden lg:block'
+      {/* 2. Messages Container (Full Width Stream) */}
+      <div className="flex-1 space-y-4 px-1 pb-4">
+        {messages.length === 0 ? (
+          /* Welcome State (ChatGPT style simplicity) */
+          <div className="py-8 sm:py-12 text-center space-y-6">
+            <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-blue-600 via-teal2-600 to-indigo-600 text-white grid place-items-center mx-auto shadow-lg shadow-blue-600/20">
+              <Compass className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-1.5 max-w-md mx-auto">
+              <h2 className="text-xl sm:text-2xl font-black text-ocean-950 dark:text-white">
+                عايز تكتشف إيه في بورسعيد اليوم؟
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+                اسألني عن أحسن أماكن الخروج، مطاعم الأسماك، كافيهات البحر، أو اطلب تخطيط خروجة كاملة بميزانيتك ووقتك.
+              </p>
+            </div>
+
+            {/* Quick Suggestions Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl mx-auto text-right pt-2">
+              {WELCOME_SUGGESTIONS.map((item, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleProcessUserMessage(item.prompt)}
+                  className="p-3.5 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] hover:border-blue-500 hover:shadow-sm transition text-right group flex items-start gap-3"
+                >
+                  <span className="text-2xl shrink-0 p-1.5 rounded-xl bg-slate-50 dark:bg-[#121f2f]">
+                    {item.icon}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-black text-xs sm:text-sm text-ocean-950 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">
+                      {item.title}
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium line-clamp-1">
+                      {item.desc}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          /* Messages Stream */
+          messages.map((m) => {
+            const isBot = m.role === 'bot';
+
+            return (
+              <div
+                key={m.id}
+                className={`flex items-start gap-2.5 ${isBot ? 'self-start' : 'self-end flex-row-reverse'}`}
+              >
+                {/* Avatar */}
+                {isBot ? (
+                  <div className="w-8 h-8 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white grid place-items-center shrink-0 mt-0.5 shadow-xs text-xs font-black">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded-2xl bg-ocean-900 text-white grid place-items-center shrink-0 mt-0.5 shadow-xs text-xs font-black">
+                    {user?.name?.[0] || 'أنت'}
+                  </div>
+                )}
+
+                {/* Message Bubble */}
+                <div
+                  className={`p-4 sm:p-5 rounded-3xl text-xs sm:text-sm leading-relaxed max-w-[92%] shadow-xs ${
+                    isBot
+                      ? 'bg-white dark:bg-[#0c1622] text-ocean-950 dark:text-white rounded-tr-xs border border-slate-200 dark:border-[#1d2d3e]'
+                      : 'bg-ocean-900 text-white rounded-tl-xs'
+                  }`}
+                >
+                  {/* Formatted Markdown Content */}
+                  {isBot ? (
+                    renderFormattedMessage(m.text)
+                  ) : (
+                    <div className="whitespace-pre-line font-medium leading-relaxed">{m.text}</div>
+                  )}
+
+                  {/* Contextual Inline Map inside Bot Message */}
+                  {isBot && m.showInlineMap && (
+                    <div className="mt-4 rounded-2xl border border-slate-200 dark:border-[#1d2d3e] bg-slate-50 dark:bg-[#121f2f] overflow-hidden shadow-xs">
+                      {/* Map Header Bar */}
+                      <div className="p-2.5 px-3 bg-white dark:bg-[#0c1622] border-b border-slate-200 dark:border-[#1d2d3e] flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <MapIcon className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                          <span className="font-black text-xs text-ocean-950 dark:text-white truncate">
+                            {m.isPlanUpdate && m.planSummary
+                              ? `مسار الخروجة: ${m.planSummary.title} (${m.planSummary.stopsCount} محطات)`
+                              : `خريطة الأماكن المحددة (${(m.suggestedPlaces || []).length} مواقع)`}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFullScreenMapData({
+                                plan: m.plan || currentPlan,
+                                suggestedPlaces: m.suggestedPlaces || activeSuggestedPlaces,
+                                title: m.planSummary?.title || 'خريطة بورسعيد التفاعلية',
+                              });
+                              setShowFullScreenMap(true);
+                            }}
+                            className="px-2.5 py-1 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-black transition flex items-center gap-1 shadow-2xs"
+                            title="عرض الخريطة بالكامل في شاشة مستقلة"
+                          >
+                            <Maximize2 className="w-3 h-3" />
+                            <span>عرض بالكامل ⤢</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => toggleInlineMapCollapse(m.id)}
+                            className="p-1 rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition"
+                            title={m.isInlineMapCollapsed ? 'إظهار الخريطة' : 'إخفاء الخريطة'}
+                          >
+                            {m.isInlineMapCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Map Viewport */}
+                      {!m.isInlineMapCollapsed && (
+                        <div className="p-2 space-y-2">
+                          <div className="h-60 sm:h-72 rounded-xl overflow-hidden relative border border-slate-200 dark:border-[#1d2d3e]">
+                            <PlannerMap
+                              plan={m.plan || (m.isPlanUpdate ? currentPlan : null)}
+                              suggestedPlaces={m.suggestedPlaces || activeSuggestedPlaces}
+                              userLocation={userLocation}
+                              activeStopIndex={activeStopIndex}
+                              onSelectStop={(idx) => setActiveStopIndex(idx)}
+                              onViewPlaceDetails={onViewPlaceDetails}
+                            />
+                          </div>
+
+                          {/* Place Tags below Map */}
+                          {m.suggestedPlaces && m.suggestedPlaces.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {m.suggestedPlaces.map((pl) => (
+                                <button
+                                  key={pl.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setFullScreenMapData({
+                                      plan: null,
+                                      suggestedPlaces: [pl],
+                                      title: pl.n,
+                                    });
+                                    setShowFullScreenMap(true);
+                                  }}
+                                  className="px-2 py-0.5 rounded-lg bg-white dark:bg-[#0c1622] text-[10px] font-bold text-ocean-950 dark:text-white border border-slate-200 dark:border-[#22354a] flex items-center gap-1 hover:border-blue-400 transition"
+                                >
+                                  <MapPin className="w-2.5 h-2.5 text-rose-500" />
+                                  <span>{pl.n}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Bubble Footer: Timestamp & Copy Button */}
+                  <div className="flex items-center justify-between gap-2 mt-3 pt-1.5 border-t border-black/5 dark:border-white/5 text-[10px] opacity-70">
+                    <span dir="ltr">{m.timestamp}</span>
+
+                    {isBot && (
+                      <button
+                        type="button"
+                        onClick={() => handleCopyMessage(m.id, m.text)}
+                        className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition flex items-center gap-1 text-[10px]"
+                        title="نسخ الإجابة"
+                      >
+                        {copiedMsgId === m.id ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-500" />
+                            <span className="text-emerald-600 dark:text-emerald-400">تم النسخ</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>نسخ</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+
+        {/* Loading Indicator */}
+        {loading && (
+          <div className="flex items-center gap-2 p-3 px-4 rounded-2xl bg-white dark:bg-[#0c1622] text-slate-700 dark:text-slate-300 text-xs font-bold w-fit border border-slate-200 dark:border-[#1d2d3e] shadow-xs">
+            <Sparkles className="w-4 h-4 text-blue-600 animate-spin" />
+            <span>مساعد بورسعيد يكتب الرد ويرتب التفاصيل...</span>
+          </div>
+        )}
+        <div ref={chatEndRef} />
+      </div>
+
+      {/* 3. Fixed Bottom Input Bar (ChatGPT Simplicity) */}
+      <div className="sticky bottom-2 z-20 pt-2">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleProcessUserMessage();
+          }}
+          className="relative flex items-center gap-2 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] p-2 shadow-lg focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-600/15 transition"
+        >
+          {/* GPS Geolocation Button */}
+          <button
+            type="button"
+            onClick={() => handleLocateUser()}
+            disabled={locatingUser}
+            title={userLocation ? `موقعي محدد في ${userLocation.district || 'بورسعيد'}` : 'تحديد موقعي الحالي بالـ GPS'}
+            className={`p-2.5 rounded-2xl transition shrink-0 ${
+              userLocation
+                ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
-            {/* Top Bar for Map / Plan */}
-            <div className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-xs flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="font-black text-sm text-ocean-950 dark:text-white truncate">
-                    {currentPlan ? currentPlan.title : 'الخريطة الحية ومسارات بورسعيد'}
-                  </h2>
-                  {currentPlan && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal2-500/15 text-teal2-700 dark:text-teal2-300 border border-teal2-400/30">
-                      {currentPlan.totalCost} ج.م • {currentPlan.stops.length} محطات
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                  {currentPlan
-                    ? `⏱️ ${currentPlan.totalDurationHours} ساعات • 👥 ${currentPlan.partySize} أفراد • 🛣️ ${currentPlan.totalDistanceKm} كم مسار حقيقي`
-                    : 'انقر على أي علامة أو حدد بداية ونهاية لمسارك'}
-                </p>
-              </div>
+            <MapPin className={`w-4 h-4 ${locatingUser ? 'animate-bounce text-rose-500' : ''}`} />
+          </button>
 
-              {/* Action Buttons for Plan */}
-              {currentPlan && (
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    onClick={handleSavePlan}
-                    type="button"
-                    className={`px-2.5 py-1.5 rounded-xl font-bold text-xs transition flex items-center gap-1 border ${
-                      isCurrentSaved
-                        ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-400/40'
-                        : 'bg-slate-100 dark:bg-[#162738] text-ocean-900 dark:text-white border-slate-200 dark:border-[#22354a]'
-                    }`}
-                  >
-                    <Bookmark className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                    <span>{isCurrentSaved ? 'محفوظة' : 'حفظ'}</span>
-                  </button>
+          {/* Input Text Field */}
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={
+              currentPlan
+                ? 'اطلب تعديل الخطة (مثلاً: شيل المكان التاني، حط مكان أقرب للبحر)...'
+                : 'اسأل عن أي مكان، أو اطلب خروجة بميزانيتك...'
+            }
+            className="flex-1 bg-transparent text-ocean-950 dark:text-white outline-none text-xs sm:text-sm font-semibold px-1 py-1 placeholder:text-slate-400"
+          />
 
-                  <button
-                    onClick={handleSharePlan}
-                    type="button"
-                    className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-[#162738] text-ocean-900 dark:text-white text-xs font-bold transition flex items-center gap-1 border border-slate-200 dark:border-[#22354a]"
-                  >
-                    {copiedShare ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Share2 className="w-3.5 h-3.5 text-teal2-600" />}
-                    <span>{copiedShare ? 'تم!' : 'مشاركة'}</span>
-                  </button>
+          {/* Send Button */}
+          <button
+            type="submit"
+            disabled={!input.trim() || loading}
+            className="p-2.5 rounded-2xl bg-blue-600 text-white disabled:opacity-30 hover:bg-blue-500 transition shrink-0 shadow-xs"
+            title="إرسال"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </form>
 
-                  <button
-                    onClick={() => setCurrentPlan(null)}
-                    type="button"
-                    title="مسح الخطة"
-                    className="p-1.5 rounded-xl bg-slate-100 dark:bg-[#162738] text-slate-500 hover:text-rose-500 transition"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Interactive Map Component */}
-            <div className={`rounded-3xl overflow-hidden border border-slate-200 dark:border-[#1d2d3e] shadow-md relative ${isMapExpanded ? 'h-[75vh]' : 'h-[380px] sm:h-[430px]'}`}>
-              <PlannerMap
-                plan={currentPlan}
-                suggestedPlaces={activeSuggestedPlaces}
-                startPoint={startPoint}
-                endPoint={isRoundTrip ? startPoint : endPoint}
-                userLocation={userLocation}
-                activeStopIndex={activeStopIndex}
-                onSelectStop={(idx) => setActiveStopIndex(idx)}
-                onAddPlaceToPlan={handleAddPlaceToPlan}
-                onRemoveStop={handleRemoveStop}
-                onSetStartPoint={handleSetStartPoint}
-                pickingPointFor={pickingPointFor}
-                onStartPickingPoint={(type) => setPickingPointFor(type)}
-                onPointPicked={(pt) => {
-                  if (pickingPointFor === 'start') {
-                    handleSetStartPoint(pt);
-                  } else {
-                    setEndPoint(pt);
-                  }
-                  setPickingPointFor(null);
-                }}
-                onCancelPick={() => setPickingPointFor(null)}
-                onViewPlaceDetails={onViewPlaceDetails}
-                isExpanded={isMapExpanded}
-                onToggleExpand={() => setIsMapExpanded(!isMapExpanded)}
-              />
-            </div>
-
-            {/* Plan Stops List & Timeline */}
-            {currentPlan && (
-              <div className="p-3.5 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-xs space-y-2.5">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-[#1d2d3e]">
-                  <h3 className="font-bold text-xs text-ocean-950 dark:text-white flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-teal2-600" />
-                    <span>محطات الرحلة ({currentPlan.stops.length} محطات)</span>
-                  </h3>
-                  <span className="text-[10px] text-slate-500">
-                    انقر على أي محطة لتكبيرها على الخريطة
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  {currentPlan.stops.map((stop, idx) => {
-                    const isSelected = activeStopIndex === idx;
-                    return (
-                      <div
-                        key={stop.placeId || idx}
-                        onClick={() => setActiveStopIndex(idx)}
-                        className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
-                          isSelected
-                            ? 'bg-slate-50 dark:bg-[#152336] border-teal2-500 shadow-xs ring-1 ring-teal2-500/30'
-                            : 'bg-white dark:bg-[#0f1b2b] border-slate-200 dark:border-[#1d2d3e] hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-start gap-2 min-w-0">
-                            <div className="w-6 h-6 rounded-lg bg-ocean-900 text-white font-black text-xs grid place-items-center shrink-0">
-                              {stop.order}
-                            </div>
-
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <h4 className="font-black text-xs text-ocean-950 dark:text-white truncate">
-                                  {stop.name}
-                                </h4>
-                                {stop.discountPercent && stop.discountPercent > 0 ? (
-                                  <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-rose-500/15 text-rose-700 dark:text-rose-300">
-                                    خصم {stop.discountPercent}%
-                                  </span>
-                                ) : null}
-                              </div>
-
-                              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                                {stop.categoryLabel} • {stop.area} • التواجد: {stop.arrivalTime} - {stop.departureTime}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Stop Controls */}
-                          <div className="flex items-center gap-1 shrink-0">
-                            <span className="font-bold text-xs text-ocean-900 dark:text-white ml-2">
-                              {stop.totalCost > 0 ? `${stop.totalCost} ج.م` : 'مجانًا'}
-                            </span>
-
-                            {idx > 0 && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleMoveStop(idx, idx - 1);
-                                }}
-                                type="button"
-                                title="تقديم المحطة"
-                                className="p-1 rounded-md bg-slate-100 dark:bg-[#162738] text-slate-600 dark:text-slate-300 hover:bg-slate-200"
-                              >
-                                <ArrowUp className="w-3 h-3" />
-                              </button>
-                            )}
-
-                            {idx < currentPlan.stops.length - 1 && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleMoveStop(idx, idx + 1);
-                                }}
-                                type="button"
-                                title="تأخير المحطة"
-                                className="p-1 rounded-md bg-slate-100 dark:bg-[#162738] text-slate-600 dark:text-slate-300 hover:bg-slate-200"
-                              >
-                                <ArrowDown className="w-3 h-3" />
-                              </button>
-                            )}
-
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveStop(stop.order);
-                              }}
-                              type="button"
-                              title="حذف المحطة"
-                              className="p-1 rounded-md bg-slate-100 dark:bg-[#162738] text-rose-600 hover:bg-rose-100 dark:hover:bg-rose-950/40"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
+        {locationNotice && (
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 px-3 font-medium text-center">
+            {locationNotice}
+          </p>
         )}
       </div>
 
-      {/* Model & AI Key Configuration Modal */}
+      {/* 4. Full-Screen Map Modal (When user clicks 'عرض بالكامل ⤢') */}
       <AnimatePresence>
-        {showSettingsModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+        {showFullScreenMap && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-ocean-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-5"
+          >
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-md p-5 rounded-3xl bg-white dark:bg-[#0d1826] border border-slate-200 dark:border-[#1d2d3e] shadow-2xl space-y-4 text-right"
-              dir="rtl"
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-white dark:bg-[#071322] rounded-3xl w-full max-w-6xl h-[92vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200 dark:border-[#1d2d3e]"
             >
-              <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#1d2d3e]">
+              {/* Modal Top Bar */}
+              <div className="p-3.5 sm:p-4 border-b border-slate-200 dark:border-[#1d2d3e] flex items-center justify-between gap-3 bg-white dark:bg-[#0c1622]">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-indigo-500/15 text-indigo-500 grid place-items-center">
-                    <Settings className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-xl bg-blue-600 text-white grid place-items-center">
+                    <MapIcon className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="font-black text-sm text-ocean-950 dark:text-white">
-                      إعدادات نموذج الذكاء الاصطناعي
+                    <h3 className="font-black text-sm sm:text-base text-ocean-950 dark:text-white">
+                      {fullScreenMapData?.title || 'خريطة بورسعيد التفاعلية'}
                     </h3>
-                    <p className="text-[10px] text-slate-500">النموذج المعتمد: {activeModelObj.name}</p>
+                    <p className="text-[11px] text-slate-500">
+                      استكشف المعالم والمسارات الحقيقية بحرية كاملة
+                    </p>
                   </div>
                 </div>
+
+                <div className="flex items-center gap-2">
+                  {fullScreenMapData?.plan && (
+                    <button
+                      type="button"
+                      onClick={handleSharePlan}
+                      className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#152332] text-xs font-bold text-ocean-950 dark:text-white flex items-center gap-1 border border-slate-200 dark:border-[#22354a]"
+                    >
+                      <Share2 className="w-3.5 h-3.5 text-teal2-600" />
+                      <span>مشاركة</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setShowFullScreenMap(false)}
+                    className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-[#152332] dark:hover:bg-[#1d2d3e] text-slate-600 dark:text-slate-300 transition"
+                    title="إغلاق الخريطة والعودة للمحادثة"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Map Viewport */}
+              <div className="flex-1 relative">
+                <PlannerMap
+                  plan={fullScreenMapData?.plan || currentPlan}
+                  suggestedPlaces={fullScreenMapData?.suggestedPlaces || activeSuggestedPlaces}
+                  userLocation={userLocation}
+                  activeStopIndex={activeStopIndex}
+                  onSelectStop={(idx) => setActiveStopIndex(idx)}
+                  onViewPlaceDetails={onViewPlaceDetails}
+                  isExpanded={true}
+                  onToggleExpand={() => setShowFullScreenMap(false)}
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 5. Model Settings Modal */}
+      <AnimatePresence>
+        {showSettingsModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              className="bg-white dark:bg-[#0c1622] rounded-3xl p-5 sm:p-6 w-full max-w-lg border border-slate-200 dark:border-[#1d2d3e] shadow-2xl space-y-4 text-right"
+            >
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-[#162232]">
+                <h3 className="font-black text-base text-ocean-950 dark:text-white flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-blue-600" />
+                  <span>إعدادات نموذج الذكاء الاصطناعي</span>
+                </h3>
                 <button
                   onClick={() => setShowSettingsModal(false)}
                   className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Model Selector */}
-              <div className="space-y-1.5 text-xs">
-                <label className="font-bold text-ocean-950 dark:text-white block">
-                  اختر النموذج:
+              {/* Model Choice */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                  اختر النموذج المفضل:
                 </label>
                 <div className="space-y-1.5">
-                  {POPULAR_MODELS.map((model) => (
+                  {POPULAR_MODELS.map((m) => (
                     <button
-                      key={model.id}
+                      key={m.id}
                       type="button"
-                      onClick={() => setSelectedModel(model.id)}
-                      className={`w-full p-2.5 rounded-xl border text-right transition flex items-center justify-between text-xs font-bold ${
-                        selectedModel === model.id
-                          ? 'bg-teal2-500/15 border-teal2-500 text-teal2-800 dark:text-teal2-200'
+                      onClick={() => {
+                        setSelectedModel(m.id);
+                        localStorage.setItem(OPENROUTER_MODEL_STORAGE, m.id);
+                      }}
+                      className={`w-full p-2.5 rounded-2xl border text-right transition flex items-center justify-between gap-2 text-xs font-bold ${
+                        selectedModel === m.id
+                          ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-600 text-blue-700 dark:text-blue-300'
                           : 'bg-slate-50 dark:bg-[#121f2f] border-slate-200 dark:border-[#1d2d3e] text-slate-700 dark:text-slate-300'
                       }`}
                     >
-                      <span className="truncate">{model.name}</span>
-                      <span className="text-[10px] opacity-70 shrink-0 mr-1">{model.tag}</span>
+                      <span>{m.name}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#22354a]">
+                        {m.tag}
+                      </span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Custom OpenRouter Key */}
-              <div className="space-y-1.5 text-xs">
-                <label className="font-bold text-ocean-950 dark:text-white flex items-center justify-between">
-                  <span>مفتاح OpenRouter API (اختياري):</span>
-                  <span className="text-[10px] text-slate-400 font-normal">محفوظ محلياً فقط</span>
+              {/* Custom Key */}
+              <div className="space-y-1.5 pt-2">
+                <label className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                  مفتاح OpenRouter API (اختياري):
                 </label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type="password"
-                      value={customKey}
-                      onChange={(e) => {
-                        setCustomKey(e.target.value);
-                        setKeyTestFeedback(null);
-                      }}
-                      placeholder="sk-or-v1-..."
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#121f2f] border border-slate-200 dark:border-[#1d2d3e] text-ocean-950 dark:text-white text-xs outline-none focus:border-teal2-500 font-mono"
-                    />
-                    <Key className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleTestKey}
-                    disabled={isTestingKey || !customKey.trim()}
-                    className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-[#152332] text-ocean-900 dark:text-white border border-slate-200 dark:border-[#1d2d3e] text-[11px] font-bold transition disabled:opacity-40 shrink-0"
-                  >
-                    {isTestingKey ? 'جارٍ الفحص...' : 'فحص المفتاح'}
-                  </button>
-                </div>
-
-                {keyTestFeedback && (
-                  <div
-                    className={`p-2.5 rounded-xl text-xs font-semibold leading-relaxed border ${
-                      keyTestFeedback.ok
-                        ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/30'
-                        : 'bg-rose-500/10 text-rose-800 dark:text-rose-300 border-rose-500/30'
-                    }`}
-                  >
-                    {keyTestFeedback.ok ? '✅ ' : '❌ '}
-                    {keyTestFeedback.message}
-                  </div>
-                )}
+                <input
+                  type="password"
+                  value={customKey}
+                  onChange={(e) => setCustomKey(e.target.value)}
+                  placeholder="sk-or-v1-..."
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-[#22354a] bg-slate-50 dark:bg-[#121f2f] text-xs font-mono outline-none focus:border-blue-600"
+                />
+                <p className="text-[10px] text-slate-400">
+                  إذا لم تضع مفتاحاً، سيعمل المحرك المحلي الافتراضي المدمج بكفاءة وسرعة.
+                </p>
               </div>
 
-              {/* Actions */}
+              {keyTestFeedback && (
+                <div
+                  className={`p-2.5 rounded-xl text-xs font-bold ${
+                    keyTestFeedback.ok
+                      ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300'
+                      : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-300'
+                  }`}
+                >
+                  {keyTestFeedback.message}
+                </div>
+              )}
+
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={handleSaveSettings}
-                  className="flex-1 py-2 rounded-xl bg-teal2-600 hover:bg-teal2-500 text-white font-bold text-xs transition"
+                  onClick={handleTestApiKey}
+                  disabled={isTestingKey}
+                  className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-[#152332] text-xs font-bold transition flex items-center justify-center gap-1.5"
                 >
-                  حفظ وتطبيق
+                  {isTestingKey ? 'جارٍ الفحص...' : 'فحص الاتصال'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowSettingsModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-[#152332] text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-200 transition"
+                  className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition"
                 >
-                  إلغاء
+                  حفظ وإغلاق
                 </button>
               </div>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Saved Trips Modal */}
+      {/* 6. Saved Trips Modal */}
       <SavedTripsModal
         isOpen={showSavedModal}
         onClose={() => setShowSavedModal(false)}
         savedTrips={savedTrips}
-        onLoadTrip={(trip: PlanResult) => {
+        onLoadTrip={(trip) => {
           setCurrentPlan(trip);
-          setActiveStopIndex(0);
           setShowSavedModal(false);
-          setShowMapPanel(true);
-          const now = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: 'restored-' + Date.now(),
-              role: 'bot',
-              text: `تم استرجاع رحلة "${trip.title}" بنجاح! تفاصيل المحطات ومسار الشوارع معروضة الآن على الخريطة 🧭`,
-              timestamp: now,
-            },
-          ]);
+          setFullScreenMapData({
+            plan: trip,
+            suggestedPlaces: [],
+            title: trip.title,
+          });
+          setShowFullScreenMap(true);
         }}
         onDeleteTrip={(id) => {
           const updated = savedTrips.filter((t) => t.id !== id);
           setSavedTrips(updated);
-          try {
-            localStorage.setItem(SAVED_TRIPS_STORAGE, JSON.stringify(updated));
-          } catch (e) {}
+          localStorage.setItem(SAVED_TRIPS_STORAGE, JSON.stringify(updated));
         }}
       />
     </div>

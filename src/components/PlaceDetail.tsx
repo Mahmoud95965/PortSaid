@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Place, Review } from '@/types';
 import { CATS, AREA_STOP, HOME_STOP, planRoute } from '@/lib/constants';
+import { PLACES_METADATA } from '@/lib/plannerUtils';
 import { useAuth } from '@/context/AuthContext';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import {
@@ -18,6 +19,14 @@ import {
   Sparkles,
   Send,
   Loader2,
+  Clock,
+  Compass,
+  Heart,
+  Share2,
+  Check,
+  Tag,
+  DollarSign,
+  Map as MapIcon,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -25,6 +34,51 @@ interface PlaceDetailProps {
   place: Place;
   onBack: () => void;
   onRequestCoupon: (place: Place) => void;
+}
+
+const FAVORITES_KEY = 'portsaid_favorite_places';
+
+// ربط المعالم والمطاعم والأماكن بالصور الأصلية المتوفرة في المشروع
+const PLACE_HERO_PHOTOS: Record<string, string> = {
+  // فنار بورسعيد التاريخي
+  '11111111-1111-1111-1111-111111111101': '/assets/port-said/port-said-lighthouse.webp',
+  // ممشى ديليسبس وقناة السويس
+  '11111111-1111-1111-1111-111111111102': '/assets/port-said/hero-01.webp',
+  // مسجد السلام الكبير
+  '11111111-1111-1111-1111-111111111103': '/assets/port-said/port-said-mosque.webp',
+  // مطعم كاستن للأسماك
+  '11111111-1111-1111-1111-111111111104': '/assets/port-said/hero-02.webp',
+  // مطعم ومأكولات الجندي البحرية
+  '11111111-1111-1111-1111-111111111105': '/assets/port-said/hero-03.webp',
+  // كافيه بينوس
+  '11111111-1111-1111-1111-111111111106': '/assets/port-said/port-said-port-night.webp',
+  // حلويات سيلفر
+  '11111111-1111-1111-1111-111111111107': '/assets/port-said/gallery/balconies-street.webp',
+  // سوق البازار
+  '11111111-1111-1111-1111-111111111108': '/assets/port-said/gallery/balconies-street.webp',
+  // ميدان الشهداء والمسلة
+  '11111111-1111-1111-1111-111111111109': '/assets/port-said/gallery/martyrs-square.webp',
+  // سكن طالبات حي الزهور
+  '11111111-1111-1111-1111-111111111110': '/assets/port-said/gallery/balconies-street.webp',
+};
+
+function getPlaceHeroPhoto(place: Place): string {
+  if (PLACE_HERO_PHOTOS[place.id]) {
+    return PLACE_HERO_PHOTOS[place.id];
+  }
+  const name = (place.n || '').toLowerCase();
+  const desc = (place.ds || '').toLowerCase();
+
+  if (name.includes('فنار')) return '/assets/port-said/port-said-lighthouse.webp';
+  if (name.includes('ديليسبس') || name.includes('ممشى')) return '/assets/port-said/hero-01.webp';
+  if (name.includes('سلام') || name.includes('مسجد')) return '/assets/port-said/port-said-mosque.webp';
+  if (name.includes('كاستن') || name.includes('سمك') || desc.includes('سمك')) return '/assets/port-said/hero-02.webp';
+  if (name.includes('جندي')) return '/assets/port-said/hero-03.webp';
+  if (name.includes('بينوس') || name.includes('كافيه') || desc.includes('كافيه')) return '/assets/port-said/port-said-port-night.webp';
+  if (name.includes('شهداء') || name.includes('مسلة') || name.includes('نصر')) return '/assets/port-said/gallery/martyrs-square.webp';
+  if (name.includes('سيلفر') || name.includes('كاساتا') || name.includes('حلويات')) return '/assets/port-said/gallery/balconies-street.webp';
+  if (name.includes('سفينة') || name.includes('قناة')) return '/assets/port-said/gallery/ship.webp';
+  return '/assets/port-said/hero-01.webp';
 }
 
 export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onRequestCoupon }) => {
@@ -35,6 +89,9 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
   const [visited, setVisited] = useState(!!place.visited);
   const [checkinMsg, setCheckinMsg] = useState('');
   const [checkinLoading, setCheckinLoading] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [copiedShare, setCopiedShare] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   // Reviews state
   const [reviews, setReviews] = useState<Review[]>([
@@ -42,7 +99,7 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
       id: '1',
       n: 'محمود السيد',
       r: 5,
-      c: 'مكان رائع جداً وخدمة ممتازة، أنصح بزيارته!',
+      c: 'مكان رائع جداً وإطلالة ممتعة على قناة السويس، يستحق الزيارة والتصوير!',
       d: '2026-10-15',
       mine: false,
       v: true,
@@ -51,7 +108,7 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
       id: '2',
       n: 'سارة إبراهيم',
       r: 4,
-      c: 'الأكل طازة والفيو يجنن على القناة.',
+      c: 'تجربة ممتازة وقريب من كل معالم حي الشرق، والخدمة سريعة.',
       d: '2026-10-14',
       mine: false,
       v: false,
@@ -62,6 +119,63 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
   const [userComment, setUserComment] = useState('');
   const [reviewMsg, setReviewMsg] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
+
+  // فحص المفضلة من التخزين المحلي
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(FAVORITES_KEY);
+      if (stored) {
+        const arr = JSON.parse(stored);
+        if (Array.isArray(arr) && arr.includes(place.id)) {
+          setIsFavorite(true);
+        }
+      }
+    } catch (e) {}
+  }, [place.id]);
+
+  const toggleFavorite = () => {
+    try {
+      const stored = localStorage.getItem(FAVORITES_KEY);
+      let arr: string[] = stored ? JSON.parse(stored) : [];
+      let nextState = !isFavorite;
+      if (nextState) {
+        if (!arr.includes(place.id)) arr.push(place.id);
+        confetti({ particleCount: 25, spread: 45, origin: { y: 0.8 } });
+        showToast('تمت إضافة المكان إلى المفضلة ❤️');
+      } else {
+        arr = arr.filter((id) => id !== place.id);
+        showToast('تمت إزالة المكان من المفضلة');
+      }
+      setIsFavorite(nextState);
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(arr));
+    } catch (e) {}
+  };
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 2500);
+  };
+
+  const handleSharePlace = async () => {
+    const shareData = {
+      title: `${place.n} — Port Said Hub`,
+      text: `تعال شوف ${place.n} في ${place.a} على Port Said Hub!`,
+      url: window.location.href,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {}
+    } else {
+      try {
+        await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+        setCopiedShare(true);
+        showToast('تم نسخ الرابط بنجاح! 📋');
+        setTimeout(() => setCopiedShare(false), 2000);
+      } catch (err) {}
+    }
+  };
 
   // جلب التقييمات الحقيقية للمكان من Supabase
   useEffect(() => {
@@ -97,13 +211,15 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
   }, [place?.id, user?.id]);
 
   const cat = CATS[place.cat] || { t: 'مكان', border: '#1559b7', bgSoft: '#1559b71a' };
+  const meta = PLACES_METADATA[place.id];
+  const photo = getPlaceHeroPhoto(place);
 
-  // Calculate route instructions
+  // مسار المواصلات
   const normArea = place.a.replace(/^\s*حي\s+/, '').trim();
   const targetStop = AREA_STOP[normArea] || 'حي العرب';
   const routePlan = planRoute(fromStop, targetStop);
 
-  // Distance calculator
+  // حساب المسافات
   const calcDistanceMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371000;
     const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -223,11 +339,12 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
 
   return (
     <motion.div
-      className="space-y-5 max-w-3xl mx-auto"
-      initial={{ opacity: 0, y: 20 }}
+      className="space-y-5 max-w-4xl mx-auto pb-12"
+      dir="rtl"
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.4 }}
+      exit={{ opacity: 0, y: -15 }}
+      transition={{ duration: 0.35 }}
     >
       <input
         ref={fileInputRef}
@@ -238,362 +355,475 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
         className="hidden"
       />
 
-      {/* Back button */}
-      <motion.button
-        onClick={onBack}
-        type="button"
-        className="inline-flex items-center gap-2 font-bold text-ocean-700 dark:text-teal2-400 hover:text-teal2-600 transition group"
-        whileHover={{ x: 4 }}
-        whileTap={{ scale: 0.95 }}
-      >
-        <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-        <span>رجوع للقائمة</span>
-      </motion.button>
-
-      {/* Main Place Card */}
-      <motion.div
-        className="bg-white dark:bg-[#0f1a28] rounded-3xl shadow-xl p-5 sm:p-8 border border-sand-200/80 dark:border-[#1d2d3e] relative overflow-hidden"
-        initial={{ scale: 0.98, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-      >
-        {/* Glow corner */}
-        <div
-          className="absolute -top-24 -left-24 w-52 h-52 rounded-full blur-3xl opacity-20 pointer-events-none"
-          style={{ backgroundColor: cat.border }}
-        />
-
-        <div className="flex items-center justify-between gap-3 mb-2">
-          <span
-            className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-black shadow-sm"
-            style={{ backgroundColor: cat.bgSoft, color: cat.border }}
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toastMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-ocean-950 text-white px-4 py-2 rounded-2xl shadow-xl text-xs sm:text-sm font-bold border border-white/10"
           >
+            {toastMsg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Top Bar: Back & Quick Actions */}
+      <div className="flex items-center justify-between gap-3">
+        <button
+          onClick={onBack}
+          type="button"
+          className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 hover:text-ocean-900 dark:hover:text-white transition group py-1.5 px-2 rounded-xl hover:bg-slate-100 dark:hover:bg-[#121f2f]"
+        >
+          <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+          <span>رجوع للأماكن</span>
+        </button>
+
+        <div className="flex items-center gap-1.5">
+          {/* Favorite Button */}
+          <button
+            type="button"
+            onClick={toggleFavorite}
+            className={`p-2 rounded-xl border transition flex items-center gap-1.5 text-xs font-bold ${
+              isFavorite
+                ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/40'
+                : 'bg-white dark:bg-[#0c1622] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-[#1d2d3e] hover:border-slate-300'
+            }`}
+            title={isFavorite ? 'في المفضلة' : 'إضافة إلى المفضلة'}
+          >
+            <Heart className={`w-4 h-4 ${isFavorite ? 'fill-rose-500 text-rose-500' : ''}`} />
+            <span className="hidden sm:inline">{isFavorite ? 'محفوظ' : 'حفظ'}</span>
+          </button>
+
+          {/* Share Button */}
+          <button
+            type="button"
+            onClick={handleSharePlace}
+            className="p-2 rounded-xl bg-white dark:bg-[#0c1622] text-slate-600 dark:text-slate-400 hover:text-ocean-900 dark:hover:text-white border border-slate-200 dark:border-[#1d2d3e] hover:border-slate-300 transition flex items-center gap-1.5 text-xs font-bold"
+            title="مشاركة المكان"
+          >
+            {copiedShare ? <Check className="w-4 h-4 text-emerald-500" /> : <Share2 className="w-4 h-4" />}
+            <span className="hidden sm:inline">{copiedShare ? 'تم النسخ' : 'مشاركة'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 1. Hero Photo Card with Details Overlay */}
+      <div className="relative rounded-3xl overflow-hidden border border-slate-200 dark:border-[#1d2d3e] shadow-sm bg-slate-900 text-white aspect-[16/10] sm:aspect-[21/9] max-h-96">
+        <img
+          src={photo}
+          alt={place.n}
+          className="w-full h-full object-cover opacity-85"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-ocean-950 via-ocean-950/40 to-transparent" />
+
+        {/* Top Badges */}
+        <div className="absolute top-4 inset-x-4 flex items-center justify-between gap-2">
+          <span
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black shadow-sm backdrop-blur-md"
+            style={{ backgroundColor: `${cat.border}e6`, color: '#ffffff' }}
+          >
+            <Compass className="w-3.5 h-3.5" />
             <span>{cat.t}</span>
           </span>
 
-          {avgRating && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sand-100 dark:bg-[#1a293b] text-xs font-black text-ocean-900 dark:text-sand-300 border border-sand-200 dark:border-[#22364c]">
-              <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-              <span>{avgRating}</span>
-              <span className="text-[10px] text-ocean-700/60 dark:text-white/50">({reviews.length})</span>
-            </span>
-          )}
+          <div className="flex items-center gap-1.5">
+            {place.p > 0 && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/90 text-ocean-950 text-xs font-black shadow-sm backdrop-blur-md">
+                <Sparkles className="w-3.5 h-3.5 fill-current" />
+                <span>+{place.p} نقطة</span>
+              </span>
+            )}
+
+            {place.disc > 0 && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-teal2-600/90 text-white text-xs font-black shadow-sm backdrop-blur-md">
+                <Tag className="w-3.5 h-3.5" />
+                <span>خصم {place.disc}%</span>
+              </span>
+            )}
+          </div>
         </div>
 
-        <h2 className="mt-2 text-2xl sm:text-3xl font-black text-ocean-900 dark:text-white leading-tight">
-          {place.n}
+        {/* Bottom Title & Location Overlay */}
+        <div className="absolute bottom-4 inset-x-4 sm:bottom-6 sm:inset-x-6 space-y-1.5 text-right">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-sand-300 drop-shadow-sm">
+              <MapPin className="w-3.5 h-3.5 text-rose-400" />
+              <span>بورسعيد · {place.a}</span>
+            </span>
+
+            {avgRating && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/40 border border-white/10 text-white text-[11px] font-bold backdrop-blur-xs">
+                <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                <span>{avgRating} ({reviews.length} تقييم)</span>
+              </span>
+            )}
+          </div>
+
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white leading-tight drop-shadow-md">
+            {place.n}
+          </h1>
+        </div>
+      </div>
+
+      {/* 2. Key Highlights Strip (Duration, Best Time, Cost, Points) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+        {/* Cost Range */}
+        <div className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] text-right space-y-1">
+          <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1">
+            <DollarSign className="w-3.5 h-3.5 text-teal2-600" />
+            <span>التكلفة التقديرية</span>
+          </span>
+          <p className="font-black text-xs sm:text-sm text-ocean-950 dark:text-white truncate">
+            {meta?.costRange || (place.cost ? `${place.cost} ج.م` : 'مجاني')}
+          </p>
+        </div>
+
+        {/* Visit Duration */}
+        <div className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] text-right space-y-1">
+          <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1">
+            <Clock className="w-3.5 h-3.5 text-blue-600" />
+            <span>المدة المقترحة</span>
+          </span>
+          <p className="font-black text-xs sm:text-sm text-ocean-950 dark:text-white truncate">
+            {meta?.recommendedDurationMinutes ? `${meta.recommendedDurationMinutes} دقيقة` : '45 دقيقة'}
+          </p>
+        </div>
+
+        {/* Best Time of Day */}
+        <div className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] text-right space-y-1">
+          <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1">
+            <Compass className="w-3.5 h-3.5 text-amber-500" />
+            <span>أفضل توقيت</span>
+          </span>
+          <p className="font-black text-xs sm:text-sm text-ocean-950 dark:text-white truncate">
+            {meta?.bestTimeOfDay === 'morning'
+              ? 'صباحاً'
+              : meta?.bestTimeOfDay === 'evening'
+              ? 'وقت الغروب'
+              : meta?.bestTimeOfDay === 'midday'
+              ? 'فترة الظهيرة'
+              : 'أي وقت'}
+          </p>
+        </div>
+
+        {/* Points Reward */}
+        <div className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] text-right space-y-1">
+          <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span>نقاط الحضور</span>
+          </span>
+          <p className="font-black text-xs sm:text-sm text-ocean-950 dark:text-white truncate">
+            +{place.p || 20} نقطة مكافأة
+          </p>
+        </div>
+      </div>
+
+      {/* 3. Place Overview & Description Card */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-xs text-right space-y-3">
+        <h2 className="text-base sm:text-lg font-black text-ocean-950 dark:text-white">
+          عن المكان وتفاصيل الزيارة
         </h2>
 
-        <p className="text-ocean-700/80 dark:text-ocean-100/70 text-xs sm:text-sm mt-1 font-semibold flex items-center gap-1.5">
-          <MapPin className="w-4 h-4 text-coral-500 shrink-0" />
-          <span>بورسعيد · {place.a}</span>
-        </p>
-
         {place.ds && (
-          <p className="mt-4 text-sm sm:text-base text-ocean-800 dark:text-white/90 leading-relaxed font-medium">
+          <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
             {place.ds}
           </p>
         )}
 
-        {/* Action Buttons: Maps & Route */}
-        <div className="mt-6 grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
-          <motion.a
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.n + ' بورسعيد')}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-2xl bg-gradient-to-b from-[#ffd27a] to-[#ffb938] text-ocean-900 font-black text-center py-3.5 hover:shadow-lg transition flex items-center justify-center gap-2 text-sm shadow-md shadow-amber-500/20"
-            whileHover={{ scale: 1.02, y: -2 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <MapPin className="w-4 h-4 text-ocean-900" />
-            <span>اعرض على الخريطة</span>
-          </motion.a>
-          <motion.button
-            onClick={() => {
-              const el = document.getElementById('route-section');
-              el?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            type="button"
-            className="rounded-2xl border-2 border-ocean-900 dark:border-teal2-400 text-ocean-900 dark:text-teal2-400 font-black text-center py-3.5 hover:bg-ocean-900 hover:text-white dark:hover:bg-teal2-400 dark:hover:text-ocean-900 transition flex items-center justify-center gap-2 text-sm"
-            whileHover={{ scale: 1.02, y: -2 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Navigation className="w-4 h-4" />
-            <span>أروح إزاي بالمواصلات؟</span>
-          </motion.button>
-        </div>
-
-        {/* Google Maps Photos Link for Food/Cafe */}
-        {(place.cat === 'food' || place.cat === 'cafe' || place.cat === 'sweets') && (
-          <motion.a
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.n + ' بورسعيد')}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 flex items-center justify-center gap-2 rounded-2xl bg-sand-50 dark:bg-[#152335] border border-sand-200 dark:border-[#22364c] text-ocean-900 dark:text-white font-bold py-2.5 text-xs hover:bg-sand-100 dark:hover:bg-[#1a2d44] transition"
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-          >
-            <ExternalLink className="w-4 h-4 text-teal2-600 dark:text-teal2-400" />
-            <span>صور وآراء الزوار على خرائط جوجل</span>
-          </motion.a>
-        )}
-
-        {/* Checkin / Visit Section (Fun Category) */}
-        {place.cat === 'fun' && (
-          <motion.div
-            className="mt-6 rounded-2xl border border-sand-200 dark:border-[#1d2d3e] bg-sand-50/80 dark:bg-[#121e2d] p-4 sm:p-5"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <Sparkles className="w-4 h-4 text-amber-500" />
-              <p className="font-black text-base text-ocean-900 dark:text-white">
-                زيارة المكان ونقاط المكافآت
-              </p>
-            </div>
-            <p className="text-xs text-ocean-700/80 dark:text-white/70 mb-3 leading-relaxed">
-              صوّر لقطة من المكان، والنقاط ({place.p || 20} نقطة) بتتحسب فوراً لما نتأكد من موقعك بـ GPS.
-            </p>
-            <motion.button
-              onClick={handleCameraCheckin}
-              disabled={visited || checkinLoading}
-              type="button"
-              className="w-full rounded-2xl bg-gradient-to-b from-[#ffd27a] to-[#ffb938] hover:from-[#ffe3a8] text-ocean-900 font-black py-3 text-sm shadow-md transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-              whileHover={!visited ? { scale: 1.02, y: -2 } : {}}
-              whileTap={!visited ? { scale: 0.98 } : {}}
-            >
-              {checkinLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-ocean-900" />
-              ) : (
-                <Camera className="w-4 h-4" />
-              )}
-              <span>
-                {visited
-                  ? 'تم تسجيل زيارتك بنجاح ✓'
-                  : checkinLoading
-                  ? 'جارٍ التحقق من موقعك...'
-                  : `صوّر وسجّل زيارتك (+${place.p || 20} نقطة)`}
-              </span>
-            </motion.button>
-            {checkinMsg && (
-              <motion.p
-                className="text-xs font-bold text-teal2-600 dark:text-teal2-400 mt-2 text-center"
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
+        {meta?.tags && meta.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-100 dark:border-[#152332]">
+            {meta.tags.map((tag, idx) => (
+              <span
+                key={idx}
+                className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#152332] text-[11px] font-bold text-slate-600 dark:text-slate-300"
               >
-                {checkinMsg}
-              </motion.p>
-            )}
-          </motion.div>
-        )}
-
-        {/* Coupon Section (Non-Housing) */}
-        {place.cat !== 'housing' && place.disc > 0 && (
-          <motion.div
-            className="mt-6 rounded-2xl border border-teal2-400/50 bg-gradient-to-br from-teal2-50/80 via-teal2-50/40 to-white dark:from-teal2-950/40 dark:to-[#0f1a28] p-4 sm:p-5 flex items-center justify-between gap-4 flex-wrap"
-            whileHover={{ scale: 1.01 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div>
-              <span className="inline-block rounded-full bg-teal2-600 text-white text-[10px] font-bold px-2 py-0.5 mb-1">
-                عرض خاص
+                #{tag}
               </span>
-              <p className="font-black text-base text-teal2-800 dark:text-teal2-300">
-                خصم {place.disc}% متاح لعملاء Port Said Hub
-              </p>
-              <p className="text-xs text-ocean-700/80 dark:text-white/70 mt-0.5">
-                استبدل {place.cost || 50} نقطة بكود خصم QR صالح للاستخدام فوراً.
-              </p>
-            </div>
-            <motion.button
-              onClick={() => onRequestCoupon(place)}
-              type="button"
-              className="px-5 py-3 rounded-2xl bg-teal2-600 hover:bg-teal2-500 text-white font-black text-sm shadow-lg shadow-teal2-600/30 transition flex items-center gap-2"
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <QrCode className="w-4 h-4" />
-              <span>اطلب كوبون</span>
-            </motion.button>
-          </motion.div>
+            ))}
+          </div>
         )}
 
-        {/* Transit Route Section */}
-        <div
-          id="route-section"
-          className="mt-6 rounded-2xl border border-sand-200 dark:border-[#1d2d3e] bg-sand-50/80 dark:bg-[#121e2d] p-5"
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <Navigation className="w-4 h-4 text-teal2-600 dark:text-teal2-400" />
-            <p className="font-black text-teal2-700 dark:text-teal2-400 text-base">
-              أروح إزاي بالمواصلات؟
+        {/* Primary Action Buttons */}
+        <div className="pt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <a
+            href={`/map?place=${place.id}`}
+            className="py-2.5 px-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black transition flex items-center justify-center gap-1.5 shadow-xs"
+          >
+            <MapIcon className="w-4 h-4" />
+            <span>عرض على الخريطة التفاعلية</span>
+          </a>
+
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.n + ' بورسعيد')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="py-2.5 px-3 rounded-2xl bg-slate-100 dark:bg-[#152332] text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-[#1d2d3e] text-xs font-bold transition flex items-center justify-center gap-1.5"
+          >
+            <ExternalLink className="w-4 h-4 text-slate-500" />
+            <span>الاتجاهات عبر Google Maps</span>
+          </a>
+
+          <a
+            href={`/ai?q=${encodeURIComponent(`عايز أزور ${place.n} في بورسعيد وخطط لي خروجة متكاملة حواليه`)}`}
+            className="py-2.5 px-3 rounded-2xl bg-teal2-50 dark:bg-teal2-950/40 text-teal2-700 dark:text-teal2-300 border border-teal2-200/60 dark:border-teal2-800/40 hover:bg-teal2-100 text-xs font-black transition flex items-center justify-center gap-1.5"
+          >
+            <Sparkles className="w-4 h-4 text-teal2-600" />
+            <span>تخطيط خروجة بالـ AI</span>
+          </a>
+        </div>
+      </div>
+
+      {/* 4. Special Offer / Discount Coupon Card */}
+      {place.cat !== 'housing' && place.disc > 0 && (
+        <div className="p-4 sm:p-5 rounded-3xl border border-teal2-400/40 bg-gradient-to-br from-teal2-50/80 via-white to-blue-50/40 dark:from-teal2-950/30 dark:via-[#0c1622] dark:to-blue-950/20 text-right shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <span className="inline-block rounded-full bg-teal2-600 text-white text-[10px] font-black px-2.5 py-0.5 mb-0.5">
+              عرض خاص وحصري
+            </span>
+            <h3 className="font-black text-base text-teal2-950 dark:text-teal2-200">
+              خصم {place.disc}% متاح لرواد Port Said Hub
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
+              استبدل {place.cost || 50} نقطة من رصيدك للحصول على كود خصم QR صالح للاستخدام فوراً عند الكاشير.
             </p>
-          </div>
-          <div className="mb-4">
-            <label className="block text-xs font-bold text-ocean-700 dark:text-white/80 mb-1.5">
-              نقطة الانطلاق:
-            </label>
-            <select
-              value={fromStop}
-              onChange={(e) => setFromStop(e.target.value)}
-              className="w-full rounded-2xl border border-sand-200 dark:border-[#203042] bg-white dark:bg-[#0f1a28] px-3.5 py-2.5 text-sm font-bold text-ocean-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal2-500"
-            >
-              <option value="المعدية / السكن الجامعي">المعدية / السكن الجامعي</option>
-              <option value="قصر الثقافة">قصر الثقافة</option>
-              <option value="حي العرب">حي العرب</option>
-              <option value="كلية الطب والعلاج الطبيعي">كلية الطب والعلاج الطبيعي</option>
-            </select>
           </div>
 
-          {routePlan && routePlan.length > 0 ? (
-            <ol className="space-y-3 relative">
-              {routePlan.map((step, idx) => (
-                <li key={idx} className="flex gap-3 text-sm">
-                  <span className="w-7 h-7 shrink-0 rounded-xl bg-teal2-600 text-white grid place-items-center font-black text-xs shadow-sm">
-                    {idx + 1}
-                  </span>
-                  <div>
-                    <p className="font-black text-ocean-900 dark:text-white">
-                      اركب خط{' '}
-                      <span className="bg-ocean-900 text-sand-300 px-2 py-0.5 rounded-lg text-xs font-black">
-                        {step.l}
-                      </span>
-                    </p>
-                    <p className="text-xs text-ocean-700/80 dark:text-white/70 mt-0.5 font-medium">
-                      من <span className="font-bold">{step.f}</span> وانزل عند{' '}
-                      <span className="font-bold text-teal2-600 dark:text-teal2-400">{step.t}</span>
-                    </p>
-                  </div>
-                </li>
-              ))}
-              <p className="text-xs text-ocean-700/70 dark:text-white/60 pt-2 font-medium">
-                وبعد النزول عند «{targetStop}» كمّل مشي أو تاكسي لحد المكان.
-              </p>
-            </ol>
-          ) : (
-            <p className="text-xs text-ocean-700/80 dark:text-white/70">
-              المكان قريب منك أو يمكنك ركوب تاكسي مباشر.
+          <button
+            onClick={() => onRequestCoupon(place)}
+            type="button"
+            className="px-5 py-2.5 rounded-2xl bg-teal2-600 hover:bg-teal2-500 text-white font-black text-xs sm:text-sm shadow-md shadow-teal2-600/25 transition flex items-center gap-2 shrink-0 self-stretch sm:self-auto justify-center"
+          >
+            <QrCode className="w-4 h-4" />
+            <span>اطلب الكوبون الآن</span>
+          </button>
+        </div>
+      )}
+
+      {/* 5. GPS Check-in & Points Reward Section */}
+      <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-xs text-right space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 grid place-items-center shrink-0">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="font-black text-sm sm:text-base text-ocean-950 dark:text-white">
+              تسجيل الحضور وكسب النقاط (+{place.p || 20} نقطة)
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              التقط صورة أثناء تواجدك في المكان، وسيتم التحقق من موقعك بـ GPS وإضافة النقاط لمحفظتك فوراً.
             </p>
-          )}
+          </div>
         </div>
 
-        {/* Reviews Section */}
-        <div className="mt-8 border-t border-sand-200 dark:border-[#1d2d3e] pt-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-black text-ocean-900 dark:text-white flex items-center gap-2">
-              <Star className="w-5 h-5 text-sand-400 fill-sand-400" />
-              <span>التقييمات والآراء</span>
+        <button
+          onClick={handleCameraCheckin}
+          disabled={visited || checkinLoading}
+          type="button"
+          className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-ocean-950 font-black text-xs sm:text-sm shadow-xs transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {checkinLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin text-ocean-950" />
+          ) : (
+            <Camera className="w-4 h-4" />
+          )}
+          <span>
+            {visited
+              ? 'تم تسجيل زيارتك واحتساب النقاط بنجاح ✓'
+              : checkinLoading
+              ? 'جارٍ التحقق من موقعك الفعلي...'
+              : `التقط صورة وسجّل حضورك (+${place.p || 20} نقطة)`}
+          </span>
+        </button>
+
+        {checkinMsg && (
+          <p className="text-xs font-bold text-teal2-600 dark:text-teal2-400 text-center pt-1">
+            {checkinMsg}
+          </p>
+        )}
+      </div>
+
+      {/* 6. Transit & Route Guide (أروح إزاي بالمواصلات؟) */}
+      <div
+        id="route-section"
+        className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-xs text-right space-y-4"
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-600 grid place-items-center shrink-0">
+            <Navigation className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="font-black text-sm sm:text-base text-ocean-950 dark:text-white">
+              أروح إزاي بالمواصلات؟
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              دليل خطوط المينى باص من السكن والجامعات إلى {place.n}
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">
+            اختر نقطة الانطلاق:
+          </label>
+          <select
+            value={fromStop}
+            onChange={(e) => setFromStop(e.target.value)}
+            className="w-full rounded-2xl border border-slate-200 dark:border-[#203042] bg-slate-50 dark:bg-[#0f1a28] px-3.5 py-2.5 text-xs sm:text-sm font-bold text-ocean-950 dark:text-white outline-none focus:border-blue-600 cursor-pointer"
+          >
+            <option value="المعدية / السكن الجامعي">المعدية / السكن الجامعي (بورفؤاد)</option>
+            <option value="قصر الثقافة">قصر الثقافة (المحافظة والشرق)</option>
+            <option value="حي العرب">حي العرب (التجاري والأسواق)</option>
+            <option value="كلية الطب والعلاج الطبيعي">كلية الطب والعلاج الطبيعي</option>
+          </select>
+        </div>
+
+        {routePlan && routePlan.length > 0 ? (
+          <ol className="space-y-3 relative pt-1">
+            {routePlan.map((step, idx) => (
+              <li key={idx} className="flex gap-3 text-xs sm:text-sm">
+                <span className="w-6 h-6 shrink-0 rounded-lg bg-ocean-900 text-white grid place-items-center font-black text-xs shadow-xs">
+                  {idx + 1}
+                </span>
+                <div className="space-y-0.5">
+                  <p className="font-black text-ocean-950 dark:text-white">
+                    اركب خط{' '}
+                    <span className="bg-blue-600 text-white px-2 py-0.5 rounded-lg text-xs font-black">
+                      {step.l}
+                    </span>
+                  </p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                    من <span className="font-bold">{step.f}</span> وانزل عند{' '}
+                    <span className="font-bold text-blue-600 dark:text-blue-400">{step.t}</span>
+                  </p>
+                </div>
+              </li>
+            ))}
+            <p className="text-xs text-slate-500 dark:text-slate-400 pt-2 font-medium border-t border-slate-100 dark:border-[#152332]">
+              💡 بعد النزول عند «{targetStop}»، يمكنك السير لدقائق قليلة أو أخذ تاكسي داخلي مباشرة للمكان.
+            </p>
+          </ol>
+        ) : (
+          <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+            المكان قريب منك جداً، يمكنك السير على الأقدام أو أخذ تاكسي مباشر.
+          </p>
+        )}
+      </div>
+
+      {/* 7. Community Reviews & Rating Form */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-xs text-right space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-black text-ocean-950 dark:text-white flex items-center gap-1.5">
+              <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+              <span>تقييمات الزوار</span>
             </h3>
             {avgRating && (
-              <span className="text-sm font-black text-teal2-600 dark:text-teal2-400">
-                {avgRating} من 5 ({reviews.length} تقييم)
+              <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/50">
+                {avgRating} من 5
               </span>
             )}
           </div>
 
-          {/* Add Review Box */}
-          <form
-            onSubmit={handleAddReview}
-            className="rounded-2xl border border-sand-200 dark:border-[#1d2d3e] bg-sand-50/70 dark:bg-[#121e2d] p-4 sm:p-5 mb-5"
-          >
-            <p className="text-sm font-black text-ocean-900 dark:text-white mb-2">
-              شاركنا رأيك وتجربتك
-            </p>
-
-            {/* Interactive Animated Stars */}
-            <div className="flex gap-1.5 text-2xl mb-3" dir="ltr">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <motion.button
-                  key={star}
-                  type="button"
-                  onMouseEnter={() => setHoverRating(star)}
-                  onMouseLeave={() => setHoverRating(null)}
-                  onClick={() => setUserRating(star)}
-                  className="transition-colors cursor-pointer"
-                  whileHover={{ scale: 1.25, rotate: 10 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <Star
-                    className={`w-6 h-6 ${
-                      star <= (hoverRating ?? userRating)
-                        ? 'text-sand-400 fill-sand-400'
-                        : 'text-sand-200 dark:text-[#253548]'
-                    }`}
-                  />
-                </motion.button>
-              ))}
-            </div>
-
-            <textarea
-              rows={2}
-              maxLength={300}
-              placeholder="اكتب تعليقك وتجربتك هنا (اختياري)..."
-              value={userComment}
-              onChange={(e) => setUserComment(e.target.value)}
-              className="w-full rounded-2xl border border-sand-200 dark:border-[#203042] bg-white dark:bg-[#0f1a28] p-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal2-500 font-medium"
-            />
-            {reviewMsg && (
-              <motion.p
-                className="text-xs font-bold text-teal2-600 dark:text-teal2-400 mt-1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                {reviewMsg}
-              </motion.p>
-            )}
-            <motion.button
-              type="submit"
-              disabled={reviewSubmitting}
-              className="mt-3 w-full py-3 rounded-2xl bg-teal2-600 hover:bg-teal2-500 text-white font-black text-sm shadow-md transition flex items-center justify-center gap-2"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Send className="w-4 h-4" />
-              <span>نشر التقييم</span>
-            </motion.button>
-          </form>
-
-          {/* Reviews List */}
-          <div className="space-y-3">
-            <AnimatePresence>
-              {reviews.map((r, i) => (
-                <motion.div
-                  key={r.id}
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="rounded-2xl bg-white dark:bg-[#121c29] border border-sand-200/80 dark:border-[#1d2d3e] p-4 shadow-sm"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-extrabold text-sm flex items-center gap-1.5 text-ocean-900 dark:text-white">
-                      <span>{r.n}</span>
-                      {r.v && <CheckCircle className="w-3.5 h-3.5 text-sky-500 fill-sky-500" />}
-                      {r.mine && (
-                        <span className="text-[10px] rounded-full bg-teal2-100 dark:bg-teal2-900/40 text-teal2-600 dark:text-teal2-400 px-2 py-0.5 font-bold">
-                          تقييمك
-                        </span>
-                      )}
-                    </p>
-                    <div className="flex gap-0.5 text-xs text-sand-400">
-                      {Array.from({ length: r.r }).map((_, si) => (
-                        <Star key={si} className="w-3 h-3 fill-sand-400 text-sand-400" />
-                      ))}
-                    </div>
-                  </div>
-                  {r.c && (
-                    <p className="mt-2 text-xs sm:text-sm text-ocean-800 dark:text-white/85 leading-relaxed font-medium">
-                      {r.c}
-                    </p>
-                  )}
-                  <p className="mt-1.5 text-[10px] text-ocean-700/60 dark:text-white/40 font-semibold">
-                    {r.d}
-                  </p>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
+          <span className="text-xs text-slate-500 font-bold">
+            {reviews.length} تقييم مسجل
+          </span>
         </div>
-      </motion.div>
+
+        {/* Add Review Form */}
+        <form
+          onSubmit={handleAddReview}
+          className="rounded-2xl border border-slate-200 dark:border-[#1d2d3e] bg-slate-50 dark:bg-[#121f2f] p-4 space-y-3"
+        >
+          <p className="text-xs sm:text-sm font-bold text-ocean-950 dark:text-white">
+            شاركنا رأيك وتجربتك في هذا المكان:
+          </p>
+
+          <div className="flex gap-1.5 text-2xl" dir="ltr">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                onMouseEnter={() => setHoverRating(star)}
+                onMouseLeave={() => setHoverRating(null)}
+                onClick={() => setUserRating(star)}
+                className="transition-transform hover:scale-110 cursor-pointer"
+              >
+                <Star
+                  className={`w-5 h-5 ${
+                    star <= (hoverRating ?? userRating)
+                      ? 'text-amber-400 fill-amber-400'
+                      : 'text-slate-300 dark:text-slate-600'
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
+
+          <textarea
+            rows={2}
+            maxLength={300}
+            placeholder="اكتب تعليقك وتجربتك هنا..."
+            value={userComment}
+            onChange={(e) => setUserComment(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 dark:border-[#203042] bg-white dark:bg-[#0c1622] p-2.5 text-xs sm:text-sm font-medium outline-none focus:border-blue-600"
+          />
+
+          {reviewMsg && (
+            <p className="text-xs font-bold text-teal2-600 dark:text-teal2-400">
+              {reviewMsg}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={reviewSubmitting}
+            className="py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs"
+          >
+            <Send className="w-3.5 h-3.5" />
+            <span>نشر التقييم</span>
+          </button>
+        </form>
+
+        {/* Reviews List */}
+        <div className="space-y-2.5 pt-1">
+          {reviews.map((r) => (
+            <div
+              key={r.id}
+              className="p-3 sm:p-4 rounded-2xl bg-slate-50/70 dark:bg-[#121f2f]/70 border border-slate-200/80 dark:border-[#1d2d3e] space-y-1"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-black text-xs sm:text-sm flex items-center gap-1 text-ocean-950 dark:text-white">
+                  <span>{r.n}</span>
+                  {r.v && <CheckCircle className="w-3.5 h-3.5 text-sky-500 fill-sky-500" />}
+                  {r.mine && (
+                    <span className="text-[10px] rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 px-2 py-0.5 font-bold">
+                      تقييمك
+                    </span>
+                  )}
+                </p>
+
+                <div className="flex gap-0.5 text-xs">
+                  {Array.from({ length: r.r }).map((_, si) => (
+                    <Star key={si} className="w-3 h-3 fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+              </div>
+
+              {r.c && (
+                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-normal">
+                  {r.c}
+                </p>
+              )}
+
+              <p className="text-[10px] text-slate-400 font-semibold">
+                {r.d}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
     </motion.div>
   );
 };
