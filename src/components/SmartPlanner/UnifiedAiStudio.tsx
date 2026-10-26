@@ -284,12 +284,9 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
     title: string;
   } | null>(null);
 
-  // إعدادات الموديل و OpenRouter
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  // إعدادات الموديل و OpenRouter (تعمل في الخلفية تلقائياً دون إظهار الموديل للمستخدم)
   const [customKey, setCustomKey] = useState('');
   const [selectedModel, setSelectedModel] = useState('openai/gpt-4.1-nano');
-  const [isTestingKey, setIsTestingKey] = useState(false);
-  const [keyTestFeedback, setKeyTestFeedback] = useState<{ ok: boolean; message: string } | null>(null);
 
   // 2. حالة الشات والمحادثة المدمجة
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -433,37 +430,6 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
       headers['x-openrouter-model'] = selectedModel;
     }
     return headers;
-  };
-
-  const handleTestApiKey = async () => {
-    if (!customKey.trim()) {
-      setKeyTestFeedback({ ok: false, message: 'برجاء إدخال المفتاح أولاً.' });
-      return;
-    }
-    setIsTestingKey(true);
-    setKeyTestFeedback(null);
-    try {
-      const res = await fetch('/api/assistant', {
-        method: 'POST',
-        headers: getAiHeaders(),
-        body: JSON.stringify({ message: 'مرحبا' }),
-      });
-      const data = await res.json();
-      if (res.ok && data.ok) {
-        setKeyTestFeedback({
-          ok: true,
-          message: `المفتاح يعمل بنجاح! المزود: ${data.provider || 'OpenRouter'} (${data.model || selectedModel})`,
-        });
-        localStorage.setItem(OPENROUTER_KEY_STORAGE, customKey.trim());
-        localStorage.setItem(OPENROUTER_MODEL_STORAGE, selectedModel);
-      } else {
-        setKeyTestFeedback({ ok: false, message: data.error || 'فشل الاتصال بالمفتاح' });
-      }
-    } catch (e: any) {
-      setKeyTestFeedback({ ok: false, message: e.message || 'خطأ أثناء فحص المفتاح' });
-    } finally {
-      setIsTestingKey(false);
-    }
   };
 
   // معالجة رسائل المستخدم الذكية
@@ -789,20 +755,6 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center gap-1.5 shrink-0">
-          {/* Model Selector Pill */}
-          <button
-            type="button"
-            onClick={() => setShowSettingsModal(true)}
-            className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#152332] text-slate-700 dark:text-slate-200 text-[11px] font-bold hover:bg-slate-200 dark:hover:bg-[#1d2d3e] transition flex items-center gap-1 border border-slate-200 dark:border-[#22354a]"
-            title="تغيير الموديل أو إضافة مفتاح"
-          >
-            <Settings className="w-3 h-3 text-blue-600" />
-            <span className="hidden sm:inline">الموديل:</span>
-            <span className="text-[10px] font-black text-blue-600 dark:text-blue-400">
-              {selectedModel.includes('gpt-4.1') ? 'GPT-4.1' : selectedModel.split('/')[1] || selectedModel}
-            </span>
-          </button>
-
           {/* Saved Trips Button */}
           {savedTrips.length > 0 && (
             <button
@@ -1187,115 +1139,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
         )}
       </AnimatePresence>
 
-      {/* 5. Model Settings Modal */}
-      <AnimatePresence>
-        {showSettingsModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3"
-          >
-            <motion.div
-              initial={{ scale: 0.95, y: 10 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 10 }}
-              className="bg-white dark:bg-[#0c1622] rounded-3xl p-5 sm:p-6 w-full max-w-lg border border-slate-200 dark:border-[#1d2d3e] shadow-2xl space-y-4 text-right"
-            >
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-[#162232]">
-                <h3 className="font-black text-base text-ocean-950 dark:text-white flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-blue-600" />
-                  <span>إعدادات نموذج الذكاء الاصطناعي</span>
-                </h3>
-                <button
-                  onClick={() => setShowSettingsModal(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Model Choice */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                  اختر النموذج المفضل:
-                </label>
-                <div className="space-y-1.5">
-                  {POPULAR_MODELS.map((m) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedModel(m.id);
-                        localStorage.setItem(OPENROUTER_MODEL_STORAGE, m.id);
-                      }}
-                      className={`w-full p-2.5 rounded-2xl border text-right transition flex items-center justify-between gap-2 text-xs font-bold ${
-                        selectedModel === m.id
-                          ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-600 text-blue-700 dark:text-blue-300'
-                          : 'bg-slate-50 dark:bg-[#121f2f] border-slate-200 dark:border-[#1d2d3e] text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      <span>{m.name}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#22354a]">
-                        {m.tag}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Custom Key */}
-              <div className="space-y-1.5 pt-2">
-                <label className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                  مفتاح OpenRouter API (اختياري):
-                </label>
-                <input
-                  type="password"
-                  value={customKey}
-                  onChange={(e) => setCustomKey(e.target.value)}
-                  placeholder="sk-or-v1-..."
-                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-[#22354a] bg-slate-50 dark:bg-[#121f2f] text-xs font-mono outline-none focus:border-blue-600"
-                />
-                <p className="text-[10px] text-slate-400">
-                  إذا لم تضع مفتاحاً، سيعمل المحرك المحلي الافتراضي المدمج بكفاءة وسرعة.
-                </p>
-              </div>
-
-              {keyTestFeedback && (
-                <div
-                  className={`p-2.5 rounded-xl text-xs font-bold ${
-                    keyTestFeedback.ok
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300'
-                      : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-300'
-                  }`}
-                >
-                  {keyTestFeedback.message}
-                </div>
-              )}
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={handleTestApiKey}
-                  disabled={isTestingKey}
-                  className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-[#152332] text-xs font-bold transition flex items-center justify-center gap-1.5"
-                >
-                  {isTestingKey ? 'جارٍ الفحص...' : 'فحص الاتصال'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowSettingsModal(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition"
-                >
-                  حفظ وإغلاق
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 6. Saved Trips Modal */}
+      {/* 5. Saved Trips Modal */}
       <SavedTripsModal
         isOpen={showSavedModal}
         onClose={() => setShowSavedModal(false)}

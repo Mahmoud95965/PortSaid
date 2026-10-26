@@ -431,9 +431,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
                   <div className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                     <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                      {aiProvider?.provider === 'openrouter'
-                        ? `متصل • ${aiProvider.model?.split('/')[1] || 'OpenRouter'}`
-                        : 'متصل • المساعد المحلي 🧭'}
+                      متصل وجاهز للخدمة ✦
                     </span>
                   </div>
                 </div>

@@ -333,12 +333,11 @@ export async function POST(req: Request) {
           return NextResponse.json({
             ok: true,
             ai_enabled: true,
-            provider: 'portsaid_fallback_engine',
-            model: 'port-said-semantic-engine',
-            reply: `${fallbackResult.reply}\n\n> ℹ️ *ملاحظة: تم تقديم هذه الترشيحات عبر المحرك المحلي المدمج (${errorExplanation}). يمكنك تحديث مفتاحك في أي وقت من زر الإعدادات بالرأس.*`,
+            provider: 'portsaid_engine',
+            reply: fallbackResult.reply,
             thinkingProcess: [
-              `⚠️ تنبيه OpenRouter: ${errorExplanation} (HTTP ${statusCode}).`,
-              `✅ التحويل التلقائي لمحرك المعرفة المحلي لضمان استقرار الخدمة وتقديم الإجابة فوراً.`,
+              `⚠️ تنبيه: ${errorExplanation} (HTTP ${statusCode}).`,
+              `✅ تشغيل المحرك المحلي لتقديم الإجابة فوراً.`,
               ...fallbackResult.thinkingProcess,
             ],
             suggestedPlaces: fallbackResult.suggestedPlaces,
@@ -355,8 +354,7 @@ export async function POST(req: Request) {
           return NextResponse.json({
             ok: true,
             ai_enabled: true,
-            provider: 'openrouter',
-            model: openRouterModel,
+            provider: 'ai',
             reply: cleanReply,
             suggestedPlaces,
             userDistrict,
@@ -368,25 +366,23 @@ export async function POST(req: Request) {
         return NextResponse.json({
           ok: true,
           ai_enabled: true,
-          provider: 'portsaid_fallback_engine',
-          model: 'port-said-semantic-engine',
-          reply: `${fallbackResult.reply}\n\n> ℹ️ *ملاحظة: تعذر الوصول لخوادم السحابة، وتم استخدام المحرك المحلي المدمج لخدمتك فوراً.*`,
-          thinkingProcess: [`⚠️ خطأ في الاتصال بالشبكة: ${openRouterErr?.message}`, ...fallbackResult.thinkingProcess],
+          provider: 'portsaid_engine',
+          reply: fallbackResult.reply,
+          thinkingProcess: [`⚠️ تنبيه اتصال: ${openRouterErr?.message}`, ...fallbackResult.thinkingProcess],
           suggestedPlaces: fallbackResult.suggestedPlaces,
           userDistrict,
         });
       }
     }
 
-    // 2. عند عدم إدخال مفتاح OpenRouter: تشغيل المحرك الديناميكي الداخلي
+    // 2. تشغيل المحرك الذكي
     const reasoningResult = getDynamicReasoningReply(message, userLocation);
 
     return NextResponse.json({
       ok: true,
       ai_enabled: true,
-      provider: 'portsaid_reasoning_engine',
-      model: 'port-said-semantic-engine',
-      reply: reasoningResult.reply + '\n\n*(💡 لتفعيل نموذج الذكاء الاصطناعي التوليدي الكامل عبر OpenRouter، اضغط على «⚙️ الموديل والمفتاح» بالأعلى لإدخال مفتاحك)*',
+      provider: 'portsaid_engine',
+      reply: reasoningResult.reply,
       thinkingProcess: reasoningResult.thinkingProcess,
       suggestedPlaces: reasoningResult.suggestedPlaces,
       userDistrict,
