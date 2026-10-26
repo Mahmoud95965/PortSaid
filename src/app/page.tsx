@@ -504,7 +504,13 @@ export default function HomePage() {
 
           {currentView === 'explore' && (
             <motion.div key="explore-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
-              <ExploreView onBack={() => handleNavigate('home')} />
+              <ExploreView
+                places={places}
+                onSelectPlace={(id) => handleNavigate('place', id)}
+                onSelectCategory={(cat) => handleNavigate('list', cat)}
+                onNavigate={handleNavigate}
+                onBack={() => handleNavigate('home')}
+              />
             </motion.div>
           )}
 

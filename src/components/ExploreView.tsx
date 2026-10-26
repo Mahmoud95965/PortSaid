@@ -1,342 +1,472 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ExploreItem, CommunityUpload } from '@/types';
-import { ArrowRight, Camera, X, UploadCloud, ChevronRight, ChevronLeft, Sparkles } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+import { Place } from '@/types';
+import { INITIAL_PLACES, CATS } from '@/lib/constants';
+import {
+  Search,
+  MapPin,
+  Sparkles,
+  ArrowRight,
+  Compass,
+  X,
+  Map,
+  Tag,
+  Star,
+  ExternalLink,
+  ChevronLeft,
+  Navigation,
+  SlidersHorizontal,
+} from 'lucide-react';
 
-interface ExploreViewProps {
-  onBack: () => void;
+export interface ExploreViewProps {
+  places?: Place[];
+  onSelectPlace?: (placeId: string) => void;
+  onSelectCategory?: (categoryKey: string) => void;
+  onNavigate?: (view: string, arg?: string | null) => void;
+  onBack?: () => void;
 }
 
-export const ExploreView: React.FC<ExploreViewProps> = ({ onBack }) => {
-  const { user } = useAuth();
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const [uploadModalOpen, setUploadModalOpen] = useState(false);
-  const [caption, setCaption] = useState('');
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [uploadStatus, setUploadStatus] = useState('');
+// ربط الأماكن الحقيقية بصور بورسعيد الأصلية المتوفرة في المشروع
+export const PLACE_PHOTOS: Record<string, string> = {
+  // فنار بورسعيد التاريخي
+  '11111111-1111-1111-1111-111111111101': '/assets/port-said/port-said-lighthouse.webp',
+  // ممشى ديليسبس وقناة السويس
+  '11111111-1111-1111-1111-111111111102': '/assets/port-said/hero-01.webp',
+  // مسجد السلام الكبير
+  '11111111-1111-1111-1111-111111111103': '/assets/port-said/port-said-mosque.webp',
+  // مطعم كاستن للأسماك
+  '11111111-1111-1111-1111-111111111104': '/assets/port-said/hero-02.webp',
+  // مطعم ومأكولات الجندي البحرية
+  '11111111-1111-1111-1111-111111111105': '/assets/port-said/hero-03.webp',
+  // كافيه بينوس ممشى القناة
+  '11111111-1111-1111-1111-111111111106': '/assets/port-said/port-said-port-night.webp',
+  // حلويات سيلفر وكاساتا بورسعيد
+  '11111111-1111-1111-1111-111111111107': '/assets/port-said/gallery/balconies-street.webp',
+  // سوق السمك الحضاري الجديد
+  '11111111-1111-1111-1111-111111111108': '/assets/port-said/gallery/ship.webp',
+  // سكن طلبة حي الشرق
+  '11111111-1111-1111-1111-111111111109': '/assets/port-said/gallery/martyrs-square.webp',
+  // سكن طالبات حي الزهور
+  '11111111-1111-1111-1111-111111111110': '/assets/port-said/gallery/balconies-street.webp',
+};
 
-  const exploreItems: ExploreItem[] = [
-    {
-      id: '1',
-      kind: 'image',
-      t: 'فنار بورسعيد القديم',
-      d: 'التحفة المعمارية التي تأسست عام 1869 عند مدخل القناة',
-      f: '/assets/port-said/port-said-lighthouse.webp',
-    },
-    {
-      id: '2',
-      kind: 'image',
-      t: 'ميناء بورسعيد ليلًا',
-      d: 'أضواء وسفن المجرى الملاحي العالمي',
-      f: '/assets/port-said/port-said-port-night.webp',
-    },
-    {
-      id: '3',
-      kind: 'image',
-      t: 'مسجد السلام التاريخي',
-      d: 'أحد أهم مساجد ومعالم المدينة',
-      f: '/assets/port-said/port-said-mosque.webp',
-    },
-    {
-      id: '4',
-      kind: 'image',
-      t: 'شرفات الحي الإفرنجي الخشبية',
-      d: 'عمارة كلاسيكية تتحدث عن تاريخ المدينة',
-      f: '/assets/port-said/gallery/balconies-street.webp',
-    },
-    {
-      id: '5',
-      kind: 'image',
-      t: 'ميدان الشهداء ومسلة النصر',
-      d: 'رمز الفداء وصمود أبطال بورسعيد',
-      f: '/assets/port-said/gallery/martyrs-square.webp',
-    },
-    {
-      id: '6',
-      kind: 'image',
-      t: 'سفينة في قناة السويس',
-      d: 'مشهد يومي مهيب يربط قارات العالم',
-      f: '/assets/port-said/gallery/ship.webp',
-    },
-  ];
+export function getPlacePhoto(place: { id?: string; n?: string; cat?: string }): string {
+  if (place.id && PLACE_PHOTOS[place.id]) {
+    return PLACE_PHOTOS[place.id];
+  }
+  const name = (place.n || '').toLowerCase();
+  if (name.includes('فنار')) return '/assets/port-said/port-said-lighthouse.webp';
+  if (name.includes('مسجد') || name.includes('سلام')) return '/assets/port-said/port-said-mosque.webp';
+  if (name.includes('ديليسبس') || name.includes('ممشى')) return '/assets/port-said/hero-01.webp';
+  if (name.includes('كاستن') || name.includes('سمك')) return '/assets/port-said/hero-02.webp';
+  if (name.includes('جندي')) return '/assets/port-said/hero-03.webp';
+  if (name.includes('بينوس') || name.includes('كافيه')) return '/assets/port-said/port-said-port-night.webp';
+  if (name.includes('سيلفر') || name.includes('كاساتا')) return '/assets/port-said/gallery/balconies-street.webp';
+  if (name.includes('شهداء') || name.includes('نصر')) return '/assets/port-said/gallery/martyrs-square.webp';
+  return '/assets/port-said/hero-01.webp';
+}
 
-  const [communityUploads, setCommunityUploads] = useState<CommunityUpload[]>([
-    {
-      id: 'c1',
-      f: '/assets/port-said/gallery/balconies-street.webp',
-      t: 'غروب الشمس من المعدية',
-      user_name: 'أحمد سعيد',
-      status: 'approved',
-    },
-    {
-      id: 'c2',
-      f: '/assets/port-said/port-said-lighthouse.webp',
-      t: 'الفنار من زاوية مختلفة',
-      user_name: 'نور الدين',
-      status: 'approved',
-    },
-  ]);
+// 2. اقتراحات بحث سريعة
+const QUICK_SUGGESTIONS = [
+  { label: 'أكلات سمك وسي فود', query: 'سمك' },
+  { label: 'ممشى ديليسبس', query: 'ديليسبس' },
+  { label: 'فنار بورسعيد التاريخي', query: 'فنار' },
+  { label: 'كافيهات على القناة', query: 'بينوس' },
+  { label: 'كاساتا وحلويات', query: 'سيلفر' },
+  { label: 'حي الشرق', query: 'حي الشرق' },
+  { label: 'حي العرب', query: 'حي العرب' },
+];
 
-  const allPhotos = [
-    ...exploreItems.map((e) => ({ src: e.f, cap: e.t, desc: e.d })),
-    ...communityUploads.map((c) => ({
-      src: c.f,
-      cap: c.t,
-      desc: `بواسطة: ${c.user_name || 'زائر'}`,
-    })),
-  ];
+// 3. تصنيفات الاكتشاف
+const DISCOVERY_CATEGORIES = [
+  { key: 'all', label: 'جميع الأماكن', icon: '✨' },
+  { key: 'fun', label: 'معالم وتاريخ', icon: '🏛️' },
+  { key: 'food', label: 'مطاعم وأسماك', icon: '🐟' },
+  { key: 'cafe', label: 'كافيهات القناة', icon: '☕' },
+  { key: 'sweets', label: 'حلويات وكاساتا', icon: '🍨' },
+  { key: 'shop', label: 'أسواق وتسوق', icon: '🛍️' },
+  { key: 'housing', label: 'سكن ومغتربين', icon: '🏠' },
+];
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
+export const ExploreView: React.FC<ExploreViewProps> = ({
+  places = INITIAL_PLACES,
+  onSelectPlace,
+  onSelectCategory,
+  onNavigate,
+  onBack,
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
+  // معالجة البحث والتصنيف بناءً على البيانات الحقيقية
+  const filteredPlaces = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+
+    return places.filter((place) => {
+      // 1. فلتر التصنيف
+      if (selectedCategory !== 'all' && place.cat !== selectedCategory) {
+        return false;
+      }
+
+      // 2. فلتر البحث النصي
+      if (!q) return true;
+
+      const nameMatch = place.n.toLowerCase().includes(q);
+      const areaMatch = place.a.toLowerCase().includes(q);
+      const descMatch = (place.ds || '').toLowerCase().includes(q);
+      const catObj = CATS[place.cat];
+      const catMatch = catObj ? catObj.t.toLowerCase().includes(q) : false;
+
+      return nameMatch || areaMatch || descMatch || catMatch;
+    });
+  }, [places, searchQuery, selectedCategory]);
+
+  const handleApplySearch = (query: string) => {
+    setSearchQuery(query);
   };
 
-  const handleUploadSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!previewUrl) return;
+  const handleClearSearch = () => {
+    setSearchQuery('');
+  };
 
-    const newUpload: CommunityUpload = {
-      id: crypto.randomUUID(),
-      f: previewUrl,
-      t: caption.trim() || 'لقطة من زائر',
-      user_name: user?.name || 'زائر',
-      status: 'approved',
-    };
+  const handleOpenPlace = (id: string) => {
+    if (onSelectPlace) {
+      onSelectPlace(id);
+    } else if (onNavigate) {
+      onNavigate('place', id);
+    }
+  };
 
-    setCommunityUploads([newUpload, ...communityUploads]);
-    setUploadStatus('تم رفع صورتك بنجاح! شكرًا لمشاركتك معنا.');
-    setTimeout(() => {
-      setUploadModalOpen(false);
-      setPreviewUrl(null);
-      setCaption('');
-      setUploadStatus('');
-    }, 1500);
+  const handleOpenMapForPlace = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (onNavigate) {
+      onNavigate('map', id);
+    } else {
+      window.location.href = `/map?place=${id}`;
+    }
+  };
+
+  const handleNavigateToMap = () => {
+    if (onNavigate) {
+      onNavigate('map');
+    } else {
+      window.location.href = '/map';
+    }
+  };
+
+  const handleNavigateToAI = () => {
+    if (onNavigate) {
+      onNavigate('ai');
+    } else {
+      window.location.href = '/ai';
+    }
   };
 
   return (
-    <motion.div
-      className="space-y-6 max-w-4xl mx-auto"
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -15 }}
-      transition={{ duration: 0.4 }}
-    >
-      <div className="flex items-center justify-between">
-        <motion.button
-          onClick={onBack}
-          type="button"
-          className="inline-flex items-center gap-2 font-bold text-ocean-700 dark:text-teal2-400 hover:text-teal2-600 transition group"
-          whileHover={{ x: 4 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-          <span>رجوع للرئيسية</span>
-        </motion.button>
-
-        <motion.button
-          onClick={() => setUploadModalOpen(true)}
-          type="button"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-teal2-600 hover:bg-teal2-500 text-white font-black text-xs sm:text-sm shadow-md transition"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Camera className="w-4 h-4" />
-          <span>شاركنا لقطتك</span>
-        </motion.button>
-      </div>
-
-      <div>
-        <h2 className="text-2xl sm:text-3xl font-black text-ocean-900 dark:text-white flex items-center gap-2">
-          <span>استكشف بورسعيد</span>
-          <Sparkles className="w-6 h-6 text-sand-400" />
-        </h2>
-        <p className="mt-1 text-xs sm:text-sm text-ocean-700/80 dark:text-ocean-100/70 font-semibold">
-          تعرّف على معالم المدينة الباسلة وشاهد أجمل لقطات الزوار والتاريخ.
-        </p>
-      </div>
-
-      {/* Main Grid */}
-      <div>
-        <h3 className="mb-4 text-base sm:text-lg font-black text-ocean-900 dark:text-white flex items-center gap-2">
-          <Camera className="w-5 h-5 text-teal2-600 dark:text-teal2-400" />
-          <span>أهم اللقطات والمعالم</span>
-        </h3>
-
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-          {allPhotos.map((p, i) => (
-            <motion.button
-              key={i}
-              type="button"
-              onClick={() => setLightboxIndex(i)}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.05 }}
-              whileHover={{ y: -6, scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
-              className="group relative block overflow-hidden rounded-2xl sm:rounded-3xl shadow-md bg-white dark:bg-[#0f1a28] text-right aspect-[4/3] border border-sand-200/80 dark:border-[#1d2d3e]"
-            >
-              <img
-                src={p.src}
-                alt={p.cap}
-                loading="lazy"
-                className="w-full h-full object-cover group-hover:scale-110 transition duration-700"
-              />
-              <span className="absolute inset-x-0 bottom-0 p-3 sm:p-4 pt-10 bg-gradient-to-t from-black/90 via-black/50 to-transparent text-white font-black text-xs sm:text-sm">
-                <span className="block truncate">{p.cap}</span>
-              </span>
-            </motion.button>
-          ))}
+    <div className="space-y-8 max-w-5xl mx-auto pb-10" dir="rtl">
+      {/* Back Button */}
+      {onBack && (
+        <div>
+          <button
+            onClick={onBack}
+            type="button"
+            className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-ocean-900 dark:hover:text-white transition group py-1"
+          >
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            <span>رجوع للرئيسية</span>
+          </button>
         </div>
-      </div>
+      )}
 
-      {/* Upload Modal */}
-      <AnimatePresence>
-        {uploadModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.85, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.85, y: 20 }}
-              className="w-full max-w-md rounded-3xl bg-white dark:bg-[#0f1a28] p-6 text-ocean-900 dark:text-white shadow-2xl border border-sand-200/80 dark:border-[#1d2d3e]"
+      {/* 1. المقدمة وحقل البحث: «اكتشف بورسعيد على مزاجك» */}
+      <section className="space-y-4 text-center sm:text-right">
+        <div className="space-y-1.5">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-800/40 text-blue-700 dark:text-blue-300 text-xs font-bold mb-1">
+            <Compass className="w-3.5 h-3.5" />
+            <span>دليل المدينة السياحي والمعرفي</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-ocean-950 dark:text-white tracking-tight">
+            اكتشف بورسعيد على مزاجك
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-medium max-w-2xl leading-relaxed">
+            دليلك لاستكشاف المعالم التاريخية، المطاعم البحرية، كافيهات الممشى، وتجارب بورسعيد الحقيقية الموثقة.
+          </p>
+        </div>
+
+        {/* حقل البحث الواضح */}
+        <div className="relative max-w-2xl">
+          <div className="relative flex items-center rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-xs focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-600/15 transition p-1.5">
+            <div className="p-2.5 text-slate-400">
+              <Search className="w-5 h-5 text-slate-400" />
+            </div>
+
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="ابحث بالاسم، الحي، أو الفئة (مثال: فنار، سمك، بينوس، حي الشرق)..."
+              className="flex-1 bg-transparent text-ocean-950 dark:text-white text-xs sm:text-sm font-semibold outline-none px-1 placeholder:text-slate-400"
+            />
+
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white transition"
+                title="مسح البحث"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 2. اقتراحات بحث سريعة */}
+        <div className="flex items-center gap-1.5 flex-wrap pt-1">
+          <span className="text-[11px] font-bold text-slate-400 shrink-0 ml-1">
+            اقتراحات سريعة:
+          </span>
+          {QUICK_SUGGESTIONS.map((item, idx) => {
+            const isActive = searchQuery === item.query;
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleApplySearch(item.query)}
+                className={`px-3 py-1 rounded-full text-xs font-bold transition flex items-center gap-1 border ${
+                  isActive
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                    : 'bg-white dark:bg-[#0c1622] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#1d2d3e] hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-[#121f2f]'
+                }`}
+              >
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 3. تصنيفات الاكتشاف */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-[#162232]">
+          <h2 className="text-sm font-black text-ocean-950 dark:text-white flex items-center gap-1.5">
+            <SlidersHorizontal className="w-4 h-4 text-blue-600" />
+            <span>تصنيفات الاكتشاف</span>
+          </h2>
+          <span className="text-[11px] text-slate-400 font-medium">
+            تصفية سريعة للأماكن
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          {DISCOVERY_CATEGORIES.map((cat) => {
+            const isSelected = selectedCategory === cat.key;
+            return (
+              <button
+                key={cat.key}
+                type="button"
+                onClick={() => {
+                  setSelectedCategory(cat.key);
+                  if (cat.key !== 'all' && onSelectCategory) {
+                    // إشعار الصفحة الرئيسية في حال الحاجة
+                  }
+                }}
+                className={`shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border ${
+                  isSelected
+                    ? 'bg-ocean-900 text-white border-ocean-900 shadow-xs dark:bg-blue-600 dark:border-blue-600'
+                    : 'bg-white dark:bg-[#0c1622] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#1d2d3e] hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                <span>{cat.icon}</span>
+                <span>{cat.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 4. قسم الأماكن المميزة (بيانات حقيقية موثوقة) */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base sm:text-lg font-black text-ocean-950 dark:text-white">
+              {searchQuery ? `نتائج البحث عن: "${searchQuery}"` : 'أماكن مميزة في بورسعيد'}
+            </h2>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              بيانات ومعالم موثقة ومطابقة لموقعها الجغرافي
+            </p>
+          </div>
+
+          <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#152332] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#22354a]">
+            {filteredPlaces.length} مكان
+          </span>
+        </div>
+
+        {/* Grid الأماكن */}
+        {filteredPlaces.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+            {filteredPlaces.map((place) => {
+              const photo = getPlacePhoto(place);
+              const catObj = CATS[place.cat] || { t: 'معلم', border: '#0284c7' };
+
+              return (
+                <div
+                  key={place.id}
+                  onClick={() => handleOpenPlace(place.id)}
+                  className="group bg-white dark:bg-[#0c1622] rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-[#1d2d3e] overflow-hidden shadow-xs hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500/50 transition-all duration-200 cursor-pointer flex flex-col justify-between text-right"
+                >
+                  {/* صورة حقيقية من معالم بورسعيد */}
+                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100 dark:bg-slate-900">
+                    <img
+                      src={photo}
+                      alt={place.n}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+
+                    {/* Gradient Overlay for Text Readability */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+
+                    {/* Badges on Image */}
+                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 flex-wrap">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-white/95 dark:bg-[#0c1622]/95 text-ocean-950 dark:text-white shadow-xs backdrop-blur-xs">
+                        {catObj.t}
+                      </span>
+                      {place.disc > 0 && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white shadow-xs">
+                          خصم {place.disc}%
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Area tag on bottom of image */}
+                    <div className="absolute bottom-2.5 right-2.5 left-2.5 flex items-center justify-between text-white text-xs">
+                      <span className="inline-flex items-center gap-1 font-bold text-[11px] drop-shadow-sm">
+                        <MapPin className="w-3.5 h-3.5 text-rose-400" />
+                        <span>{place.a}</span>
+                      </span>
+
+                      {place.p > 0 && (
+                        <span className="text-[10px] font-bold text-amber-300 drop-shadow-sm">
+                          +{place.p} نقطة
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Place Content Details */}
+                  <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h3 className="font-black text-sm sm:text-base text-ocean-950 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition leading-snug">
+                        {place.n}
+                      </h3>
+                      {place.ds && (
+                        <p className="text-xs text-slate-600 dark:text-slate-400 font-normal line-clamp-2 mt-1 leading-relaxed">
+                          {place.ds}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Card Actions */}
+                    <div className="pt-3 border-t border-slate-100 dark:border-[#162232] flex items-center justify-between gap-2 mt-2">
+                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400 group-hover:translate-x-[-2px] transition flex items-center gap-1">
+                        <span>تفاصيل المكان</span>
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={(e) => handleOpenMapForPlace(e, place.id)}
+                        className="p-1.5 px-2.5 rounded-xl bg-slate-100 dark:bg-[#152332] text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#1d2d3e] text-[11px] font-bold transition flex items-center gap-1"
+                        title="عرض المكان على الخريطة"
+                      >
+                        <Map className="w-3.5 h-3.5 text-teal2-600" />
+                        <span>الخريطة</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* حالة عدم وجود نتائج للبحث */
+          <div className="p-8 sm:p-12 text-center rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-[#152332] text-slate-400 grid place-items-center mx-auto">
+              <Search className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-black text-base text-ocean-950 dark:text-white">
+                لم نجد أماكن مطابقة لبحثك
+              </h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                جرب البحث بكلمات أخرى مثل «فنار»، «سمك»، «ديليسبس»، أو قم بإلغاء الفلتر.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleClearSearch}
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition shadow-xs"
             >
-              <div className="flex items-center justify-between pb-3 border-b border-sand-200 dark:border-[#1d2d3e]">
-                <h3 className="text-lg font-black">شاركنا لقطتك من بورسعيد</h3>
-                <motion.button
-                  type="button"
-                  onClick={() => setUploadModalOpen(false)}
-                  className="w-8 h-8 rounded-full bg-sand-100 dark:bg-[#1a2d42] grid place-items-center"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <X className="w-4 h-4" />
-                </motion.button>
-              </div>
-
-              <form onSubmit={handleUploadSubmit} className="mt-4 space-y-4">
-                <div>
-                  <label className="block text-xs font-bold mb-1.5">اختر الصورة</label>
-                  <label className="w-full h-36 border-2 border-dashed border-sand-300 dark:border-[#22354a] rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-teal2-500 transition overflow-hidden">
-                    {previewUrl ? (
-                      <img src={previewUrl} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="text-center p-3">
-                        <UploadCloud className="w-8 h-8 text-teal2-600 mx-auto mb-1" />
-                        <p className="text-xs font-bold">اضغط لاختيار صورة من جهازك</p>
-                      </div>
-                    )}
-                    <input type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
-                  </label>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold mb-1">تعليق أو عنوان للصورة</label>
-                  <input
-                    type="text"
-                    placeholder="مثال: ممشى ديليسبس وقت الغروب"
-                    value={caption}
-                    onChange={(e) => setCaption(e.target.value)}
-                    className="w-full rounded-2xl border border-sand-200 dark:border-[#22354a] bg-sand-50 dark:bg-[#142232] px-4 py-2.5 text-sm font-medium"
-                    required
-                  />
-                </div>
-
-                {uploadStatus && (
-                  <p className="text-xs font-bold text-teal2-600 text-center">{uploadStatus}</p>
-                )}
-
-                <motion.button
-                  type="submit"
-                  disabled={!previewUrl}
-                  className="w-full py-3 rounded-2xl bg-teal2-600 hover:bg-teal2-500 text-white font-black text-sm shadow transition disabled:opacity-50"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  نشر الصورة
-                </motion.button>
-              </form>
-            </motion.div>
+              عرض جميع الأماكن
+            </button>
           </div>
         )}
-      </AnimatePresence>
+      </section>
 
-      {/* Lightbox Modal */}
-      <AnimatePresence>
-        {lightboxIndex !== null && (
-          <motion.div
-            onClick={() => setLightboxIndex(null)}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/92 backdrop-blur-md p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.button
-              onClick={() => setLightboxIndex(null)}
-              type="button"
-              aria-label="إغلاق"
-              className="absolute top-4 left-4 z-10 w-11 h-11 rounded-2xl bg-white/20 text-white grid place-items-center hover:bg-white/30 transition shadow-lg"
-              whileHover={{ scale: 1.1, rotate: 90 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <X className="w-6 h-6" />
-            </motion.button>
+      {/* 5. قسم ومدخل الخريطة التفاعلية */}
+      <section className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="space-y-1.5 max-w-xl">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-teal2-500/15 text-teal2-600 grid place-items-center shrink-0">
+              <Map className="w-4 h-4" />
+            </div>
+            <h3 className="font-black text-base sm:text-lg text-ocean-950 dark:text-white">
+              استكشف كل الأماكن على الخريطة التفاعلية
+            </h3>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-normal">
+            تصفح خريطة شوارع بورسعيد الحية مع علامات المعالم، وحساب المسافات الدقيقة لموقعك الحالي بالـ GPS، ومسارات السير.
+          </p>
+        </div>
 
-            <motion.button
-              onClick={(e) => {
-                e.stopPropagation();
-                setLightboxIndex((lightboxIndex - 1 + allPhotos.length) % allPhotos.length);
-              }}
-              type="button"
-              aria-label="السابق"
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-2xl bg-white/20 text-white grid place-items-center hover:bg-white/30 transition shadow-lg"
-              whileHover={{ scale: 1.1, x: 4 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <ChevronRight className="w-6 h-6" />
-            </motion.button>
+        <button
+          onClick={handleNavigateToMap}
+          type="button"
+          className="px-4 py-2.5 rounded-xl bg-ocean-900 hover:bg-ocean-800 text-white font-bold text-xs sm:text-sm transition flex items-center gap-2 shadow-xs shrink-0 self-stretch sm:self-auto justify-center"
+        >
+          <span>فتح الخريطة التفاعلية</span>
+          <Map className="w-4 h-4 text-sand-400" />
+        </button>
+      </section>
 
-            <motion.button
-              onClick={(e) => {
-                e.stopPropagation();
-                setLightboxIndex((lightboxIndex + 1) % allPhotos.length);
-              }}
-              type="button"
-              aria-label="التالي"
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-2xl bg-white/20 text-white grid place-items-center hover:bg-white/30 transition shadow-lg"
-              whileHover={{ scale: 1.1, x: -4 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </motion.button>
+      {/* 6. مدخل مركز الذكاء الاصطناعي لتخطيط الخروجات */}
+      <section className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-ocean-950 via-[#0a1e38] to-[#062c3e] text-white border border-teal2-500/30 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="space-y-1.5 max-w-xl">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-teal2-500/25 text-teal2-300 grid place-items-center shrink-0 border border-teal2-400/30">
+              <Sparkles className="w-4 h-4 text-sand-300 animate-pulse" />
+            </div>
+            <h3 className="font-black text-base sm:text-lg text-white">
+              مخطط الخروجات الذكي (AI Studio)
+            </h3>
+          </div>
+          <p className="text-xs sm:text-sm text-white/80 leading-relaxed font-normal">
+            حدد ميزانيتك ووقتك، والمساعد الذكي هيصمم لك برنامج خروجة متكامل بمحطات واقعية في بورسعيد ومسار شوارع فوري.
+          </p>
+        </div>
 
-            <motion.div
-              onClick={(e) => e.stopPropagation()}
-              className="max-w-4xl max-h-[85vh] flex flex-col items-center gap-3"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-            >
-              <img
-                src={allPhotos[lightboxIndex].src}
-                alt=""
-                className="max-w-full max-h-[75vh] rounded-2xl sm:rounded-3xl object-contain shadow-2xl border border-white/10"
-              />
-              <div className="text-center text-white px-4">
-                <p className="font-black text-base sm:text-lg">{allPhotos[lightboxIndex].cap}</p>
-                {allPhotos[lightboxIndex].desc && (
-                  <p className="text-xs sm:text-sm text-white/80 mt-1 font-medium">
-                    {allPhotos[lightboxIndex].desc}
-                  </p>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+        <button
+          onClick={handleNavigateToAI}
+          type="button"
+          className="px-4 py-2.5 rounded-xl bg-teal2-600 hover:bg-teal2-500 text-white font-black text-xs sm:text-sm transition flex items-center gap-2 shadow-md shrink-0 self-stretch sm:self-auto justify-center"
+        >
+          <span>ابدأ التخطيط بالذكاء الاصطناعي</span>
+          <Sparkles className="w-4 h-4" />
+        </button>
+      </section>
+    </div>
   );
 };
