@@ -5,12 +5,14 @@ import { motion, Variants } from 'framer-motion';
 import { Place } from '@/types';
 import { CATS } from '@/lib/constants';
 import { ArrowRight, MapPin, Sparkles, Tag } from 'lucide-react';
+import { SightsView } from '@/components/SightsView';
 
 interface PlaceListProps {
   categoryKey: string;
   places: Place[];
   onSelectPlace: (placeId: string) => void;
   onBack: () => void;
+  onNavigate?: (view: string, arg?: string | null) => void;
 }
 
 const containerVariants: Variants = {
@@ -38,7 +40,24 @@ const cardVariants: Variants = {
   },
 };
 
-export const PlaceList: React.FC<PlaceListProps> = ({ categoryKey, places, onSelectPlace, onBack }) => {
+export const PlaceList: React.FC<PlaceListProps> = ({
+  categoryKey,
+  places,
+  onSelectPlace,
+  onBack,
+  onNavigate,
+}) => {
+  if (categoryKey === 'fun') {
+    return (
+      <SightsView
+        places={places}
+        onSelectPlace={onSelectPlace}
+        onNavigate={onNavigate}
+        onBack={onBack}
+      />
+    );
+  }
+
   const cat = CATS[categoryKey] || { t: 'الأماكن', border: '#1559b7', bgSoft: '#1559b71a' };
   const filtered = places.filter((p) => p.cat === categoryKey);
 

@@ -472,6 +472,7 @@ export default function HomePage() {
                 places={places}
                 onSelectPlace={(id) => handleNavigate('place', id)}
                 onBack={() => handleNavigate('home')}
+                onNavigate={handleNavigate}
               />
             </motion.div>
           )}
