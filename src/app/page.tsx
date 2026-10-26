@@ -187,6 +187,11 @@ export default function HomePage() {
       setCurrentView('bus');
       return;
     }
+    if (view === 'housing' || view === 'hotels' || view === 'stay') {
+      setSelectedCategory('housing');
+      setCurrentView('housing');
+      return;
+    }
     if (view === 'list' && arg) {
       setSelectedCategory(arg);
       setCurrentView('list');
@@ -523,12 +528,14 @@ export default function HomePage() {
             </motion.div>
           )}
 
-          {currentView === 'housing' && (
+          {(currentView === 'housing' || currentView === 'hotels' || currentView === 'stay') && (
             <motion.div key="housing-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
               <HousingView
                 places={places}
                 onSelectPlace={(id) => handleNavigate('place', id)}
+                onNavigate={handleNavigate}
                 onBack={() => handleNavigate('home')}
+                onRequestCoupon={handleRequestCoupon}
               />
             </motion.div>
           )}
