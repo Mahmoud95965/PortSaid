@@ -162,6 +162,11 @@ export default function HomePage() {
       setCurrentView('map');
       return;
     }
+    if (view === 'food') {
+      setSelectedCategory('food');
+      setCurrentView('list');
+      return;
+    }
     if (view === 'list' && arg) {
       setSelectedCategory(arg);
       setCurrentView('list');
@@ -473,6 +478,7 @@ export default function HomePage() {
                 onSelectPlace={(id) => handleNavigate('place', id)}
                 onBack={() => handleNavigate('home')}
                 onNavigate={handleNavigate}
+                onRequestCoupon={handleRequestCoupon}
               />
             </motion.div>
           )}

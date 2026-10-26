@@ -6,6 +6,7 @@ import { Place } from '@/types';
 import { CATS } from '@/lib/constants';
 import { ArrowRight, MapPin, Sparkles, Tag } from 'lucide-react';
 import { SightsView } from '@/components/SightsView';
+import { RestaurantsView } from '@/components/RestaurantsView';
 
 interface PlaceListProps {
   categoryKey: string;
@@ -13,6 +14,7 @@ interface PlaceListProps {
   onSelectPlace: (placeId: string) => void;
   onBack: () => void;
   onNavigate?: (view: string, arg?: string | null) => void;
+  onRequestCoupon?: (place: Place) => void;
 }
 
 const containerVariants: Variants = {
@@ -46,6 +48,7 @@ export const PlaceList: React.FC<PlaceListProps> = ({
   onSelectPlace,
   onBack,
   onNavigate,
+  onRequestCoupon,
 }) => {
   if (categoryKey === 'fun') {
     return (
@@ -54,6 +57,18 @@ export const PlaceList: React.FC<PlaceListProps> = ({
         onSelectPlace={onSelectPlace}
         onNavigate={onNavigate}
         onBack={onBack}
+      />
+    );
+  }
+
+  if (categoryKey === 'food') {
+    return (
+      <RestaurantsView
+        places={places}
+        onSelectPlace={onSelectPlace}
+        onNavigate={onNavigate}
+        onBack={onBack}
+        onRequestCoupon={onRequestCoupon}
       />
     );
   }
