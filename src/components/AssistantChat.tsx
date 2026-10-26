@@ -40,7 +40,69 @@ export interface ChatMessage {
   timestamp: string;
   suggestedPlaces?: SuggestedPlace[];
   isError?: boolean;
+  isStreaming?: boolean;
 }
+
+const TypewriterMessageText: React.FC<{
+  text: string;
+  isStreaming?: boolean;
+  onDone?: () => void;
+  onTick?: () => void;
+}> = ({ text, isStreaming, onDone, onTick }) => {
+  const [displayedLength, setDisplayedLength] = useState(isStreaming ? 1 : text.length);
+  const [isFinished, setIsFinished] = useState(!isStreaming);
+
+  useEffect(() => {
+    if (!isStreaming || isFinished) {
+      setDisplayedLength(text.length);
+      setIsFinished(true);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setDisplayedLength((prev) => {
+        const next = Math.min(prev + 3, text.length);
+        if (next >= text.length) {
+          clearInterval(timer);
+          setIsFinished(true);
+          onDone?.();
+        }
+        onTick?.();
+        return next;
+      });
+    }, 20);
+
+    return () => clearInterval(timer);
+  }, [isStreaming, text, isFinished, onDone, onTick]);
+
+  const handleSkip = () => {
+    setDisplayedLength(text.length);
+    setIsFinished(true);
+    onDone?.();
+  };
+
+  const displayText = text.slice(0, displayedLength);
+
+  return (
+    <div
+      className="relative"
+      onClick={!isFinished ? handleSkip : undefined}
+      title={!isFinished ? 'اضغط لعرض الرد بالكامل فوراً' : undefined}
+    >
+      <div className="whitespace-pre-line font-medium leading-relaxed">
+        {displayText}
+        {!isFinished && (
+          <span className="inline-block w-1.5 h-3.5 bg-teal2-500 animate-pulse mr-1 align-middle rounded-xs" />
+        )}
+      </div>
+      {!isFinished && (
+        <span className="text-[10px] text-teal2-600 dark:text-teal2-400 font-bold block mt-1 hover:underline cursor-pointer select-none">
+          ⚡ اضغط للتخطي
+        </span>
+      )}
+    </div>
+  );
+};
 
 export interface AssistantChatProps {
   onOpenPoints?: () => void;
@@ -330,6 +392,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
             text: botReply,
             timestamp: timeStr,
             suggestedPlaces,
+            isStreaming: true,
           },
         ]);
       } else {
@@ -414,7 +477,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
             exit={{ opacity: 0, scale: 0.92, y: 20 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
             dir="rtl"
-            className="fixed left-3 sm:left-6 bottom-18 sm:bottom-22 z-50 w-[calc(100vw-1.5rem)] sm:w-[410px] h-[min(580px,calc(100dvh-5.5rem))] flex flex-col rounded-3xl overflow-hidden shadow-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e]"
+            className="fixed inset-x-2.5 sm:inset-x-auto sm:left-6 bottom-16 sm:bottom-22 z-50 w-auto sm:w-[410px] h-[min(580px,calc(100dvh-5rem))] flex flex-col rounded-3xl overflow-hidden shadow-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e]"
           >
             {/* Header */}
             <div className="p-3.5 px-4 bg-slate-50 dark:bg-[#101e2e] border-b border-slate-200 dark:border-[#1d2d3e] flex items-center justify-between gap-2 shrink-0">
@@ -531,10 +594,27 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
                           : 'bg-ocean-900 text-white rounded-tl-sm'
                       }`}
                     >
-                      <div className="whitespace-pre-line font-medium leading-relaxed">{m.text}</div>
+                      {isBot && !m.isError ? (
+                        <TypewriterMessageText
+                          text={m.text}
+                          isStreaming={m.isStreaming}
+                          onDone={() => {
+                            setMessages((prev) =>
+                              prev.map((item) => (item.id === m.id ? { ...item, isStreaming: false } : item))
+                            );
+                          }}
+                          onTick={() => {
+                            if (chatBodyRef.current) {
+                              chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
+                            }
+                          }}
+                        />
+                      ) : (
+                        <div className="whitespace-pre-line font-medium leading-relaxed">{m.text}</div>
+                      )}
 
                       {/* Suggested Places Cards */}
-                      {isBot && m.suggestedPlaces && m.suggestedPlaces.length > 0 && (
+                      {isBot && !m.isStreaming && m.suggestedPlaces && m.suggestedPlaces.length > 0 && (
                         <div className="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-800 space-y-1.5">
                           <span className="text-[10px] font-bold text-teal2-700 dark:text-teal2-300 block">
                             الأماكن المقترحة على الخريطة:

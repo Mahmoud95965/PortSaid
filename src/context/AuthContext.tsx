@@ -10,6 +10,7 @@ interface AuthContextType {
   loading: boolean;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
+  setThemeExplicitly?: (newTheme: 'light' | 'dark') => void;
   hasSeenWelcome: boolean;
   setHasSeenWelcome: (seen: boolean) => void;
   login: (identifier: string, pass: string) => Promise<{ ok: boolean; message?: string }>;
@@ -109,6 +110,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTheme(nextTheme);
     localStorage.setItem('ps_theme', nextTheme);
     document.documentElement.classList.toggle('dark', nextTheme === 'dark');
+  };
+
+  const setThemeExplicitly = (newTheme: 'light' | 'dark') => {
+    setTheme(newTheme);
+    localStorage.setItem('ps_theme', newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
 
   const setHasSeenWelcome = (seen: boolean) => {
@@ -412,6 +419,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         theme,
         toggleTheme,
+        setThemeExplicitly,
         hasSeenWelcome,
         setHasSeenWelcome,
         login,

@@ -258,11 +258,11 @@ body {
 
 /* ===================== FORM INPUTS ===================== */
 .ps-input {
-  @apply w-full rounded-2xl border border-sand-200 dark:border-[#2a3a4a] bg-white dark:bg-[#1a2535] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal2-500 dark:focus:ring-teal2-400 transition placeholder:text-gray-400 dark:placeholder:text-gray-500;
+  @apply w-full rounded-2xl border border-sand-200 dark:border-[#2a3a4a] bg-white dark:bg-[#1a2535] text-ocean-900 dark:text-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal2-500 dark:focus:ring-teal2-400 transition placeholder:text-slate-400 dark:placeholder:text-slate-500;
 }
 
 .ps-select {
-  @apply w-full rounded-2xl border border-sand-200 dark:border-[#2a3a4a] bg-white dark:bg-[#1a2535] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal2-500 dark:focus:ring-teal2-400 transition;
+  @apply w-full rounded-2xl border border-sand-200 dark:border-[#2a3a4a] bg-white dark:bg-[#1a2535] text-ocean-900 dark:text-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal2-500 dark:focus:ring-teal2-400 transition;
 }
 
 .ps-btn-primary {

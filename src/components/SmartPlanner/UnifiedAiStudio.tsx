@@ -63,6 +63,7 @@ export interface ChatMessage {
   showInlineMap?: boolean;
   isInlineMapCollapsed?: boolean;
   followUpChips?: FollowUpChip[];
+  isStreaming?: boolean;
 }
 
 interface UnifiedAiStudioProps {
@@ -254,6 +255,68 @@ function renderFormattedMessage(text: string) {
   flushList();
   return <div className="space-y-1">{elements}</div>;
 }
+
+const TypewriterMarkdownMessage: React.FC<{
+  text: string;
+  isStreaming?: boolean;
+  onDone?: () => void;
+  onTick?: () => void;
+}> = ({ text, isStreaming, onDone, onTick }) => {
+  const [displayedLength, setDisplayedLength] = useState(isStreaming ? 1 : text.length);
+  const [isFinished, setIsFinished] = useState(!isStreaming);
+
+  useEffect(() => {
+    if (!isStreaming || isFinished) {
+      setDisplayedLength(text.length);
+      setIsFinished(true);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setDisplayedLength((prev) => {
+        const next = Math.min(prev + 4, text.length);
+        if (next >= text.length) {
+          clearInterval(timer);
+          setIsFinished(true);
+          onDone?.();
+        }
+        onTick?.();
+        return next;
+      });
+    }, 18);
+
+    return () => clearInterval(timer);
+  }, [isStreaming, text, isFinished, onDone, onTick]);
+
+  const handleSkip = () => {
+    setDisplayedLength(text.length);
+    setIsFinished(true);
+    onDone?.();
+  };
+
+  const currentSlice = text.slice(0, displayedLength);
+
+  return (
+    <div
+      onClick={!isFinished ? handleSkip : undefined}
+      className={!isFinished ? 'cursor-pointer group select-none' : ''}
+      title={!isFinished ? 'اضغط لعرض الرد بالكامل فوراً' : undefined}
+    >
+      {renderFormattedMessage(currentSlice)}
+      {!isFinished && (
+        <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100 dark:border-white/5">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400">
+            <span className="inline-block w-2 h-3.5 bg-blue-600 dark:bg-blue-400 animate-pulse rounded-xs" />
+            <span>المساعد يكتب الآن...</span>
+          </span>
+          <span className="text-[10px] text-slate-400 hover:text-blue-600 dark:hover:text-blue-300 font-bold transition">
+            ⚡ اضغط للتخطي
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
   initialPrompt,
@@ -550,6 +613,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               plan: data.plan,
               showInlineMap: true,
               followUpChips: generateFollowUpChips(textToSend, true),
+              isStreaming: true,
             },
           ]);
         } else {
@@ -602,6 +666,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               plan: data.plan,
               showInlineMap: true,
               followUpChips: generateFollowUpChips(textToSend, true),
+              isStreaming: true,
             },
           ]);
         } else {
@@ -655,6 +720,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               suggestedPlaces: suggestedList,
               showInlineMap: shouldShowMap,
               followUpChips: generateFollowUpChips(textToSend, false, suggestedList),
+              isStreaming: true,
             },
           ]);
         } else {
@@ -865,13 +931,26 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                   >
                     {/* Formatted Markdown Content */}
                     {isBot ? (
-                      renderFormattedMessage(m.text)
+                      <TypewriterMarkdownMessage
+                        text={m.text}
+                        isStreaming={m.isStreaming}
+                        onDone={() => {
+                          setMessages((prev) =>
+                            prev.map((item) =>
+                              item.id === m.id ? { ...item, isStreaming: false } : item
+                            )
+                          );
+                        }}
+                        onTick={() => {
+                          chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                      />
                     ) : (
                       <div className="whitespace-pre-line font-medium leading-relaxed">{m.text}</div>
                     )}
 
                     {/* Contextual Inline Map inside Bot Message */}
-                    {isBot && m.showInlineMap && (
+                    {isBot && !m.isStreaming && m.showInlineMap && (
                       <div className="mt-3.5 rounded-2xl border border-slate-200 dark:border-[#1d2d3e] bg-slate-50 dark:bg-[#121f2f] overflow-hidden shadow-2xs">
                         {/* Map Header Bar */}
                         <div className="p-2.5 px-3 bg-white dark:bg-[#0c1622] border-b border-slate-200 dark:border-[#1d2d3e] flex items-center justify-between gap-2">
@@ -990,7 +1069,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                   </div>
 
                   {/* Contextual Smart Follow-up Suggestion Chips */}
-                  {isBot && m.followUpChips && m.followUpChips.length > 0 && (
+                  {isBot && !m.isStreaming && m.followUpChips && m.followUpChips.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 pt-0.5">
                       {m.followUpChips.map((chip, cIdx) => (
                         <button

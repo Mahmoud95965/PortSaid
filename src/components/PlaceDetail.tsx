@@ -792,7 +792,7 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
             placeholder="اكتب تعليقك وتجربتك هنا..."
             value={userComment}
             onChange={(e) => setUserComment(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 dark:border-[#203042] bg-white dark:bg-[#0c1622] p-2.5 text-xs sm:text-sm font-medium outline-none focus:border-blue-600"
+            className="w-full rounded-xl border border-slate-200 dark:border-[#203042] bg-white dark:bg-[#0c1622] text-ocean-950 dark:text-white placeholder:text-slate-400 p-2.5 text-xs sm:text-sm font-medium outline-none focus:border-blue-600"
           />
 
           {reviewMsg && (
