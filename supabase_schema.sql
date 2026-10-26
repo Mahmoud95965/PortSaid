@@ -516,21 +516,190 @@ INSERT INTO public.settings (k, v) VALUES
 ('explore_auto_approve', '0')
 ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v;
 
--- 8. حساب المالك الافتراضي (Admin / Owner)
--- كلمة المرور الافتراضية الأولية: Admin@123456 (يمكن تغييرها فور الدخول)
+-- 8. حسابات المستخدمين المعتمدة وسجلات النقاط (5 حسابات رسمية)
+-- 3. إدراج وتحديث حسابات المستخدمين الرسمية والمعتمدة (Users)
+
 INSERT INTO public.users (
-    id, name, email, phone, password_hash, role_id, points_balance, must_change_password, email_verified_at
+    id, name, email, phone, password_hash, role_id, user_type_id, governorate_id, institution_id, points_balance, status, email_verified_at, created_at
 ) VALUES (
     '00000000-0000-0000-0000-000000000001',
     'المالك الرئيسي',
     'admin@portsaidhub.com',
     '01000000001',
-    '$2y$10$eO1v5fFv8G8Rk7e.Tj7.eOTYlK73f8G8Rk7e.Tj7.eOTYlK73f8G8', -- Admin@123456
-    1, -- owner
+    'scrypt:16384:8:1:4103052d78ab5464223911afe5154204:4729f958f01c29795a039bd86a2b54fbf6c158cf5d887304451f5c2786c59c14128d8dc7b38f97115b780a1fb4b13eabba2870f3e23e027234de33048c02b914',
+    1,
+    3,
+    (SELECT id FROM public.governorates WHERE name_ar = 'بورسعيد' LIMIT 1),
+    NULL,
     500,
-    FALSE,
-    NOW()
-) ON CONFLICT (id) DO NOTHING;
+    'active',
+    NOW(),
+    '2026-10-24T17:05:32.287Z'
+) ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    email = EXCLUDED.email,
+    phone = EXCLUDED.phone,
+    password_hash = EXCLUDED.password_hash,
+    role_id = EXCLUDED.role_id,
+    user_type_id = EXCLUDED.user_type_id,
+    governorate_id = EXCLUDED.governorate_id,
+    institution_id = EXCLUDED.institution_id,
+    points_balance = EXCLUDED.points_balance,
+    status = 'active';
+
+INSERT INTO public.users (
+    id, name, email, phone, password_hash, role_id, user_type_id, governorate_id, institution_id, points_balance, status, email_verified_at, created_at
+) VALUES (
+    '00000000-0000-0000-0000-000000000004',
+    'أحمد السيد',
+    'ahmed@student.psu.edu.eg',
+    '01234567890',
+    'scrypt:16384:8:1:64fba198cb5b5e2b8b4df2b3093175e3:eca6446f351e086fff129f22e817d5091055f837bb20bcb0599f7e762e5f4eaa70ed227870d842ac3a694e6d7fd11c9b556f612d4bff5f5eefb8422cc324269f',
+    4,
+    1,
+    (SELECT id FROM public.governorates WHERE name_ar = 'بورسعيد' LIMIT 1),
+    NULL,
+    60,
+    'active',
+    NOW(),
+    '2026-10-24T17:05:32.287Z'
+) ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    email = EXCLUDED.email,
+    phone = EXCLUDED.phone,
+    password_hash = EXCLUDED.password_hash,
+    role_id = EXCLUDED.role_id,
+    user_type_id = EXCLUDED.user_type_id,
+    governorate_id = EXCLUDED.governorate_id,
+    institution_id = EXCLUDED.institution_id,
+    points_balance = EXCLUDED.points_balance,
+    status = 'active';
+
+INSERT INTO public.users (
+    id, name, email, phone, password_hash, role_id, user_type_id, governorate_id, institution_id, points_balance, status, email_verified_at, created_at
+) VALUES (
+    '00000000-0000-0000-0000-000000000002',
+    'كريم محمود',
+    'karim@portsaidhub.com',
+    '01011223344',
+    'scrypt:16384:8:1:50953e3354557d0a28ea8a1ff5220094:143329a92df5a38175c5657b3ce2762c50498a4918d4e9d4e7d51ff2032b96aeb5788b76dcf7d921847bbccf534c68581c414854c5d5cbedbfbb06260117c519',
+    2,
+    3,
+    (SELECT id FROM public.governorates WHERE name_ar = 'بورسعيد' LIMIT 1),
+    NULL,
+    220,
+    'active',
+    NOW(),
+    '2026-10-24T17:05:32.287Z'
+) ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    email = EXCLUDED.email,
+    phone = EXCLUDED.phone,
+    password_hash = EXCLUDED.password_hash,
+    role_id = EXCLUDED.role_id,
+    user_type_id = EXCLUDED.user_type_id,
+    governorate_id = EXCLUDED.governorate_id,
+    institution_id = EXCLUDED.institution_id,
+    points_balance = EXCLUDED.points_balance,
+    status = 'active';
+
+INSERT INTO public.users (
+    id, name, email, phone, password_hash, role_id, user_type_id, governorate_id, institution_id, points_balance, status, email_verified_at, created_at
+) VALUES (
+    'a9ed234a-7b67-4f19-b2f9-c6296d4c7c46',
+    'محمود محمد موسى',
+    'mahmoud.m.moussa5310@gmail.com',
+    '01026795965',
+    'scrypt:16384:8:1:19c90a4da65044b70ee0c34f9ed1a665:0a95fe16e5f664adce71ef41e924b0c494158bd876567e7518a0a413cfc77c0c973fd38ae650a91cef4db903b16f9adce0d669f67266d994adc11f413a36e013',
+    4,
+    1,
+    (SELECT id FROM public.governorates WHERE name_ar = 'قنا' LIMIT 1),
+    (SELECT id FROM public.institutions WHERE name_ar = 'كلية أخرى' LIMIT 1),
+    20,
+    'active',
+    NOW(),
+    '2026-10-24T17:25:49.818Z'
+) ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    email = EXCLUDED.email,
+    phone = EXCLUDED.phone,
+    password_hash = EXCLUDED.password_hash,
+    role_id = EXCLUDED.role_id,
+    user_type_id = EXCLUDED.user_type_id,
+    governorate_id = EXCLUDED.governorate_id,
+    institution_id = EXCLUDED.institution_id,
+    points_balance = EXCLUDED.points_balance,
+    status = 'active';
+
+INSERT INTO public.users (
+    id, name, email, phone, password_hash, role_id, user_type_id, governorate_id, institution_id, points_balance, status, email_verified_at, created_at
+) VALUES (
+    '00000000-0000-0000-0000-000000000003',
+    'صاحب مطعم كاستن',
+    'merchant@portsaidhub.com',
+    '01000000002',
+    'scrypt:16384:8:1:1f78e425e47d3fd05d8284633a081d13:5aabcc9d5b26527c1a60de0c61da1daf63bd3220805ebfde49b3d2bc1daf149c395783b907819c7739ee445587f9c2b2d2f3d7c98d56414e2fea48902fc57ceb',
+    3,
+    3,
+    (SELECT id FROM public.governorates WHERE name_ar = 'بورسعيد' LIMIT 1),
+    NULL,
+    100,
+    'active',
+    NOW(),
+    '2026-10-24T17:05:32.287Z'
+) ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    email = EXCLUDED.email,
+    phone = EXCLUDED.phone,
+    password_hash = EXCLUDED.password_hash,
+    role_id = EXCLUDED.role_id,
+    user_type_id = EXCLUDED.user_type_id,
+    governorate_id = EXCLUDED.governorate_id,
+    institution_id = EXCLUDED.institution_id,
+    points_balance = EXCLUDED.points_balance,
+    status = 'active';
+
+-- 4. إدراج رصيد النقاط الافتتاحي في سجل الحركات (Points Ledger)
+
+INSERT INTO public.points_ledger (
+    user_id, delta, balance_after, reason, ref_type, created_at
+) 
+SELECT '00000000-0000-0000-0000-000000000001', 500, 500, 'هدية الانضمام وتأكيد الحساب', 'initial_bonus', NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.points_ledger WHERE user_id = '00000000-0000-0000-0000-000000000001' AND ref_type = 'initial_bonus'
+);
+
+INSERT INTO public.points_ledger (
+    user_id, delta, balance_after, reason, ref_type, created_at
+) 
+SELECT '00000000-0000-0000-0000-000000000004', 60, 60, 'هدية الانضمام وتأكيد الحساب', 'initial_bonus', NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.points_ledger WHERE user_id = '00000000-0000-0000-0000-000000000004' AND ref_type = 'initial_bonus'
+);
+
+INSERT INTO public.points_ledger (
+    user_id, delta, balance_after, reason, ref_type, created_at
+) 
+SELECT '00000000-0000-0000-0000-000000000002', 220, 220, 'هدية الانضمام وتأكيد الحساب', 'initial_bonus', NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.points_ledger WHERE user_id = '00000000-0000-0000-0000-000000000002' AND ref_type = 'initial_bonus'
+);
+
+INSERT INTO public.points_ledger (
+    user_id, delta, balance_after, reason, ref_type, created_at
+) 
+SELECT 'a9ed234a-7b67-4f19-b2f9-c6296d4c7c46', 20, 20, 'هدية الانضمام وتأكيد الحساب', 'initial_bonus', NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.points_ledger WHERE user_id = 'a9ed234a-7b67-4f19-b2f9-c6296d4c7c46' AND ref_type = 'initial_bonus'
+);
+
+INSERT INTO public.points_ledger (
+    user_id, delta, balance_after, reason, ref_type, created_at
+) 
+SELECT '00000000-0000-0000-0000-000000000003', 100, 100, 'هدية الانضمام وتأكيد الحساب', 'initial_bonus', NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.points_ledger WHERE user_id = '00000000-0000-0000-0000-000000000003' AND ref_type = 'initial_bonus'
+);
 
 -- 9. أماكن ومعالم رسمية معتمدة في بورسعيد (252 مكاناً)
 INSERT INTO public.places (

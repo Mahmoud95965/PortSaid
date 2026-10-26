@@ -128,7 +128,7 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
   const [reviewMsg, setReviewMsg] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
-  // فحص المفضلة من التخزين المحلي
+  // فحص ومزامنة المفضلة من التخزين المحلي والسحابي
   useEffect(() => {
     try {
       const stored = localStorage.getItem(FAVORITES_KEY);
@@ -138,6 +138,16 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
           setIsFavorite(true);
         }
       }
+      fetch('/api/user/favorites')
+        .then((r) => r.json())
+        .then((res) => {
+          if (res.ok && res.favorites && Array.isArray(res.favorites)) {
+            if (res.favorites.includes(place.id)) {
+              setIsFavorite(true);
+            }
+          }
+        })
+        .catch(() => {});
     } catch (e) {}
   }, [place.id]);
 
@@ -156,6 +166,13 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
       }
       setIsFavorite(nextState);
       localStorage.setItem(FAVORITES_KEY, JSON.stringify(arr));
+
+      // مزامنة فورية مع Supabase عند تسجيل الدخول
+      fetch('/api/user/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ placeId: place.id, action: nextState ? 'add' : 'remove' }),
+      }).catch(() => {});
     } catch (e) {}
   };
 

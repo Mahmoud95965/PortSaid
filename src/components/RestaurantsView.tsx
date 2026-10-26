@@ -90,13 +90,25 @@ export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
   const [favorites, setFavorites] = useState<string[]>([]);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // تحميل المفضلة من التخزين المحلي
+  // تحميل ومزامنة المفضلة من التخزين المحلي والسحابي
   useEffect(() => {
     try {
       const stored = localStorage.getItem(FAVORITES_KEY);
       if (stored) {
         setFavorites(JSON.parse(stored));
       }
+      fetch('/api/user/favorites')
+        .then((r) => r.json())
+        .then((res) => {
+          if (res.ok && res.favorites && res.favorites.length > 0) {
+            setFavorites((prev) => {
+              const merged = Array.from(new Set([...prev, ...res.favorites]));
+              localStorage.setItem(FAVORITES_KEY, JSON.stringify(merged));
+              return merged;
+            });
+          }
+        })
+        .catch(() => {});
     } catch (e) {}
   }, []);
 
@@ -113,6 +125,13 @@ export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
       }
       setFavorites(updated);
       localStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
+
+      // مزامنة فورية مع Supabase عند تسجيل الدخول
+      fetch('/api/user/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ placeId: id, action: isAdded ? 'add' : 'remove' }),
+      }).catch(() => {});
 
       if (isAdded) {
         confetti({ particleCount: 20, spread: 50, origin: { y: 0.8 } });
