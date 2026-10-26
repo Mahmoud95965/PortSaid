@@ -8,6 +8,7 @@ import { ArrowRight, MapPin, Sparkles, Tag, ChevronDown } from 'lucide-react';
 import { SightsView } from '@/components/SightsView';
 import { RestaurantsView } from '@/components/RestaurantsView';
 import { CafesView } from '@/components/CafesView';
+import { SweetsView } from '@/components/SweetsView';
 
 interface PlaceListProps {
   categoryKey: string;
@@ -77,6 +78,18 @@ export const PlaceList: React.FC<PlaceListProps> = ({
   if (categoryKey === 'cafe') {
     return (
       <CafesView
+        places={places}
+        onSelectPlace={onSelectPlace}
+        onNavigate={onNavigate}
+        onBack={onBack}
+        onRequestCoupon={onRequestCoupon}
+      />
+    );
+  }
+
+  if (categoryKey === 'sweets') {
+    return (
+      <SweetsView
         places={places}
         onSelectPlace={onSelectPlace}
         onNavigate={onNavigate}

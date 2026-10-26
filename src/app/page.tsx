@@ -173,6 +173,11 @@ export default function HomePage() {
       setCurrentView('list');
       return;
     }
+    if (view === 'sweets' || view === 'sweet') {
+      setSelectedCategory('sweets');
+      setCurrentView('list');
+      return;
+    }
     if (view === 'list' && arg) {
       setSelectedCategory(arg);
       setCurrentView('list');
