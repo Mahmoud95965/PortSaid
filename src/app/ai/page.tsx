@@ -3,7 +3,6 @@
 import React, { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
 import { UnifiedAiStudio } from '@/components/SmartPlanner/UnifiedAiStudio';
 
 function AIPageContent() {
@@ -42,7 +41,7 @@ function AIPageContent() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between relative overflow-x-hidden bg-sand-50 dark:bg-[#071322] text-ocean-900 dark:text-white">
+    <div className="h-[100dvh] flex flex-col justify-between overflow-hidden bg-sand-50 dark:bg-[#071322] text-ocean-900 dark:text-white">
       {/* Header */}
       <Header
         onNavigate={handleNavigate}
@@ -50,8 +49,8 @@ function AIPageContent() {
         onOpenPoints={() => router.push('/')}
       />
 
-      {/* Main Unified AI Workspace (Planner + Chat + Map in One Single Screen) */}
-      <main className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-3 sm:py-5 flex-1 w-full relative z-10">
+      {/* Main Unified AI Workspace (Full-Screen Chat Canvas without Footer) */}
+      <main className="flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 py-2 flex flex-col overflow-hidden relative z-10">
         <UnifiedAiStudio
           initialPrompt={initialPrompt}
           initialPlanData={initialPlanData}
@@ -59,9 +58,6 @@ function AIPageContent() {
           onBackToHome={() => router.push('/')}
         />
       </main>
-
-      {/* Footer */}
-      <Footer />
     </div>
   );
 }
@@ -79,4 +75,3 @@ export default function AIPage() {
     </Suspense>
   );
 }
-

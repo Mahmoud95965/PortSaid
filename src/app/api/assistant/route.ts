@@ -308,39 +308,40 @@ export async function POST(req: Request) {
           body: JSON.stringify({
             model: openRouterModel,
             messages,
-            max_tokens: 750,
+            max_tokens: 1200,
             temperature: 0.7,
           }),
         });
 
-        // إذا واجه OpenRouter خطأ (401، 402، 404، إلخ) - نعرض للمستخدم سبب الخطأ بشفافية كاملة
+        // إذا واجه OpenRouter خطأ، نقوم بتشغيل المحرك المحلي فوراً كبديل موثوق ومستقر دون كسر تجربة المستخدم
         if (!openRouterRes.ok) {
           const errData = await openRouterRes.json().catch(() => null);
           const statusCode = openRouterRes.status;
           let errorExplanation = errData?.error?.message || `كود الخطأ: ${statusCode}`;
 
           if (statusCode === 401) {
-            errorExplanation = 'مفتاح OpenRouter غير صالح أو منتهي الصلاحية (401 Unauthorized). يرجى التأكد من نسخه بشكل صحيح.';
+            errorExplanation = 'مفتاح OpenRouter غير صالح أو يحتاج للتحديث.';
           } else if (statusCode === 402) {
-            errorExplanation = 'رصيد الحساب غير كافٍ في OpenRouter (402 Payment Required). يرجى شحن الرصيد أو استخدام موديل مجاني مثل google/gemini-2.0-flash-thinking-exp:free.';
+            errorExplanation = 'رصيد الحساب غير كافٍ في OpenRouter.';
           } else if (statusCode === 404) {
-            errorExplanation = `الموديل المختار (${openRouterModel}) غير متاح حالياً على OpenRouter.`;
+            errorExplanation = `الموديل المختار (${openRouterModel}) غير متاح حالياً.`;
           }
 
-          console.error('OpenRouter API returned error:', statusCode, errData);
+          console.warn('OpenRouter API returned error, gracefully falling back to local reasoning:', statusCode, errData);
 
+          const fallbackResult = getDynamicReasoningReply(message, userLocation);
           return NextResponse.json({
             ok: true,
-            ai_enabled: false,
-            provider: 'openrouter_error',
-            model: openRouterModel,
-            reply: `⚠️ **تنبيه مفتاح الذكاء الاصطناعي (OpenRouter):**\n\nواجهة برمجة التطبيقات ردت بالخطأ التالي (${statusCode}):\n> ${errorExplanation}\n\nيرجى فحص المفتاح أو تغييره من زر **«⚙️ الموديل والمفتاح»** بالأعلى لتشغيل النموذج الحقيقي دون قيود.`,
+            ai_enabled: true,
+            provider: 'portsaid_fallback_engine',
+            model: 'port-said-semantic-engine',
+            reply: `${fallbackResult.reply}\n\n> ℹ️ *ملاحظة: تم تقديم هذه الترشيحات عبر المحرك المحلي المدمج (${errorExplanation}). يمكنك تحديث مفتاحك في أي وقت من زر الإعدادات بالرأس.*`,
             thinkingProcess: [
-              `❌ فشل الاتصال بموديل OpenRouter (${openRouterModel}).`,
-              `⚠️ كود الاستجابة: HTTP ${statusCode}.`,
-              `🔍 تفاصيل الخطأ: ${errorExplanation}`,
+              `⚠️ تنبيه OpenRouter: ${errorExplanation} (HTTP ${statusCode}).`,
+              `✅ التحويل التلقائي لمحرك المعرفة المحلي لضمان استقرار الخدمة وتقديم الإجابة فوراً.`,
+              ...fallbackResult.thinkingProcess,
             ],
-            suggestedPlaces: [],
+            suggestedPlaces: fallbackResult.suggestedPlaces,
             userDistrict,
           });
         }
@@ -362,14 +363,16 @@ export async function POST(req: Request) {
           });
         }
       } catch (openRouterErr: any) {
-        console.error('OpenRouter network request failed:', openRouterErr);
+        console.warn('OpenRouter network request failed, falling back to local engine:', openRouterErr);
+        const fallbackResult = getDynamicReasoningReply(message, userLocation);
         return NextResponse.json({
           ok: true,
-          ai_enabled: false,
-          provider: 'network_error',
-          reply: `⚠️ تعذر الاتصال بخوادم OpenRouter: ${openRouterErr?.message || 'خطأ في الشبكة'}. يرجى التحقق من اتصال الإنترنت.`,
-          thinkingProcess: [`❌ خطأ في الاتصال بالشبكة: ${openRouterErr?.message}`],
-          suggestedPlaces: [],
+          ai_enabled: true,
+          provider: 'portsaid_fallback_engine',
+          model: 'port-said-semantic-engine',
+          reply: `${fallbackResult.reply}\n\n> ℹ️ *ملاحظة: تعذر الوصول لخوادم السحابة، وتم استخدام المحرك المحلي المدمج لخدمتك فوراً.*`,
+          thinkingProcess: [`⚠️ خطأ في الاتصال بالشبكة: ${openRouterErr?.message}`, ...fallbackResult.thinkingProcess],
+          suggestedPlaces: fallbackResult.suggestedPlaces,
           userDistrict,
         });
       }

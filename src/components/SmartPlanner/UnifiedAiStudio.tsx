@@ -20,14 +20,12 @@ import { PlannerMap, SuggestedMapPlace } from './PlannerMap';
 import { SavedTripsModal } from './SavedTripsModal';
 import {
   Sparkles,
-  Bot,
   Send,
   MapPin,
   Clock,
   DollarSign,
   Share2,
   Bookmark,
-  Trash2,
   RotateCcw,
   Check,
   Settings,
@@ -38,8 +36,15 @@ import {
   Map as MapIcon,
   ChevronDown,
   ChevronUp,
+  Tag,
+  ArrowRight,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+
+export interface FollowUpChip {
+  label: string;
+  prompt: string;
+}
 
 export interface ChatMessage {
   id: string;
@@ -57,6 +62,7 @@ export interface ChatMessage {
   plan?: PlanResult;
   showInlineMap?: boolean;
   isInlineMapCollapsed?: boolean;
+  followUpChips?: FollowUpChip[];
 }
 
 interface UnifiedAiStudioProps {
@@ -105,6 +111,38 @@ const WELCOME_SUGGESTIONS = [
     icon: '📍',
   },
 ];
+
+/**
+ * توليد أسئلة متابعة ذكية وسريعة بناءً على سياق الإجابة
+ */
+function generateFollowUpChips(text: string, isPlan: boolean, places?: SuggestedMapPlace[]): FollowUpChip[] {
+  const chips: FollowUpChip[] = [];
+  const lower = (text || '').toLowerCase();
+
+  if (isPlan) {
+    chips.push({ label: '🌊 شيل المكان التاني وحط مكان أقرب للبحر', prompt: 'شيل المكان التاني وحط مكان أقرب للبحر' });
+    chips.push({ label: '🔄 غيّر الترتيب وخلي أقرب مكان الأول', prompt: 'غيّر ترتيب الأماكن وخلي أقرب مكان الأول' });
+    chips.push({ label: '🍨 ضيف حلويات سيلفر للخطة', prompt: 'ضيف حلويات سيلفر للخطة' });
+  } else if (lower.includes('سمك') || lower.includes('أكل') || lower.includes('مطعم')) {
+    chips.push({ label: '☕ كافيهات هادية بعد الأكل على القناة', prompt: 'عايز كافيهات هادية قريبة من البحر لمشاهدة السفن بعد الغدا' });
+    chips.push({ label: '🍨 كاساتا وحلويات سيلفر', prompt: 'فين ألاقي كاساتا سيلفر الشهيرة في بورسعيد وتفاصيلها؟' });
+    chips.push({ label: '🧭 خطط لي خروجة متكاملة بمطعم سمك', prompt: 'خطط لي خروجة كاملة تبدأ بمطعم سمك وتنتهي بممشى ديليسبس' });
+  } else if (lower.includes('كافيه') || lower.includes('قهوة') || lower.includes('بحر')) {
+    chips.push({ label: '🚢 أفضل وقت لمشاهدة قوافل السفن', prompt: 'إيه أفضل توقيت لمشاهدة السفن بتعبر قناة السويس من الكافيه؟' });
+    chips.push({ label: '🏛️ معالم تاريخية قريبة من الكافيه', prompt: 'إيه أهم المعالم التاريخية القريبة أقدر أزورها بعد الكافيه؟' });
+    chips.push({ label: '💰 خططلي يوم كامل بميزانية 250 جنيه', prompt: 'خططلي خروجة بميزانية 250 جنيه' });
+  } else if (lower.includes('قريب مني') || lower.includes('موقعي')) {
+    chips.push({ label: '🧭 رتب لي الأماكن دي في خروجة', prompt: 'رتب لي الأماكن المقترحة دي في خطة خروجة سريعة' });
+    chips.push({ label: '🍽️ مطاعم قريبة لموقعي', prompt: 'إيه أقرب مطاعم سمك أو أكلات سريعة لموقعي الحالي؟' });
+    chips.push({ label: '🚌 أروح إزاي بالمواصلات؟', prompt: 'إيه أسهل خط مواصلات يوصلني لمنطقة القناة؟' });
+  } else {
+    chips.push({ label: '☕ كافيهات هادية قريبة من البحر', prompt: 'هاتلي كافيهات هادية قريبة من البحر' });
+    chips.push({ label: '💰 خططلي خروجة بميزانية 300 جنيه', prompt: 'خططلي خروجة بميزانية 300 جنيه' });
+    chips.push({ label: '📍 أماكن حلوة قريبة مني', prompt: 'عايز أماكن حلوة قريبة مني' });
+  }
+
+  return chips.slice(0, 3);
+}
 
 /**
  * دالة تنسيق وترتيب نصوص الإجابات وتحويل الماركداون لواجهة بصرية منظمة
@@ -265,7 +303,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
   const [activeSuggestedPlaces, setActiveSuggestedPlaces] = useState<SuggestedMapPlace[]>([]);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // تحميل الإعدادات والرحلات المحفوظة وسجل الشات
   useEffect(() => {
@@ -336,6 +374,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               },
               plan: decoded,
               showInlineMap: true,
+              followUpChips: generateFollowUpChips(decoded.title, true),
             },
           ]);
         }
@@ -544,6 +583,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               },
               plan: data.plan,
               showInlineMap: true,
+              followUpChips: generateFollowUpChips(textToSend, true),
             },
           ]);
         } else {
@@ -595,6 +635,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               },
               plan: data.plan,
               showInlineMap: true,
+              followUpChips: generateFollowUpChips(textToSend, true),
             },
           ]);
         } else {
@@ -637,6 +678,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
               suggestedPlaces: suggestedList,
               showInlineMap: shouldShowMap,
+              followUpChips: generateFollowUpChips(textToSend, false, suggestedList),
             },
           ]);
         } else {
@@ -649,8 +691,13 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
         {
           id: 'err-' + Date.now(),
           role: 'bot',
-          text: `عذراً يا غالي، حدث خطأ بسيط: ${err.message || 'يرجى المحاولة مرة أخرى'}. جرب تسألني بصيغة مختلفة وسأكون معك فوراً!`,
+          text: `عذراً يا غالي، حدث تأخير بسيط في الاتصال. جرب تسألني بصيغة ثانية وسأجاوبك فوراً!`,
           timestamp: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+          followUpChips: [
+            { label: '🐟 أفضل مطاعم سمك في بورسعيد', prompt: 'عايز ترشيحات لأحسن مطاعم سمك في بورسعيد' },
+            { label: '☕ كافيهات هادية قريبة من البحر', prompt: 'هاتلي كافيهات هادية قريبة من البحر' },
+            { label: '🧭 خططلي خروجة بميزانية 300 جنيه', prompt: 'خططلي خروجة بميزانية 300 جنيه' },
+          ],
         },
       ]);
     } finally {
@@ -719,22 +766,22 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto w-full min-h-[82vh] flex flex-col justify-between relative pb-6" dir="rtl">
-      {/* 1. Header Bar: Title, Model Badge, Clear & Settings */}
-      <div className="p-3 sm:p-4 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-xs flex items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-blue-600 via-teal2-600 to-indigo-600 text-white grid place-items-center shrink-0 shadow-xs">
-            <Sparkles className="w-5 h-5" />
+    <div className="h-full flex flex-col justify-between overflow-hidden relative max-w-4xl mx-auto w-full" dir="rtl">
+      {/* 1. Header Bar: Compact, Stable, Fixed Top */}
+      <div className="p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-2xs flex items-center justify-between gap-2.5 mb-2 shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 via-teal2-600 to-indigo-600 text-white grid place-items-center shrink-0 shadow-xs">
+            <Sparkles className="w-4 h-4" />
           </div>
 
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="font-black text-sm sm:text-base text-ocean-950 dark:text-white truncate">
+            <div className="flex items-center gap-1.5">
+              <h1 className="font-black text-xs sm:text-sm text-ocean-950 dark:text-white truncate">
                 مساعد بورسعيد ومخطط الرحلات الذكي
               </h1>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" title="جاهز للمساعدة" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" title="جاهز للخدمة" />
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">
               {userLocation?.district ? `📍 موقعك: ${userLocation.district}` : 'استكشف بورسعيد، خطط الخروجات، واسأل عن أي مكان'}
             </p>
           </div>
@@ -746,12 +793,12 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
           <button
             type="button"
             onClick={() => setShowSettingsModal(true)}
-            className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-[#152332] text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-200 dark:hover:bg-[#1d2d3e] transition flex items-center gap-1 border border-slate-200 dark:border-[#22354a]"
+            className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#152332] text-slate-700 dark:text-slate-200 text-[11px] font-bold hover:bg-slate-200 dark:hover:bg-[#1d2d3e] transition flex items-center gap-1 border border-slate-200 dark:border-[#22354a]"
             title="تغيير الموديل أو إضافة مفتاح"
           >
-            <Settings className="w-3.5 h-3.5 text-blue-600" />
+            <Settings className="w-3 h-3 text-blue-600" />
             <span className="hidden sm:inline">الموديل:</span>
-            <span className="text-[11px] font-black text-blue-600 dark:text-blue-400">
+            <span className="text-[10px] font-black text-blue-600 dark:text-blue-400">
               {selectedModel.includes('gpt-4.1') ? 'GPT-4.1' : selectedModel.split('/')[1] || selectedModel}
             </span>
           </button>
@@ -761,10 +808,10 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
             <button
               type="button"
               onClick={() => setShowSavedModal(true)}
-              className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300/40 transition hover:bg-amber-100"
+              className="p-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300/40 transition hover:bg-amber-100"
               title="الرحلات المحفوظة"
             >
-              <Bookmark className="w-4 h-4 fill-current" />
+              <Bookmark className="w-3.5 h-3.5 fill-current" />
             </button>
           )}
 
@@ -773,50 +820,50 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
             <button
               type="button"
               onClick={handleClearChat}
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white transition hover:bg-slate-100 dark:hover:bg-[#121f2f]"
+              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white transition hover:bg-slate-100 dark:hover:bg-[#121f2f]"
               title="محادثة جديدة"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
       </div>
 
-      {/* 2. Messages Container (Full Width Stream) */}
-      <div className="flex-1 space-y-4 px-1 pb-4">
+      {/* 2. Messages Container (Smoothly Scrollable Full-Screen Canvas) */}
+      <div className="flex-1 overflow-y-auto px-1 sm:px-2 space-y-4 scroll-smooth pb-2">
         {messages.length === 0 ? (
           /* Welcome State (ChatGPT style simplicity) */
-          <div className="py-8 sm:py-12 text-center space-y-6">
-            <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-blue-600 via-teal2-600 to-indigo-600 text-white grid place-items-center mx-auto shadow-lg shadow-blue-600/20">
-              <Compass className="w-8 h-8" />
+          <div className="py-6 sm:py-10 text-center space-y-5">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 via-teal2-600 to-indigo-600 text-white grid place-items-center mx-auto shadow-lg shadow-blue-600/20">
+              <Compass className="w-7 h-7" />
             </div>
 
             <div className="space-y-1.5 max-w-md mx-auto">
-              <h2 className="text-xl sm:text-2xl font-black text-ocean-950 dark:text-white">
+              <h2 className="text-lg sm:text-xl font-black text-ocean-950 dark:text-white">
                 عايز تكتشف إيه في بورسعيد اليوم؟
               </h2>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
                 اسألني عن أحسن أماكن الخروج، مطاعم الأسماك، كافيهات البحر، أو اطلب تخطيط خروجة كاملة بميزانيتك ووقتك.
               </p>
             </div>
 
             {/* Quick Suggestions Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl mx-auto text-right pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-xl mx-auto text-right pt-1">
               {WELCOME_SUGGESTIONS.map((item, idx) => (
                 <button
                   key={idx}
                   type="button"
                   onClick={() => handleProcessUserMessage(item.prompt)}
-                  className="p-3.5 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] hover:border-blue-500 hover:shadow-sm transition text-right group flex items-start gap-3"
+                  className="p-3 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] hover:border-blue-500 hover:shadow-xs transition text-right group flex items-start gap-2.5"
                 >
-                  <span className="text-2xl shrink-0 p-1.5 rounded-xl bg-slate-50 dark:bg-[#121f2f]">
+                  <span className="text-xl shrink-0 p-1.5 rounded-xl bg-slate-50 dark:bg-[#121f2f]">
                     {item.icon}
                   </span>
                   <div className="min-w-0">
-                    <p className="font-black text-xs sm:text-sm text-ocean-950 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">
+                    <p className="font-black text-xs text-ocean-950 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">
                       {item.title}
                     </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium line-clamp-1">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium line-clamp-1">
                       {item.desc}
                     </p>
                   </div>
@@ -836,140 +883,166 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
               >
                 {/* Avatar */}
                 {isBot ? (
-                  <div className="w-8 h-8 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white grid place-items-center shrink-0 mt-0.5 shadow-xs text-xs font-black">
-                    <Sparkles className="w-4 h-4" />
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white grid place-items-center shrink-0 mt-0.5 shadow-xs text-xs font-black">
+                    <Sparkles className="w-3.5 h-3.5" />
                   </div>
                 ) : (
-                  <div className="w-8 h-8 rounded-2xl bg-ocean-900 text-white grid place-items-center shrink-0 mt-0.5 shadow-xs text-xs font-black">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-2xl bg-ocean-900 text-white grid place-items-center shrink-0 mt-0.5 shadow-xs text-xs font-black">
                     {user?.name?.[0] || 'أنت'}
                   </div>
                 )}
 
-                {/* Message Bubble */}
-                <div
-                  className={`p-4 sm:p-5 rounded-3xl text-xs sm:text-sm leading-relaxed max-w-[92%] shadow-xs ${
-                    isBot
-                      ? 'bg-white dark:bg-[#0c1622] text-ocean-950 dark:text-white rounded-tr-xs border border-slate-200 dark:border-[#1d2d3e]'
-                      : 'bg-ocean-900 text-white rounded-tl-xs'
-                  }`}
-                >
-                  {/* Formatted Markdown Content */}
-                  {isBot ? (
-                    renderFormattedMessage(m.text)
-                  ) : (
-                    <div className="whitespace-pre-line font-medium leading-relaxed">{m.text}</div>
-                  )}
+                {/* Message Bubble Container */}
+                <div className="max-w-[94%] sm:max-w-[88%] space-y-2">
+                  <div
+                    className={`p-3.5 sm:p-4 rounded-3xl text-xs sm:text-sm leading-relaxed shadow-xs ${
+                      isBot
+                        ? 'bg-white dark:bg-[#0c1622] text-ocean-950 dark:text-white rounded-tr-xs border border-slate-200 dark:border-[#1d2d3e]'
+                        : 'bg-ocean-900 text-white rounded-tl-xs'
+                    }`}
+                  >
+                    {/* Formatted Markdown Content */}
+                    {isBot ? (
+                      renderFormattedMessage(m.text)
+                    ) : (
+                      <div className="whitespace-pre-line font-medium leading-relaxed">{m.text}</div>
+                    )}
 
-                  {/* Contextual Inline Map inside Bot Message */}
-                  {isBot && m.showInlineMap && (
-                    <div className="mt-4 rounded-2xl border border-slate-200 dark:border-[#1d2d3e] bg-slate-50 dark:bg-[#121f2f] overflow-hidden shadow-xs">
-                      {/* Map Header Bar */}
-                      <div className="p-2.5 px-3 bg-white dark:bg-[#0c1622] border-b border-slate-200 dark:border-[#1d2d3e] flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <MapIcon className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                          <span className="font-black text-xs text-ocean-950 dark:text-white truncate">
-                            {m.isPlanUpdate && m.planSummary
-                              ? `مسار الخروجة: ${m.planSummary.title} (${m.planSummary.stopsCount} محطات)`
-                              : `خريطة الأماكن المحددة (${(m.suggestedPlaces || []).length} مواقع)`}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setFullScreenMapData({
-                                plan: m.plan || currentPlan,
-                                suggestedPlaces: m.suggestedPlaces || activeSuggestedPlaces,
-                                title: m.planSummary?.title || 'خريطة بورسعيد التفاعلية',
-                              });
-                              setShowFullScreenMap(true);
-                            }}
-                            className="px-2.5 py-1 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-black transition flex items-center gap-1 shadow-2xs"
-                            title="عرض الخريطة بالكامل في شاشة مستقلة"
-                          >
-                            <Maximize2 className="w-3 h-3" />
-                            <span>عرض بالكامل ⤢</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => toggleInlineMapCollapse(m.id)}
-                            className="p-1 rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition"
-                            title={m.isInlineMapCollapsed ? 'إظهار الخريطة' : 'إخفاء الخريطة'}
-                          >
-                            {m.isInlineMapCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Map Viewport */}
-                      {!m.isInlineMapCollapsed && (
-                        <div className="p-2 space-y-2">
-                          <div className="h-60 sm:h-72 rounded-xl overflow-hidden relative border border-slate-200 dark:border-[#1d2d3e]">
-                            <PlannerMap
-                              plan={m.plan || (m.isPlanUpdate ? currentPlan : null)}
-                              suggestedPlaces={m.suggestedPlaces || activeSuggestedPlaces}
-                              userLocation={userLocation}
-                              activeStopIndex={activeStopIndex}
-                              onSelectStop={(idx) => setActiveStopIndex(idx)}
-                              onViewPlaceDetails={onViewPlaceDetails}
-                            />
+                    {/* Contextual Inline Map inside Bot Message */}
+                    {isBot && m.showInlineMap && (
+                      <div className="mt-3.5 rounded-2xl border border-slate-200 dark:border-[#1d2d3e] bg-slate-50 dark:bg-[#121f2f] overflow-hidden shadow-2xs">
+                        {/* Map Header Bar */}
+                        <div className="p-2.5 px-3 bg-white dark:bg-[#0c1622] border-b border-slate-200 dark:border-[#1d2d3e] flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <MapIcon className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                            <span className="font-black text-xs text-ocean-950 dark:text-white truncate">
+                              {m.isPlanUpdate && m.planSummary
+                                ? `مسار الخروجة: ${m.planSummary.title} (${m.planSummary.stopsCount} محطات)`
+                                : `خريطة الأماكن المحددة (${(m.suggestedPlaces || []).length} مواقع)`}
+                            </span>
                           </div>
 
-                          {/* Place Tags below Map */}
-                          {m.suggestedPlaces && m.suggestedPlaces.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 pt-1">
-                              {m.suggestedPlaces.map((pl) => (
-                                <button
-                                  key={pl.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setFullScreenMapData({
-                                      plan: null,
-                                      suggestedPlaces: [pl],
-                                      title: pl.n,
-                                    });
-                                    setShowFullScreenMap(true);
-                                  }}
-                                  className="px-2 py-0.5 rounded-lg bg-white dark:bg-[#0c1622] text-[10px] font-bold text-ocean-950 dark:text-white border border-slate-200 dark:border-[#22354a] flex items-center gap-1 hover:border-blue-400 transition"
-                                >
-                                  <MapPin className="w-2.5 h-2.5 text-rose-500" />
-                                  <span>{pl.n}</span>
-                                </button>
-                              ))}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFullScreenMapData({
+                                  plan: m.plan || currentPlan,
+                                  suggestedPlaces: m.suggestedPlaces || activeSuggestedPlaces,
+                                  title: m.planSummary?.title || 'خريطة بورسعيد التفاعلية',
+                                });
+                                setShowFullScreenMap(true);
+                              }}
+                              className="px-2.5 py-1 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-[11px] font-black transition flex items-center gap-1 shadow-2xs"
+                              title="عرض الخريطة بالكامل في شاشة مستقلة"
+                            >
+                              <Maximize2 className="w-3 h-3" />
+                              <span>عرض بالكامل ⤢</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => toggleInlineMapCollapse(m.id)}
+                              className="p-1 rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition"
+                              title={m.isInlineMapCollapsed ? 'إظهار الخريطة' : 'إخفاء الخريطة'}
+                            >
+                              {m.isInlineMapCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Map Viewport */}
+                        {!m.isInlineMapCollapsed && (
+                          <div className="p-2 space-y-2">
+                            <div className="h-56 sm:h-64 rounded-xl overflow-hidden relative border border-slate-200 dark:border-[#1d2d3e]">
+                              <PlannerMap
+                                plan={m.plan || (m.isPlanUpdate ? currentPlan : null)}
+                                suggestedPlaces={m.suggestedPlaces || activeSuggestedPlaces}
+                                userLocation={userLocation}
+                                activeStopIndex={activeStopIndex}
+                                onSelectStop={(idx) => setActiveStopIndex(idx)}
+                                onViewPlaceDetails={onViewPlaceDetails}
+                              />
                             </div>
-                          )}
+
+                            {/* Place Tags below Map with Visit Points */}
+                            {m.suggestedPlaces && m.suggestedPlaces.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                {m.suggestedPlaces.map((pl) => (
+                                  <button
+                                    key={pl.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setFullScreenMapData({
+                                        plan: null,
+                                        suggestedPlaces: [pl],
+                                        title: pl.n,
+                                      });
+                                      setShowFullScreenMap(true);
+                                    }}
+                                    className="px-2 py-1 rounded-xl bg-white dark:bg-[#0c1622] text-[10px] font-bold text-ocean-950 dark:text-white border border-slate-200 dark:border-[#22354a] flex items-center gap-1 hover:border-blue-400 transition shadow-2xs"
+                                  >
+                                    <MapPin className="w-2.5 h-2.5 text-rose-500" />
+                                    <span>{pl.n}</span>
+                                    {pl.disc ? (
+                                      <span className="text-[9px] px-1 rounded bg-teal2-100 dark:bg-teal2-900/60 text-teal2-700 dark:text-teal2-300 font-black">
+                                        خصم {pl.disc}%
+                                      </span>
+                                    ) : null}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Bubble Footer: Timestamp & Copy Button */}
+                    <div className="flex items-center justify-between gap-2 mt-2.5 pt-1.5 border-t border-black/5 dark:border-white/5 text-[10px] opacity-70">
+                      <span dir="ltr">{m.timestamp}</span>
+
+                      {isBot && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleCopyMessage(m.id, m.text)}
+                            className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition flex items-center gap-1 text-[10px]"
+                            title="نسخ الإجابة"
+                          >
+                            {copiedMsgId === m.id ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-500" />
+                                <span className="text-emerald-600 dark:text-emerald-400">تم النسخ</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span>نسخ</span>
+                              </>
+                            )}
+                          </button>
                         </div>
                       )}
                     </div>
-                  )}
-
-                  {/* Bubble Footer: Timestamp & Copy Button */}
-                  <div className="flex items-center justify-between gap-2 mt-3 pt-1.5 border-t border-black/5 dark:border-white/5 text-[10px] opacity-70">
-                    <span dir="ltr">{m.timestamp}</span>
-
-                    {isBot && (
-                      <button
-                        type="button"
-                        onClick={() => handleCopyMessage(m.id, m.text)}
-                        className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition flex items-center gap-1 text-[10px]"
-                        title="نسخ الإجابة"
-                      >
-                        {copiedMsgId === m.id ? (
-                          <>
-                            <Check className="w-3 h-3 text-emerald-500" />
-                            <span className="text-emerald-600 dark:text-emerald-400">تم النسخ</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3 h-3" />
-                            <span>نسخ</span>
-                          </>
-                        )}
-                      </button>
-                    )}
                   </div>
+
+                  {/* Contextual Smart Follow-up Suggestion Chips */}
+                  {isBot && m.followUpChips && m.followUpChips.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {m.followUpChips.map((chip, cIdx) => (
+                        <button
+                          key={cIdx}
+                          type="button"
+                          onClick={() => handleProcessUserMessage(chip.prompt)}
+                          className="px-2.5 py-1 rounded-xl bg-white dark:bg-[#0c1622] hover:bg-blue-50 dark:hover:bg-blue-950/40 text-[11px] font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[#1d2d3e] hover:border-blue-400 transition flex items-center gap-1 shadow-2xs group"
+                        >
+                          <span className="group-hover:text-blue-600 dark:group-hover:text-blue-400">{chip.label}</span>
+                          <ArrowRight className="w-3 h-3 text-slate-400 group-hover:text-blue-600 transition -rotate-180" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -978,22 +1051,22 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
 
         {/* Loading Indicator */}
         {loading && (
-          <div className="flex items-center gap-2 p-3 px-4 rounded-2xl bg-white dark:bg-[#0c1622] text-slate-700 dark:text-slate-300 text-xs font-bold w-fit border border-slate-200 dark:border-[#1d2d3e] shadow-xs">
-            <Sparkles className="w-4 h-4 text-blue-600 animate-spin" />
+          <div className="flex items-center gap-2 p-2.5 px-3.5 rounded-2xl bg-white dark:bg-[#0c1622] text-slate-700 dark:text-slate-300 text-xs font-bold w-fit border border-slate-200 dark:border-[#1d2d3e] shadow-xs">
+            <Sparkles className="w-3.5 h-3.5 text-blue-600 animate-spin" />
             <span>مساعد بورسعيد يكتب الرد ويرتب التفاصيل...</span>
           </div>
         )}
         <div ref={chatEndRef} />
       </div>
 
-      {/* 3. Fixed Bottom Input Bar (ChatGPT Simplicity) */}
-      <div className="sticky bottom-2 z-20 pt-2">
+      {/* 3. Fixed Bottom Input Bar (Clean, Stable, Anchored) */}
+      <div className="shrink-0 pt-2 pb-1 bg-sand-50 dark:bg-[#071322]">
         <form
           onSubmit={(e) => {
             e.preventDefault();
             handleProcessUserMessage();
           }}
-          className="relative flex items-center gap-2 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] p-2 shadow-lg focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-600/15 transition"
+          className="relative flex items-center gap-2 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] p-1.5 shadow-md focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-600/15 transition"
         >
           {/* GPS Geolocation Button */}
           <button
@@ -1001,7 +1074,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
             onClick={() => handleLocateUser()}
             disabled={locatingUser}
             title={userLocation ? `موقعي محدد في ${userLocation.district || 'بورسعيد'}` : 'تحديد موقعي الحالي بالـ GPS'}
-            className={`p-2.5 rounded-2xl transition shrink-0 ${
+            className={`p-2 rounded-xl transition shrink-0 ${
               userLocation
                 ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
                 : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -1012,6 +1085,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
 
           {/* Input Text Field */}
           <input
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -1027,7 +1101,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
           <button
             type="submit"
             disabled={!input.trim() || loading}
-            className="p-2.5 rounded-2xl bg-blue-600 text-white disabled:opacity-30 hover:bg-blue-500 transition shrink-0 shadow-xs"
+            className="p-2 rounded-xl bg-blue-600 text-white disabled:opacity-30 hover:bg-blue-500 transition shrink-0 shadow-xs"
             title="إرسال"
           >
             <Send className="w-4 h-4" />
@@ -1035,7 +1109,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
         </form>
 
         {locationNotice && (
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 px-3 font-medium text-center">
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 px-2 font-medium text-center">
             {locationNotice}
           </p>
         )}
