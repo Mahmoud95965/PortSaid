@@ -4,7 +4,7 @@ import React from 'react';
 import { motion, Variants } from 'framer-motion';
 import { Place } from '@/types';
 import { CATS } from '@/lib/constants';
-import { ArrowRight, MapPin, Sparkles, Tag } from 'lucide-react';
+import { ArrowRight, MapPin, Sparkles, Tag, ChevronDown } from 'lucide-react';
 import { SightsView } from '@/components/SightsView';
 import { RestaurantsView } from '@/components/RestaurantsView';
 
@@ -75,6 +75,11 @@ export const PlaceList: React.FC<PlaceListProps> = ({
 
   const cat = CATS[categoryKey] || { t: 'الأماكن', border: '#1559b7', bgSoft: '#1559b71a' };
   const filtered = places.filter((p) => p.cat === categoryKey);
+  const [visibleCount, setVisibleCount] = React.useState(12);
+
+  React.useEffect(() => {
+    setVisibleCount(12);
+  }, [categoryKey]);
 
   return (
     <motion.div
@@ -132,7 +137,7 @@ export const PlaceList: React.FC<PlaceListProps> = ({
         animate="visible"
       >
         {filtered.length > 0 ? (
-          filtered.map((p) => (
+          filtered.slice(0, visibleCount).map((p) => (
             <motion.button
               key={p.id}
               onClick={() => onSelectPlace(p.id)}
@@ -206,6 +211,23 @@ export const PlaceList: React.FC<PlaceListProps> = ({
           </motion.div>
         )}
       </motion.div>
+
+      {/* زر عرض المزيد من الأماكن */}
+      {filtered.length > visibleCount && (
+        <div className="mt-8 flex flex-col items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => setVisibleCount((prev) => prev + 12)}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white dark:bg-[#0f1a28] border border-sand-200/80 dark:border-[#1d2d3e] text-ocean-900 dark:text-white font-bold text-sm shadow-xs hover:border-teal2-500 hover:text-teal2-600 dark:hover:text-teal2-400 hover:shadow-md transition cursor-pointer"
+          >
+            <span>عرض المزيد من الأماكن</span>
+            <ChevronDown className="w-4 h-4 text-teal2-500" />
+          </button>
+          <span className="text-xs text-ocean-700/60 dark:text-white/50">
+            يتم عرض {Math.min(visibleCount, filtered.length)} من إجمالي {filtered.length} مكان
+          </span>
+        </div>
+      )}
     </motion.div>
   );
 };

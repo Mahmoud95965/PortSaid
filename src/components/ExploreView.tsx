@@ -16,6 +16,7 @@ import {
   Star,
   ExternalLink,
   ChevronLeft,
+  ChevronDown,
   Navigation,
   SlidersHorizontal,
 } from 'lucide-react';
@@ -107,6 +108,12 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [visibleCount, setVisibleCount] = useState(9);
+
+  // إعادة ضبط عدد الأماكن المعروضة عند تغيير الفلاتر أو البحث
+  React.useEffect(() => {
+    setVisibleCount(9);
+  }, [searchQuery, selectedCategory]);
 
   // معالجة البحث والتصنيف بناءً على البيانات الحقيقية
   const filteredPlaces = useMemo(() => {
@@ -314,17 +321,18 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
 
         {/* Grid الأماكن */}
         {filteredPlaces.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-            {filteredPlaces.map((place) => {
-              const photo = getPlacePhoto(place);
-              const catObj = CATS[place.cat] || { t: 'معلم', border: '#0284c7' };
+          <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+              {filteredPlaces.slice(0, visibleCount).map((place) => {
+                const photo = getPlacePhoto(place);
+                const catObj = CATS[place.cat] || { t: 'معلم', border: '#0284c7' };
 
-              return (
-                <div
-                  key={place.id}
-                  onClick={() => handleOpenPlace(place.id)}
-                  className="group bg-white dark:bg-[#0c1622] rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-[#1d2d3e] overflow-hidden shadow-xs hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500/50 transition-all duration-200 cursor-pointer flex flex-col justify-between text-right"
-                >
+                return (
+                  <div
+                    key={place.id}
+                    onClick={() => handleOpenPlace(place.id)}
+                    className="group bg-white dark:bg-[#0c1622] rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-[#1d2d3e] overflow-hidden shadow-xs hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500/50 transition-all duration-200 cursor-pointer flex flex-col justify-between text-right"
+                  >
                   {/* صورة حقيقية من معالم بورسعيد */}
                   <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100 dark:bg-slate-900">
                     <img
@@ -399,6 +407,24 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
               );
             })}
           </div>
+
+          {/* زر عرض المزيد من الأماكن */}
+          {filteredPlaces.length > visibleCount && (
+            <div className="mt-8 flex flex-col items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setVisibleCount((prev) => prev + 9)}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] text-slate-800 dark:text-white font-bold text-sm shadow-xs hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 hover:shadow-md transition-all duration-200 cursor-pointer"
+              >
+                <span>عرض المزيد من الأماكن</span>
+                <ChevronDown className="w-4 h-4 text-blue-500" />
+              </button>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                يتم عرض {Math.min(visibleCount, filteredPlaces.length)} من إجمالي {filteredPlaces.length} مكان
+              </span>
+            </div>
+          )}
+        </div>
         ) : (
           /* حالة عدم وجود نتائج للبحث */
           <div className="p-8 sm:p-12 text-center rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] space-y-3">

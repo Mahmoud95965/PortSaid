@@ -16,6 +16,7 @@ import {
   Clock,
   Heart,
   ChevronLeft,
+  ChevronDown,
   Tag,
   DollarSign,
   QrCode,
@@ -89,6 +90,12 @@ export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
   const [sortBy, setSortBy] = useState<'default' | 'discount' | 'points' | 'cost_asc'>('default');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(9);
+
+  // إعادة ضبط عدد العناصر المعروضة عند تغيير الفلاتر أو البحث
+  useEffect(() => {
+    setVisibleCount(9);
+  }, [searchQuery, selectedCategory, selectedArea, sortBy]);
 
   // تحميل ومزامنة المفضلة من التخزين المحلي والسحابي
   useEffect(() => {
@@ -416,18 +423,19 @@ export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
 
         {/* Places Grid */}
         {filteredRestaurants.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-            {filteredRestaurants.map((place) => {
-              const photo = getRestaurantPhoto(place);
-              const meta = PLACES_METADATA[place.id];
-              const isFav = favorites.includes(place.id);
+          <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+              {filteredRestaurants.slice(0, visibleCount).map((place) => {
+                const photo = getRestaurantPhoto(place);
+                const meta = PLACES_METADATA[place.id];
+                const isFav = favorites.includes(place.id);
 
-              return (
-                <div
-                  key={place.id}
-                  onClick={() => handleOpenPlace(place.id)}
-                  className="group bg-white dark:bg-[#0c1622] rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-[#1d2d3e] overflow-hidden shadow-xs hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500/50 transition-all duration-200 cursor-pointer flex flex-col justify-between text-right"
-                >
+                return (
+                  <div
+                    key={place.id}
+                    onClick={() => handleOpenPlace(place.id)}
+                    className="group bg-white dark:bg-[#0c1622] rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-[#1d2d3e] overflow-hidden shadow-xs hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500/50 transition-all duration-200 cursor-pointer flex flex-col justify-between text-right"
+                  >
                   {/* Photo Container */}
                   <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100 dark:bg-slate-900">
                     <img
@@ -576,6 +584,24 @@ export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
               );
             })}
           </div>
+
+          {/* زر عرض المزيد من المطاعم */}
+          {filteredRestaurants.length > visibleCount && (
+            <div className="mt-8 flex flex-col items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setVisibleCount((prev) => prev + 9)}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] text-slate-800 dark:text-white font-bold text-sm shadow-xs hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 hover:shadow-md transition-all duration-200 cursor-pointer"
+              >
+                <span>عرض المزيد من المطاعم</span>
+                <ChevronDown className="w-4 h-4 text-blue-500" />
+              </button>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                يتم عرض {Math.min(visibleCount, filteredRestaurants.length)} من إجمالي {filteredRestaurants.length} مطعماً
+              </span>
+            </div>
+          )}
+        </div>
         ) : (
           /* Empty Search State */
           <div className="p-8 sm:p-12 text-center rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] space-y-3">

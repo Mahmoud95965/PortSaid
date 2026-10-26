@@ -613,6 +613,15 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
           text: m.text,
         }));
 
+        let localFavs: string[] = [];
+        try {
+          const stored = localStorage.getItem('portsaid_favorite_places');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) localFavs = parsed;
+          }
+        } catch {}
+
         const res = await fetch('/api/assistant', {
           method: 'POST',
           headers: getAiHeaders(),
@@ -620,6 +629,7 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
             message: textToSend,
             history: historyTurns,
             userLocation: currentLoc ? { lat: currentLoc.lat, lng: currentLoc.lng } : null,
+            localFavorites: localFavs,
           }),
         });
 
