@@ -183,6 +183,10 @@ export default function HomePage() {
       setCurrentView('list');
       return;
     }
+    if (view === 'transport' || view === 'transit' || view === 'bus') {
+      setCurrentView('bus');
+      return;
+    }
     if (view === 'list' && arg) {
       setSelectedCategory(arg);
       setCurrentView('list');
@@ -509,9 +513,13 @@ export default function HomePage() {
             </motion.div>
           )}
 
-          {currentView === 'bus' && (
+          {(currentView === 'bus' || currentView === 'transport' || currentView === 'transit') && (
             <motion.div key="bus-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
-              <TransportView onBack={() => handleNavigate('home')} />
+              <TransportView
+                places={places}
+                onNavigate={handleNavigate}
+                onBack={() => handleNavigate('home')}
+              />
             </motion.div>
           )}
 

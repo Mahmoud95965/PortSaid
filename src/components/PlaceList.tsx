@@ -10,6 +10,7 @@ import { RestaurantsView } from '@/components/RestaurantsView';
 import { CafesView } from '@/components/CafesView';
 import { SweetsView } from '@/components/SweetsView';
 import { ShoppingView } from '@/components/ShoppingView';
+import { TransportView } from '@/components/TransportView';
 
 interface PlaceListProps {
   categoryKey: string;
@@ -108,6 +109,16 @@ export const PlaceList: React.FC<PlaceListProps> = ({
         onNavigate={onNavigate}
         onBack={onBack}
         onRequestCoupon={onRequestCoupon}
+      />
+    );
+  }
+
+  if (categoryKey === 'bus' || categoryKey === 'transport' || categoryKey === 'transit') {
+    return (
+      <TransportView
+        places={places}
+        onNavigate={onNavigate}
+        onBack={onBack}
       />
     );
   }
