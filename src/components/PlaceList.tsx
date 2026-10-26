@@ -7,6 +7,7 @@ import { CATS } from '@/lib/constants';
 import { ArrowRight, MapPin, Sparkles, Tag, ChevronDown } from 'lucide-react';
 import { SightsView } from '@/components/SightsView';
 import { RestaurantsView } from '@/components/RestaurantsView';
+import { CafesView } from '@/components/CafesView';
 
 interface PlaceListProps {
   categoryKey: string;
@@ -64,6 +65,18 @@ export const PlaceList: React.FC<PlaceListProps> = ({
   if (categoryKey === 'food') {
     return (
       <RestaurantsView
+        places={places}
+        onSelectPlace={onSelectPlace}
+        onNavigate={onNavigate}
+        onBack={onBack}
+        onRequestCoupon={onRequestCoupon}
+      />
+    );
+  }
+
+  if (categoryKey === 'cafe') {
+    return (
+      <CafesView
         places={places}
         onSelectPlace={onSelectPlace}
         onNavigate={onNavigate}
