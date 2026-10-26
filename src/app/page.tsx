@@ -15,6 +15,7 @@ import { PlaceList } from '@/components/PlaceList';
 import { PlaceDetail } from '@/components/PlaceDetail';
 import { TransportView } from '@/components/TransportView';
 import { HousingView } from '@/components/HousingView';
+import { SportsView } from '@/components/SportsView';
 import { ExploreView } from '@/components/ExploreView';
 import { MapView } from '@/components/MapView';
 import { FeedbackView } from '@/components/FeedbackView';
@@ -190,6 +191,11 @@ export default function HomePage() {
     if (view === 'housing' || view === 'hotels' || view === 'stay') {
       setSelectedCategory('housing');
       setCurrentView('housing');
+      return;
+    }
+    if (view === 'sport' || view === 'sports') {
+      setSelectedCategory('sport');
+      setCurrentView('sport');
       return;
     }
     if (view === 'list' && arg) {
@@ -531,6 +537,18 @@ export default function HomePage() {
           {(currentView === 'housing' || currentView === 'hotels' || currentView === 'stay') && (
             <motion.div key="housing-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
               <HousingView
+                places={places}
+                onSelectPlace={(id) => handleNavigate('place', id)}
+                onNavigate={handleNavigate}
+                onBack={() => handleNavigate('home')}
+                onRequestCoupon={handleRequestCoupon}
+              />
+            </motion.div>
+          )}
+
+          {(currentView === 'sport' || currentView === 'sports') && (
+            <motion.div key="sport-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+              <SportsView
                 places={places}
                 onSelectPlace={(id) => handleNavigate('place', id)}
                 onNavigate={handleNavigate}
