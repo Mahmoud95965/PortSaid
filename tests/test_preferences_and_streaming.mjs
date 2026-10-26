@@ -53,7 +53,18 @@ assert(unifiedAiCode.includes('⚡ اضغط للتخطي'), 'UnifiedAiStudio mus
 
 console.log('✅ UnifiedAiStudio progressive typewriter checks passed.');
 
-// 4. Verify Live Dev Server
+// 4. Verify TOLZY Team Attribution
+const footerPath = path.resolve('src/components/Footer.tsx');
+const footerCode = fs.readFileSync(footerPath, 'utf8');
+assert(footerCode.includes('الموقع مصمم من قبل') && footerCode.includes('TOLZY Team'), 'Footer must credit TOLZY Team');
+
+const welcomeModalPath = path.resolve('src/components/WelcomeModal.tsx');
+const welcomeModalCode = fs.readFileSync(welcomeModalPath, 'utf8');
+assert(welcomeModalCode.includes('TOLZY Team'), 'WelcomeModal must credit TOLZY Team');
+
+console.log('✅ TOLZY Team branding and attribution checks passed.');
+
+// 5. Verify Live Dev Server
 const resHome = await fetch('http://localhost:3000/');
 assert.strictEqual(resHome.status, 200, 'Home page must return HTTP 200');
 

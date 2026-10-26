@@ -25,7 +25,7 @@ export const Footer: React.FC = () => {
             </span>
           </motion.div>
           <span className="hidden sm:inline text-sand-400">·</span>
-          <p className="flex items-center gap-1.5 font-semibold text-xs sm:text-sm">
+          <p className="flex items-center gap-1.5 font-semibold text-xs sm:text-sm flex-wrap justify-center sm:justify-start">
             <span>صُنع بـ</span>
             <motion.span
               animate={{ scale: [1, 1.25, 1] }}
@@ -33,7 +33,7 @@ export const Footer: React.FC = () => {
             >
               <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500 inline" />
             </motion.span>
-            <span>بواسطة فريق Alpha Team © 2026</span>
+            <span>الموقع مصمم من قبل <strong className="font-black text-ocean-900 dark:text-white">TOLZY Team</strong> © 2026</span>
           </p>
         </div>
 

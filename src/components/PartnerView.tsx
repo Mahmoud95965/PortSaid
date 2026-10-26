@@ -276,7 +276,7 @@ export const PartnerView: React.FC<PartnerViewProps> = ({ onBack }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1.5">عمولة فريق Alpha (ج/عميل)</label>
+                  <label className="block text-xs font-bold mb-1.5">عمولة فريق TOLZY (ج/عميل)</label>
                   <input
                     type="number"
                     min="0"
@@ -445,7 +445,7 @@ export const PartnerView: React.FC<PartnerViewProps> = ({ onBack }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1.5">العمولة لفريق Alpha (ج/عميل)</label>
+                  <label className="block text-xs font-bold mb-1.5">العمولة لفريق TOLZY (ج/عميل)</label>
                   <input
                     type="number"
                     min="0"
