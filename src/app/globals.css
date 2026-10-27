@@ -324,3 +324,45 @@ body {
   backface-visibility: hidden;
   will-change: transform;
 }
+
+/* ===================== LIGHT MODE CONTRAST & VISIBILITY ENHANCEMENTS ===================== */
+/* Ensures all secondary, placeholder, and muted texts are crystal clear in daylight mode */
+html:not(.dark) {
+  color: #0b2a5b;
+}
+
+html:not(.dark) input,
+html:not(.dark) select,
+html:not(.dark) textarea {
+  color: #07162b !important;
+}
+
+html:not(.dark) input::placeholder,
+html:not(.dark) textarea::placeholder {
+  color: #64748b !important; /* rich slate-500 instead of washed-out light gray */
+  opacity: 1;
+}
+
+html:not(.dark) .text-slate-400:not(svg),
+html:not(.dark) .text-gray-400:not(svg),
+html:not(.dark) .text-zinc-400:not(svg),
+html:not(.dark) .text-neutral-400:not(svg) {
+  color: #475569; /* slate-600 */
+}
+
+html:not(.dark) .text-slate-500:not(svg),
+html:not(.dark) .text-gray-500:not(svg),
+html:not(.dark) .text-zinc-500:not(svg),
+html:not(.dark) .text-neutral-500:not(svg) {
+  color: #334155; /* slate-700 */
+}
+
+html:not(.dark) .text-ocean-700\/40,
+html:not(.dark) .text-ocean-700\/50,
+html:not(.dark) .text-ocean-700\/60,
+html:not(.dark) .text-ocean-700\/70,
+html:not(.dark) .text-ocean-900\/60,
+html:not(.dark) .text-ocean-900\/70 {
+  color: #1e3a5f; /* deep readable navy */
+}
+

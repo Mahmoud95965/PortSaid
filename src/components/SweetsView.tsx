@@ -396,7 +396,7 @@ export const SweetsView: React.FC<SweetsViewProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
           {/* Areas Scrollable Pills */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none flex-1">
-            <span className="text-xs font-bold text-slate-500 shrink-0 ml-1">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0 ml-1">
               المنطقة:
             </span>
             <button

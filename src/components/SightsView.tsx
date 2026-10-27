@@ -334,8 +334,8 @@ export const SightsView: React.FC<SightsViewProps> = ({
           {/* Area Filter Select */}
           {availableAreas.length > 1 && (
             <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto text-xs">
-              <span className="text-slate-400 font-bold flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5" />
+              <span className="text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-blue-600" />
                 <span>المنطقة:</span>
               </span>
               <select

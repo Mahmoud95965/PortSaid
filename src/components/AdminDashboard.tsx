@@ -45,22 +45,13 @@ export const AdminDashboard: React.FC = () => {
   const [userStatusFilter, setUserStatusFilter] = useState('all');
   const [staffList, setStaffList] = useState([
     {
-      id: '00000000-0000-0000-0000-000000000001',
-      name: 'المالك الرئيسي',
-      email: 'admin@portsaidhub.com',
-      phone: '01000000001',
+      id: 'a9ed234a-7b67-4f19-b2f9-c6296d4c7c46',
+      name: 'محمود محمد موسى',
+      email: 'mahmoud.m.moussa5310@gmail.com',
+      phone: '01026795965',
       role: 'owner',
       status: 'active',
       perms: ['all'],
-    },
-    {
-      id: '00000000-0000-0000-0000-000000000003',
-      name: 'كريم محمود',
-      email: 'karim@portsaidhub.com',
-      phone: '01011223344',
-      role: 'admin',
-      status: 'active',
-      perms: ['users.view', 'places.view', 'places.edit', 'stats.view'],
     },
   ]);
 
@@ -318,8 +309,8 @@ export const AdminDashboard: React.FC = () => {
     );
   }
 
-  // 2. Strict Security Access Guard (Admin & Owner Only)
-  if (!user || (user.role !== 'admin' && user.role !== 'owner')) {
+  // 2. Strict Security Access Guard (Exclusively mahmoud.m.moussa5310@gmail.com)
+  if (!user || user.email !== 'mahmoud.m.moussa5310@gmail.com') {
     return (
       <div className="min-h-screen bg-sand-50 dark:bg-[#071322] flex items-center justify-center p-4" dir="rtl">
         <div className="max-w-md w-full bg-white dark:bg-[#0c1622] rounded-3xl p-6 sm:p-8 border border-red-200 dark:border-red-950/60 shadow-2xl text-center space-y-5">
@@ -336,7 +327,7 @@ export const AdminDashboard: React.FC = () => {
               غير مصرح بالدخول
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-              هذه الصفحة مخصصة فقط لمسؤولي وإدارة منصة <strong className="text-slate-900 dark:text-white">Port Said Hub</strong>. حسابك الحالي لا يمتلك الصلاحيات الإدارية اللازمة لتصفح هذه البيانات أو تعديلها.
+              هذه الصفحة مخصصة حصرياً للمسؤول المعتمد لمنصة <strong className="text-slate-900 dark:text-white">Port Said Hub</strong> (<span dir="ltr" className="font-mono text-teal2-600 dark:text-teal2-400">mahmoud.m.moussa5310@gmail.com</span>). حسابك الحالي لا يمتلك الصلاحيات الإدارية المطلوبة.
             </p>
           </div>
 
@@ -586,7 +577,7 @@ export const AdminDashboard: React.FC = () => {
                   placeholder="ابحث بالاسم أو البريد أو الهاتف..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
-                  className="w-full rounded-2xl border border-sand-200 dark:border-[#1d2d3e] bg-white dark:bg-[#0c1622] px-4 py-2.5 text-sm"
+                  className="w-full rounded-2xl border border-sand-200 dark:border-[#1d2d3e] bg-white dark:bg-[#0c1622] px-4 py-2.5 text-sm text-ocean-950 dark:text-white placeholder:text-slate-400 outline-none focus:border-teal2-500 font-medium"
                 />
               </div>
             </div>
@@ -594,7 +585,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="rounded-3xl bg-white dark:bg-[#0c1622] shadow overflow-hidden border border-sand-200/60 dark:border-[#1d2d3e]">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-right">
-                  <thead className="bg-sand-100 dark:bg-[#212d37] text-xs font-black">
+                  <thead className="bg-sand-100 dark:bg-[#212d37] text-xs font-black text-ocean-900 dark:text-white">
                     <tr>
                       <th className="p-4">الاسم</th>
                       <th className="p-4">الهاتف / البريد</th>
@@ -603,30 +594,30 @@ export const AdminDashboard: React.FC = () => {
                       <th className="p-4">الحالة</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-sand-200/60 dark:divide-[#2a2a2a]">
+                  <tbody className="divide-y divide-sand-200/60 dark:divide-[#2a2a2a] text-ocean-900 dark:text-white">
                     <tr>
-                      <td className="p-4 font-bold">المالك الرئيسي</td>
-                      <td className="p-4 text-xs">01000000001 · admin@portsaidhub.com</td>
+                      <td className="p-4 font-bold">محمود محمد موسى</td>
+                      <td className="p-4 text-xs font-mono">01026795965 · mahmoud.m.moussa5310@gmail.com</td>
                       <td className="p-4">
-                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-ocean-900 text-sand-400">مالك</span>
+                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-ocean-900 text-sand-400">مالك المنصة</span>
                       </td>
                       <td className="p-4 font-bold text-sand-500">500</td>
                       <td className="p-4 text-teal2-600 font-bold">نشط</td>
                     </tr>
                     <tr>
                       <td className="p-4 font-bold">كريم محمود</td>
-                      <td className="p-4 text-xs">01011223344 · karim@portsaidhub.com</td>
+                      <td className="p-4 text-xs font-mono">01011223344 · karim@portsaidhub.com</td>
                       <td className="p-4">
-                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-ocean-700 text-white">أدمن</span>
+                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-sand-200 dark:bg-[#2a2a2a] text-ocean-800 dark:text-slate-300">مستخدم</span>
                       </td>
                       <td className="p-4 font-bold text-sand-500">220</td>
                       <td className="p-4 text-teal2-600 font-bold">نشط</td>
                     </tr>
                     <tr>
                       <td className="p-4 font-bold">أحمد السيد</td>
-                      <td className="p-4 text-xs">01234567890 · ahmed@student.psu.edu.eg</td>
+                      <td className="p-4 text-xs font-mono">01234567890 · ahmed@student.psu.edu.eg</td>
                       <td className="p-4">
-                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-sand-200 dark:bg-[#2a2a2a]">مستخدم</span>
+                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-sand-200 dark:bg-[#2a2a2a] text-ocean-800 dark:text-slate-300">مستخدم</span>
                       </td>
                       <td className="p-4 font-bold text-sand-500">60</td>
                       <td className="p-4 text-teal2-600 font-bold">نشط</td>

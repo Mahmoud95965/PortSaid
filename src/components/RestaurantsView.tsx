@@ -362,7 +362,7 @@ export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
             {/* Area Filter */}
             {availableAreas.length > 1 && (
               <div className="flex items-center gap-1">
-                <span className="text-slate-400 font-bold hidden min-[400px]:inline">المنطقة:</span>
+                <span className="text-slate-700 dark:text-slate-300 font-bold hidden min-[400px]:inline">المنطقة:</span>
                 <select
                   value={selectedArea}
                   onChange={(e) => setSelectedArea(e.target.value)}
@@ -380,7 +380,7 @@ export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
 
             {/* Sort Dropdown */}
             <div className="flex items-center gap-1">
-              <span className="text-slate-400 font-bold hidden min-[400px]:inline">الترتيب:</span>
+              <span className="text-slate-700 dark:text-slate-300 font-bold hidden min-[400px]:inline">الترتيب:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}

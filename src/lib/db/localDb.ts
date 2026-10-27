@@ -233,6 +233,12 @@ export function getLocalDb(): DatabaseSync {
     seedBaselineUsers(db);
   }
 
+  // Strictly enforce that ONLY mahmoud.m.moussa5310@gmail.com holds owner/admin permissions
+  db.exec(`
+    UPDATE users SET role = 'owner', role_id = 1 WHERE email = 'mahmoud.m.moussa5310@gmail.com';
+    UPDATE users SET role = 'user', role_id = 4 WHERE email != 'mahmoud.m.moussa5310@gmail.com' AND role IN ('admin', 'owner');
+  `);
+
   // Clear baseline/hardcoded stories so stories are exclusively added by admin
   db.exec("DELETE FROM historical_stories WHERE id LIKE 'story-%';");
 
@@ -260,12 +266,12 @@ function seedBaselineUsers(db: DatabaseSync) {
 
   const now = new Date().toISOString();
 
-  // 1. Owner Admin
+  // 1. Owner Admin (Exclusively Mahmoud Moussa)
   insertUser.run(
-    '00000000-0000-0000-0000-000000000001',
-    'المالك الرئيسي',
-    'admin@portsaidhub.com',
-    '01000000001',
+    'a9ed234a-7b67-4f19-b2f9-c6296d4c7c46',
+    'محمود محمد موسى',
+    'mahmoud.m.moussa5310@gmail.com',
+    '01026795965',
     hashPasswordModern('Admin@123456'),
     'male',
     1,
@@ -279,7 +285,7 @@ function seedBaselineUsers(db: DatabaseSync) {
     now
   );
 
-  // 2. Karim Admin
+  // 2. Regular User Karim
   insertUser.run(
     '00000000-0000-0000-0000-000000000002',
     'كريم محمود',
@@ -287,8 +293,8 @@ function seedBaselineUsers(db: DatabaseSync) {
     '01011223344',
     hashPasswordModern('Admin@123456'),
     'male',
-    2,
-    'admin',
+    4,
+    'user',
     3,
     'local',
     'بورسعيد',

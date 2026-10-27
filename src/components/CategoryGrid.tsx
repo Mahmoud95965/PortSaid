@@ -45,7 +45,7 @@ export const CategoryGrid: React.FC<CategoryGridProps> = ({ onSelectCategory }) 
             اكتشف بورسعيد
           </h3>
         </div>
-        <span className="text-[11px] sm:text-xs font-bold text-ocean-700/60 dark:text-white/50">
+        <span className="text-[11px] sm:text-xs font-bold text-ocean-800/80 dark:text-white/60">
           11 قسماً رئيسياً
         </span>
       </div>

@@ -273,7 +273,7 @@ export const HotelsView: React.FC<HotelsViewProps> = ({
         {/* فلتر الأحياء */}
         {availableAreas.length > 0 && (
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1 border-t border-slate-100 dark:border-slate-800/80">
-            <span className="text-[11px] font-bold text-slate-400 shrink-0 ml-1">
+            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 shrink-0 ml-1">
               المنطقة:
             </span>
             <button
