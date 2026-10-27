@@ -3,7 +3,7 @@
 import React, { useRef } from 'react';
 import { motion, useInView, Variants } from 'framer-motion';
 import { CATS } from '@/lib/constants';
-import { Compass, Star, Utensils, Coffee, IceCream, ShoppingBag, Dumbbell, Bed, Bus, Sparkles } from 'lucide-react';
+import { Compass, Star, Utensils, Coffee, IceCream, ShoppingBag, Dumbbell, Bed, Bus, Sparkles, Hotel, Shirt } from 'lucide-react';
 
 const ICONS: Record<string, React.ReactNode> = {
   explore: <Compass className="w-5 h-5 min-[380px]:w-6 min-[380px]:h-6 sm:w-7 sm:h-7" />,
@@ -12,7 +12,9 @@ const ICONS: Record<string, React.ReactNode> = {
   cafe: <Coffee className="w-5 h-5 min-[380px]:w-6 min-[380px]:h-6 sm:w-7 sm:h-7" />,
   sweets: <IceCream className="w-5 h-5 min-[380px]:w-6 min-[380px]:h-6 sm:w-7 sm:h-7" />,
   shop: <ShoppingBag className="w-5 h-5 min-[380px]:w-6 min-[380px]:h-6 sm:w-7 sm:h-7" />,
+  clothes: <Shirt className="w-5 h-5 min-[380px]:w-6 min-[380px]:h-6 sm:w-7 sm:h-7" />,
   sport: <Dumbbell className="w-5 h-5 min-[380px]:w-6 min-[380px]:h-6 sm:w-7 sm:h-7" />,
+  hotels: <Hotel className="w-5 h-5 min-[380px]:w-6 min-[380px]:h-6 sm:w-7 sm:h-7" />,
   housing: <Bed className="w-5 h-5 min-[380px]:w-6 min-[380px]:h-6 sm:w-7 sm:h-7" />,
   bus: <Bus className="w-5 h-5 min-[380px]:w-6 min-[380px]:h-6 sm:w-7 sm:h-7" />,
 };
@@ -75,7 +77,7 @@ export const CategoryGrid: React.FC<CategoryGridProps> = ({ onSelectCategory }) 
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
-          9 أقسام رئيسية
+          11 قسماً رئيسياً
         </motion.span>
       </motion.div>
 

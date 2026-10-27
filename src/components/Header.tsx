@@ -21,6 +21,9 @@ import {
   Sparkles,
   MapPin,
   Settings,
+  Hotel,
+  Camera,
+  Shirt,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -55,11 +58,14 @@ export const Header: React.FC<HeaderProps> = ({
 
   const navLinks = [
     { key: 'home', label: 'الرئيسية', icon: Home },
-    { key: 'ai', label: 'الذكاء الاصطناعي ✦', icon: Sparkles },
-    { key: 'map', label: 'الخريطة', icon: MapPin },
+    { key: 'hotels', label: 'الفنادق', icon: Hotel },
+    { key: 'explore', label: 'تاريخ بورسعيد', icon: Compass },
+    { key: 'memories', label: 'الذكريات', icon: Camera },
     { key: 'bus', label: 'المواصلات', icon: Bus },
     { key: 'housing', label: 'السكن', icon: Bed },
-    { key: 'explore', label: 'استكشف', icon: Compass },
+    { key: 'clothes', label: 'الملابس', icon: Shirt },
+    { key: 'map', label: 'الخريطة', icon: MapPin },
+    { key: 'ai', label: 'الذكاء الاصطناعي ✦', icon: Sparkles },
   ];
 
   const menuVariants: Variants = {
@@ -342,6 +348,25 @@ export const Header: React.FC<HeaderProps> = ({
                         </span>
                       </button>
                     </motion.div>
+
+                    {/* لوحة التحكم للمالك والمشرف */}
+                    {(user?.role === 'admin' || user?.role === 'owner') && (
+                      <motion.div variants={menuItemVariants}>
+                        <Link
+                          href="/admin"
+                          onClick={() => setMenuOpen(false)}
+                          className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-sand-100 dark:bg-[#1f2d3f] text-ocean-900 dark:text-white font-bold text-sm hover:bg-sand-200 dark:hover:bg-[#283950] transition border border-sand-300 dark:border-[#31445d]"
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <Shield className="w-4 h-4 text-sand-500" />
+                            <span>لوحة التحكم الإدارية</span>
+                          </span>
+                          <span className="text-[10px] font-black text-white bg-ocean-900 px-2 py-0.5 rounded-full">
+                            إدارة
+                          </span>
+                        </Link>
+                      </motion.div>
+                    )}
 
                     {/* 3. تسجيل الخروج */}
                     <motion.div variants={menuItemVariants}>

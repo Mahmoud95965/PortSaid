@@ -147,3 +147,41 @@ export interface Institution {
   kind: string;
   parent?: string;
 }
+
+export interface MemoryPost {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_avatar?: string | null;
+  image_url: string;
+  caption?: string | null;
+  likes_count: number;
+  comments_count: number;
+  liked_by_me?: boolean;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+}
+
+export interface MemoryComment {
+  id: string;
+  memory_id: string;
+  user_id: string;
+  user_name: string;
+  user_avatar?: string | null;
+  comment: string;
+  created_at: string;
+}
+
+export interface HistoricalStory {
+  id: string;
+  title_ar: string;
+  era_year?: string | null;
+  summary_ar: string;
+  content_ar: string;
+  image_url: string;
+  additional_images?: string[];
+  sort_order: number;
+  is_published: boolean;
+  created_at?: string;
+  updated_at?: string;
+}

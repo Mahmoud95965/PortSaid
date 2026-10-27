@@ -25,8 +25,16 @@ import {
   Edit,
   Mail,
   ShieldAlert,
+  BookOpen,
+  Camera,
+  Check,
+  Eye,
+  EyeOff,
+  Save,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
+import { HistoricalStory, MemoryPost } from '@/types';
 
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -136,8 +144,144 @@ export const AdminDashboard: React.FC = () => {
 
   const [redeemCode, setRedeemCode] = useState('');
   const [redeemResult, setRedeemResult] = useState<string | null>(null);
-
   const [logVerifyResult, setLogVerifyResult] = useState<string | null>(null);
+
+  // ---------------------------------------------------------
+  // Historical Stories State & Handlers
+  // ---------------------------------------------------------
+  const [stories, setStories] = useState<HistoricalStory[]>([]);
+  const [loadingStories, setLoadingStories] = useState(false);
+  const [editingStory, setEditingStory] = useState<Partial<HistoricalStory> | null>(null);
+  const [storyFormOpen, setStoryFormOpen] = useState(false);
+
+  const fetchStories = async () => {
+    try {
+      setLoadingStories(true);
+      const res = await fetch('/api/historical-stories?all=true');
+      const data = await res.json();
+      if (data.ok && Array.isArray(data.stories)) {
+        setStories(data.stories);
+      }
+    } catch (e) {
+      console.error('Error fetching stories:', e);
+    } finally {
+      setLoadingStories(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'history') {
+      fetchStories();
+    }
+  }, [activeTab]);
+
+  const handleSaveStory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStory || !editingStory.title_ar || !editingStory.summary_ar || !editingStory.content_ar || !editingStory.image_url) {
+      alert('يرجى ملء جميع الحقول المطلوبة.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/historical-stories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingStory),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setStoryFormOpen(false);
+        setEditingStory(null);
+        fetchStories();
+      } else {
+        alert(data.message || 'فشل حفظ القصة.');
+      }
+    } catch (err) {
+      alert('حدث خطأ أثناء حفظ القصة.');
+    }
+  };
+
+  const handleDeleteStory = async (id: string) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذه القصة التاريخية؟')) return;
+    try {
+      const res = await fetch(`/api/historical-stories?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setStories((prev) => prev.filter((s) => s.id !== id));
+      } else {
+        alert(data.message || 'فشل حذف القصة.');
+      }
+    } catch (err) {
+      alert('حدث خطأ أثناء الحذف.');
+    }
+  };
+
+  const handleTogglePublishStory = async (story: HistoricalStory) => {
+    try {
+      const res = await fetch('/api/historical-stories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...story,
+          is_published: !story.is_published,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setStories((prev) =>
+          prev.map((s) => (s.id === story.id ? { ...s, is_published: !story.is_published } : s))
+        );
+      }
+    } catch (err) {
+      console.error('Error toggling story publish:', err);
+    }
+  };
+
+  // ---------------------------------------------------------
+  // Community Memories Admin State & Handlers
+  // ---------------------------------------------------------
+  const [adminMemories, setAdminMemories] = useState<MemoryPost[]>([]);
+  const [loadingMemories, setLoadingMemories] = useState(false);
+
+  const fetchAdminMemories = async () => {
+    try {
+      setLoadingMemories(true);
+      const res = await fetch('/api/memories?admin=true');
+      const data = await res.json();
+      if (data.ok && Array.isArray(data.memories)) {
+        setAdminMemories(data.memories);
+      }
+    } catch (e) {
+      console.error('Error fetching admin memories:', e);
+    } finally {
+      setLoadingMemories(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'memories') {
+      fetchAdminMemories();
+    }
+  }, [activeTab]);
+
+  const handleDeleteAdminMemory = async (id: string) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذه الذكرى نهائياً؟')) return;
+    try {
+      const res = await fetch(`/api/memories?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setAdminMemories((prev) => prev.filter((m) => m.id !== id));
+      } else {
+        alert(data.message || 'فشل الحذف.');
+      }
+    } catch (err) {
+      alert('حدث خطأ أثناء الحذف.');
+    }
+  };
 
   const isOwner = user?.role === 'owner';
 
@@ -265,6 +409,30 @@ export const AdminDashboard: React.FC = () => {
           >
             <BarChart3 className="w-4 h-4" />
             <span>الإحصائيات</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
+              activeTab === 'history'
+                ? 'bg-ocean-900 text-white border-ocean-900'
+                : 'bg-white dark:bg-[#161616] text-ocean-900 dark:text-white border-sand-200 dark:border-[#2a2a2a]'
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>الدليل التاريخي</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('memories')}
+            className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
+              activeTab === 'memories'
+                ? 'bg-ocean-900 text-white border-ocean-900'
+                : 'bg-white dark:bg-[#161616] text-ocean-900 dark:text-white border-sand-200 dark:border-[#2a2a2a]'
+            }`}
+          >
+            <Camera className="w-4 h-4" />
+            <span>ذكريات المجتمع</span>
           </button>
 
           <button
@@ -472,6 +640,300 @@ export const AdminDashboard: React.FC = () => {
                 <p className="text-xs font-bold text-teal2-600 mt-3 p-3 rounded-xl bg-teal2-50 dark:bg-teal2-950/40">
                   {redeemResult}
                 </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Tab Content: Historical Stories Management */}
+        {activeTab === 'history' && (
+          <div className="space-y-6 pop-in">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-black">إدارة الدليل التاريخي لبورسعيد</h3>
+                <p className="text-xs text-ocean-700/70 dark:text-white/60">
+                  إضافة وتعديل وترتيب ونشر القصص التاريخية والمعالم الموثقة في صفحة استكشف.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingStory({
+                    title_ar: '',
+                    era_year: '',
+                    summary_ar: '',
+                    content_ar: '',
+                    image_url: '/assets/port-said/hero-01.webp',
+                    sort_order: stories.length + 1,
+                    is_published: true,
+                  });
+                  setStoryFormOpen(true);
+                }}
+                className="px-4 py-2.5 rounded-2xl bg-teal2-600 hover:bg-teal2-500 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow"
+              >
+                <Plus className="w-4 h-4" />
+                <span>إضافة قصة تاريخية جديدة</span>
+              </button>
+            </div>
+
+            {/* Story Edit / Create Form Modal */}
+            {storyFormOpen && editingStory && (
+              <div className="p-6 rounded-3xl bg-white dark:bg-[#161616] border border-sand-300 dark:border-[#2a2a2a] shadow-lg space-y-4">
+                <div className="flex items-center justify-between border-b pb-3 border-sand-200 dark:border-[#2a2a2a]">
+                  <h4 className="font-black text-base">
+                    {editingStory.id ? 'تعديل قصة تاريخية' : 'إضافة قصة تاريخية جديدة'}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStoryFormOpen(false);
+                      setEditingStory(null);
+                    }}
+                    className="p-1 rounded-xl text-ocean-700 dark:text-white/70"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveStory} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-bold mb-1">عنوان القصة التاريخية *</label>
+                      <input
+                        type="text"
+                        value={editingStory.title_ar || ''}
+                        onChange={(e) => setEditingStory({ ...editingStory, title_ar: e.target.value })}
+                        placeholder="مثال: فنار بورسعيد التاريخي..."
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#2a2a2a] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold mb-1">العام / الحقبة الزمنية</label>
+                      <input
+                        type="text"
+                        value={editingStory.era_year || ''}
+                        onChange={(e) => setEditingStory({ ...editingStory, era_year: e.target.value })}
+                        placeholder="مثال: 1869 م"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#2a2a2a] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold mb-1">مسار أو رابط الصورة *</label>
+                      <input
+                        type="text"
+                        value={editingStory.image_url || ''}
+                        onChange={(e) => setEditingStory({ ...editingStory, image_url: e.target.value })}
+                        placeholder="/assets/port-said/..."
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#2a2a2a] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold font-mono"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold mb-1">ترتيب الظهور (رقم)</label>
+                      <input
+                        type="number"
+                        value={editingStory.sort_order ?? 1}
+                        onChange={(e) => setEditingStory({ ...editingStory, sort_order: parseInt(e.target.value, 10) || 1 })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#2a2a2a] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold mb-1">الملخص القصير *</label>
+                    <textarea
+                      rows={2}
+                      value={editingStory.summary_ar || ''}
+                      onChange={(e) => setEditingStory({ ...editingStory, summary_ar: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#2a2a2a] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold mb-1">المحتوى التاريخي الكامل *</label>
+                    <textarea
+                      rows={5}
+                      value={editingStory.content_ar || ''}
+                      onChange={(e) => setEditingStory({ ...editingStory, content_ar: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#2a2a2a] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="isPublishedCheck"
+                      checked={editingStory.is_published !== false}
+                      onChange={(e) => setEditingStory({ ...editingStory, is_published: e.target.checked })}
+                      className="w-4 h-4 rounded text-teal2-600"
+                    />
+                    <label htmlFor="isPublishedCheck" className="text-xs font-bold select-none cursor-pointer">
+                      منشور في صفحة الاستكشاف العامة
+                    </label>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStoryFormOpen(false);
+                        setEditingStory(null);
+                      }}
+                      className="px-4 py-2 rounded-xl border text-xs font-bold"
+                    >
+                      إلغاء
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 rounded-xl bg-teal2-600 hover:bg-teal2-500 text-white font-bold text-xs flex items-center gap-2"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>حفظ القصة</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Stories Table */}
+            <div className="rounded-3xl bg-white dark:bg-[#161616] shadow border border-sand-200/60 dark:border-[#2a2a2a] overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-xs">
+                  <thead className="bg-sand-100/60 dark:bg-[#1f1f1f] text-ocean-700 dark:text-white/70 font-black">
+                    <tr>
+                      <th className="p-3.5">الترتيب</th>
+                      <th className="p-3.5">الصورة</th>
+                      <th className="p-3.5">العنوان</th>
+                      <th className="p-3.5">الحقبة</th>
+                      <th className="p-3.5">الحالة</th>
+                      <th className="p-3.5 text-center">إجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-sand-200/50 dark:divide-[#2a2a2a]">
+                    {loadingStories ? (
+                      <tr>
+                        <td colSpan={6} className="p-6 text-center text-xs">جاري التحميل...</td>
+                      </tr>
+                    ) : stories.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="p-6 text-center text-xs">لا توجد قصص مسجلة حالياً.</td>
+                      </tr>
+                    ) : (
+                      stories.map((story) => (
+                        <tr key={story.id} className="hover:bg-sand-50 dark:hover:bg-[#1d1d1d] transition">
+                          <td className="p-3.5 font-black text-teal2-600">{story.sort_order}</td>
+                          <td className="p-3.5">
+                            <img src={story.image_url} alt="" className="w-12 h-9 object-cover rounded-lg border" />
+                          </td>
+                          <td className="p-3.5 font-bold max-w-xs truncate">{story.title_ar}</td>
+                          <td className="p-3.5 font-bold text-sand-500">{story.era_year || '-'}</td>
+                          <td className="p-3.5">
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePublishStory(story)}
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 ${
+                                story.is_published
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
+                                  : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                              }`}
+                            >
+                              {story.is_published ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                              <span>{story.is_published ? 'منشور' : 'مخفي'}</span>
+                            </button>
+                          </td>
+                          <td className="p-3.5">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingStory(story);
+                                  setStoryFormOpen(true);
+                                }}
+                                className="p-1.5 rounded-lg bg-sand-100 dark:bg-[#252525] text-ocean-800 dark:text-sand-300 hover:bg-sand-200"
+                                title="تعديل"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteStory(story.id)}
+                                className="p-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 hover:bg-red-100"
+                                title="حذف"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab Content: Community Memories Moderation */}
+        {activeTab === 'memories' && (
+          <div className="space-y-6 pop-in">
+            <div>
+              <h3 className="text-xl font-black">إشراف ذكريات المجتمع</h3>
+              <p className="text-xs text-ocean-700/70 dark:text-white/60">
+                مراجعة الصور والذكريات المنشورة من قبل المستخدمين وحذف أي محتوى غير لائق.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {loadingMemories ? (
+                <div className="col-span-full p-8 text-center text-xs">جاري تحميل الذكريات...</div>
+              ) : adminMemories.length === 0 ? (
+                <div className="col-span-full p-8 text-center text-xs">لا توجد منشورات حالياً.</div>
+              ) : (
+                adminMemories.map((mem) => (
+                  <div
+                    key={mem.id}
+                    className="rounded-3xl bg-white dark:bg-[#161616] border border-sand-200/60 dark:border-[#2a2a2a] p-4 shadow space-y-3 flex flex-col justify-between"
+                  >
+                    <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-sand-100 dark:bg-[#1e1e1e]">
+                      <img src={mem.image_url} alt="" className="w-full h-full object-cover" />
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-black text-xs">{mem.user_name}</span>
+                        <span className="text-[10px] text-ocean-700/60 dark:text-white/50">
+                          {mem.created_at?.slice(0, 10)}
+                        </span>
+                      </div>
+                      {mem.caption && (
+                        <p className="text-xs text-ocean-700/80 dark:text-white/70 line-clamp-2">
+                          {mem.caption}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-sand-200 dark:border-[#2a2a2a]">
+                      <span className="text-[11px] font-bold text-sand-500">
+                        ❤️ {mem.likes_count} إعجاب · 💬 {mem.comments_count} تعليق
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAdminMemory(mem.id)}
+                        className="px-3 py-1.5 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 text-xs font-bold hover:bg-red-100 flex items-center gap-1.5"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>حذف</span>
+                      </button>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
           </div>

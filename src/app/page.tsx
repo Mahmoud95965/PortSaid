@@ -15,6 +15,9 @@ import { PlaceList } from '@/components/PlaceList';
 import { PlaceDetail } from '@/components/PlaceDetail';
 import { TransportView } from '@/components/TransportView';
 import { HousingView } from '@/components/HousingView';
+import { HotelsView } from '@/components/HotelsView';
+import { ClothesView } from '@/components/ClothesView';
+import { MemoriesView } from '@/components/MemoriesView';
 import { SportsView } from '@/components/SportsView';
 import { ExploreView } from '@/components/ExploreView';
 import { MapView } from '@/components/MapView';
@@ -351,7 +354,7 @@ export default function HomePage() {
 
               <CategoryGrid
                 onSelectCategory={(key) => {
-                  if (key === 'bus' || key === 'housing' || key === 'explore' || key === 'map') {
+                  if (['bus', 'housing', 'hotels', 'clothes', 'memories', 'explore', 'map'].includes(key)) {
                     handleNavigate(key);
                   } else {
                     handleNavigate('list', key);
@@ -534,14 +537,44 @@ export default function HomePage() {
             </motion.div>
           )}
 
-          {(currentView === 'housing' || currentView === 'hotels' || currentView === 'stay') && (
-            <motion.div key="housing-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
-              <HousingView
+          {(currentView === 'hotels' || currentView === 'hotel' || currentView === 'stay') && (
+            <motion.div key="hotels-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+              <HotelsView
                 places={places}
                 onSelectPlace={(id) => handleNavigate('place', id)}
                 onNavigate={handleNavigate}
                 onBack={() => handleNavigate('home')}
                 onRequestCoupon={handleRequestCoupon}
+              />
+            </motion.div>
+          )}
+
+          {currentView === 'housing' && (
+            <motion.div key="housing-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+              <HousingView
+                places={places}
+                onSelectPlace={(id: string) => handleNavigate('place', id)}
+                onNavigate={handleNavigate}
+                onBack={() => handleNavigate('home')}
+                onRequestCoupon={handleRequestCoupon}
+              />
+            </motion.div>
+          )}
+
+          {currentView === 'clothes' && (
+            <motion.div key="clothes-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+              <ClothesView
+                onNavigate={handleNavigate}
+                onBack={() => handleNavigate('home')}
+              />
+            </motion.div>
+          )}
+
+          {currentView === 'memories' && (
+            <motion.div key="memories-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
+              <MemoriesView
+                onNavigate={handleNavigate}
+                onBack={() => handleNavigate('home')}
               />
             </motion.div>
           )}

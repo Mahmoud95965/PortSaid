@@ -5,8 +5,10 @@ export const CATS: Record<string, { t: string; i: string; c: string; border: str
   cafe: { t: 'كافيهات', i: 'fa-mug-hot', c: 'bg-ocean-900 text-white', border: '#7a5230', bgSoft: '#7a52301a' },
   sweets: { t: 'حلويات', i: 'fa-ice-cream', c: 'bg-coral-500 text-white', border: '#c93d78', bgSoft: '#c93d781a' },
   shop: { t: 'تسوق', i: 'fa-bag-shopping', c: 'bg-ocean-500 text-white', border: '#13809c', bgSoft: '#13809c1a' },
+  clothes: { t: 'الملابس', i: 'fa-shirt', c: 'bg-indigo-600 text-white', border: '#4f46e5', bgSoft: '#4f46e51a' },
   sport: { t: 'رياضة', i: 'fa-dumbbell', c: 'bg-teal2-500 text-white', border: '#2b8a57', bgSoft: '#2b8a571a' },
-  housing: { t: 'السكن', i: 'fa-bed', c: 'bg-coral-500 text-white', border: '#6f55c4', bgSoft: '#6f55c41a' },
+  hotels: { t: 'الفنادق والأوتيلات', i: 'fa-hotel', c: 'bg-blue-600 text-white', border: '#1559b7', bgSoft: '#1559b71a' },
+  housing: { t: 'السكن', i: 'fa-bed', c: 'bg-amber-600 text-white', border: '#d97706', bgSoft: '#d977061a' },
   bus: { t: 'مواصلات', i: 'fa-bus', c: 'bg-ocean-700 text-white', border: '#1559b7', bgSoft: '#1559b71a' },
 };
 
@@ -859,7 +861,7 @@ export const INITIAL_PLACES = [
   },
   {
     "id": "20000000-0000-0000-0000-000000000055",
-    "cat": "housing",
+    "cat": "hotels",
     "n": "فندق بدر",
     "a": "حي الزهور",
     "ds": "إقامة مريحة وخدمات فندقية متميزة في موقع حيوي بـ حي الزهور (السواحل).",
@@ -872,7 +874,7 @@ export const INITIAL_PLACES = [
   },
   {
     "id": "20000000-0000-0000-0000-000000000056",
-    "cat": "housing",
+    "cat": "hotels",
     "n": "بيت الشباب بورسعيد",
     "a": "حي الشرق",
     "ds": "إقامة مريحة وخدمات فندقية متميزة في موقع حيوي بـ حي الشرق.",
@@ -885,7 +887,7 @@ export const INITIAL_PLACES = [
   },
   {
     "id": "20000000-0000-0000-0000-000000000057",
-    "cat": "housing",
+    "cat": "hotels",
     "n": "Porto Said Resort & Spa",
     "a": "حي غرب",
     "ds": "إقامة مريحة وخدمات فندقية متميزة في موقع حيوي بـ حي غرب (غرب بورسعيد).",
@@ -898,7 +900,7 @@ export const INITIAL_PLACES = [
   },
   {
     "id": "20000000-0000-0000-0000-000000000058",
-    "cat": "housing",
+    "cat": "hotels",
     "n": "Grand Albatros",
     "a": "طرح البحر",
     "ds": "إقامة مريحة وخدمات فندقية متميزة في موقع حيوي بـ طرح البحر (طرح البحر).",
@@ -911,7 +913,7 @@ export const INITIAL_PLACES = [
   },
   {
     "id": "20000000-0000-0000-0000-000000000059",
-    "cat": "housing",
+    "cat": "hotels",
     "n": "Helnan Port Fouad",
     "a": "بورفؤاد",
     "ds": "إقامة مريحة وخدمات فندقية متميزة في موقع حيوي بـ بورفؤاد.",
@@ -924,7 +926,7 @@ export const INITIAL_PLACES = [
   },
   {
     "id": "20000000-0000-0000-0000-000000000060",
-    "cat": "housing",
+    "cat": "hotels",
     "n": "Marom Port Said Resort",
     "a": "حي الشرق",
     "ds": "إقامة مريحة وخدمات فندقية متميزة في موقع حيوي بـ حي الشرق.",
@@ -937,7 +939,7 @@ export const INITIAL_PLACES = [
   },
   {
     "id": "20000000-0000-0000-0000-000000000061",
-    "cat": "housing",
+    "cat": "hotels",
     "n": "Palma Hotel",
     "a": "حي الشرق",
     "ds": "إقامة مريحة وخدمات فندقية متميزة في موقع حيوي بـ حي الشرق.",
@@ -950,7 +952,7 @@ export const INITIAL_PLACES = [
   },
   {
     "id": "20000000-0000-0000-0000-000000000062",
-    "cat": "housing",
+    "cat": "hotels",
     "n": "Hotel Port Said",
     "a": "حي الشرق",
     "ds": "إقامة مريحة وخدمات فندقية متميزة في موقع حيوي بـ حي الشرق.",
@@ -963,7 +965,7 @@ export const INITIAL_PLACES = [
   },
   {
     "id": "20000000-0000-0000-0000-000000000063",
-    "cat": "housing",
+    "cat": "hotels",
     "n": "De la Poste",
     "a": "الممشى السياحي",
     "ds": "إقامة مريحة وخدمات فندقية متميزة في موقع حيوي بـ الممشى السياحي (قرب المنارة).",

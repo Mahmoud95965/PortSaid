@@ -12,6 +12,7 @@ import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import fs from 'node:fs';
 import { hashPasswordModern } from '@/lib/auth/password';
+import { MemoryPost, MemoryComment, HistoricalStory } from '@/types';
 
 export interface DbUser {
   id: string;
@@ -170,17 +171,76 @@ export function getLocalDb(): DatabaseSync {
       created_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS community_memories (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      user_name TEXT NOT NULL,
+      user_avatar TEXT,
+      image_url TEXT NOT NULL,
+      caption TEXT,
+      likes_count INTEGER DEFAULT 0,
+      comments_count INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'approved',
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS memory_likes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      memory_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      UNIQUE(memory_id, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS memory_comments (
+      id TEXT PRIMARY KEY,
+      memory_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      user_name TEXT NOT NULL,
+      user_avatar TEXT,
+      comment TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS historical_stories (
+      id TEXT PRIMARY KEY,
+      title_ar TEXT NOT NULL,
+      era_year TEXT,
+      summary_ar TEXT NOT NULL,
+      content_ar TEXT NOT NULL,
+      image_url TEXT NOT NULL,
+      additional_images TEXT,
+      sort_order INTEGER DEFAULT 0,
+      is_published INTEGER DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT
+    );
+
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
     CREATE INDEX IF NOT EXISTS idx_ledger_user ON points_ledger(user_id);
     CREATE INDEX IF NOT EXISTS idx_ledger_idemp ON points_ledger(idempotency_key);
     CREATE INDEX IF NOT EXISTS idx_visits_user_day ON visits(user_id, place_id, visit_day);
+    CREATE INDEX IF NOT EXISTS idx_memories_status ON community_memories(status, created_at);
+    CREATE INDEX IF NOT EXISTS idx_mem_likes_post ON memory_likes(memory_id);
+    CREATE INDEX IF NOT EXISTS idx_mem_comments_post ON memory_comments(memory_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_hist_stories_sort ON historical_stories(sort_order);
   `);
 
   // Seed baseline accounts if database is fresh
   const userCountRow = db.prepare('SELECT COUNT(*) as cnt FROM users').get() as { cnt: number };
   if (!userCountRow || userCountRow.cnt === 0) {
     seedBaselineUsers(db);
+  }
+
+  const storyCountRow = db.prepare('SELECT COUNT(*) as cnt FROM historical_stories').get() as { cnt: number };
+  if (!storyCountRow || storyCountRow.cnt === 0) {
+    seedBaselineHistoricalStories(db);
+  }
+
+  const memoryCountRow = db.prepare('SELECT COUNT(*) as cnt FROM community_memories').get() as { cnt: number };
+  if (!memoryCountRow || memoryCountRow.cnt === 0) {
+    seedBaselineMemories(db);
   }
 
   dbInstance = db;
@@ -580,3 +640,464 @@ export function dbInsertPartnerApplication(app: {
     new Date().toISOString()
   );
 }
+
+function seedBaselineHistoricalStories(db: DatabaseSync) {
+  const insertStory = db.prepare(`
+    INSERT INTO historical_stories (
+      id, title_ar, era_year, summary_ar, content_ar, image_url, additional_images, sort_order, is_published, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const now = new Date().toISOString();
+
+  const stories = [
+    {
+      id: 'story-1',
+      title: 'تأسيس بورسعيد وضربة الفأس الأولى',
+      era: '1859 م',
+      summary: 'في 25 أبريل 1859 أطلق فرديناند ديليسبس إشارة البدء بحفر قناة السويس عند النقطة التي تحولت إلى بورسعيد، تيمناً بوالي مصر محمد سعيد باشا.',
+      content: 'بدأت قصة بورسعيد كشريط رملي ضيق يفصل البحر المتوسط عن بحيرة المنزلة. احتشد آلاف الفلاحين والعمال المصريين ليبدأوا أعظم ملحمة حفر في التاريخ الحديث؛ حفر قناة السويس بالجهد والعرق، لتولد مدينة عالمية ربطت بين الشرق والغرب وأصبحت بوابة الملاحة الدولية الأولى في العالم.',
+      image: '/assets/port-said/hero-01.webp',
+      additional: JSON.stringify(['/assets/port-said/port-said-port-night.webp']),
+      order: 1,
+    },
+    {
+      id: 'story-2',
+      title: 'فنار بورسعيد التاريخي.. أول مبنى خرساني في العالم',
+      era: '1869 م',
+      summary: 'شُيّد عام 1869 وافتتح بالتزامن مع افتتاح قناة السويس، ويُعد أول مبنى شُيّد بالخرسانة المسلحة في العالم على يد المعماري فرانسوا كوانييه.',
+      content: 'يعد فنار بورسعيد القديم معجزة هندسية وثقافية رائدة. يتميز بتصميمه الثماني الأضلاع وارتفاعه الشاهق الذي يبلغ حوالي 56 متراً، وكان مرشداً لكل سفن العالم العابرة لقناة السويس. يحمل الفنار قيمة معمارية فريدة جعلته مسجلاً ضمن الآثار الإسلامية والقبطية المصرية ومقصداً لعشاق التراث.',
+      image: '/assets/port-said/port-said-lighthouse.webp',
+      additional: JSON.stringify(['/assets/port-said/hero-01.webp']),
+      order: 2,
+    },
+    {
+      id: 'story-3',
+      title: 'العمارة الكوزموبوليتانية وشرفات الخشب التاريخية',
+      era: '1880 - 1930 م',
+      summary: 'تميز حي الشرق (الحي الإفرنجي) بطراز معماري فريد يجمع بين النمط الفرنسي والإيطالي والشرفات الخشبية (Verandas) لمقاومة الرطوبة وتوفير الظل.',
+      content: 'احتضنت بورسعيد في أواخر القرن التاسع عشر مجتمعاً متعدد الثقافات من فرنسيين وإيطاليين ويونانيين وبريطانيين عاشوا جنباً إلى جنب مع أهل المدينة في حي العرب. انعكس هذا التنوع على الهندسة المعمارية؛ مبانٍ متناسقة وأسقف خشبية وأروقة للمشاة تحمي من حرارة الصيف وأمطار الشتاء، مما جعل شوارع بورسعيد لوحة معمارية مفتوحة.',
+      image: '/assets/port-said/gallery/balconies-street.webp',
+      additional: JSON.stringify(['/assets/port-said/port-said-port-night.webp']),
+      order: 3,
+    },
+    {
+      id: 'story-4',
+      title: 'ملحمة الصمود والعدوان الثلاثي.. المدينة الباسلة',
+      era: '1956 م',
+      summary: 'سطر أبناء بورسعيد وفدائيوها أعظم ملاحم المقاومة الشعبية ضد قوى العدوان الثلاثي، حتى أُجبرت القوات المعتدية على الجلاء في 23 ديسمبر 1956.',
+      content: 'تحملت بورسعيد القصف والإنزال الجوي والبحري بشجاعة استثنائية. شكّل الأهالي والفدائيون مجموعات مقاومة سرية أربكت قيادات الغزاة وأسقطت ضباطهم وأسرت قادتهم، حتى أقر العالم ببسالة المدينة. أطلق عليها الرئيس جمال عبد الناصر لقب "المدينة الباسلة" وأصبح يوم 23 ديسمبر هو العيد القومي السنوي لمحافظة بورسعيد ومسلة النصر بميدان الشهداء تخليداً لهذه التضحيات.',
+      image: '/assets/port-said/gallery/martyrs-square.webp',
+      additional: JSON.stringify(['/assets/port-said/port-said-mosque.webp']),
+      order: 4,
+    },
+    {
+      id: 'story-5',
+      title: 'بورسعيد المنطقة الحرة وعصر التجارة الذهبي',
+      era: '1976 م',
+      summary: 'أصدر الرئيس أنور السادات القانون رقم 12 لسنة 1976 بإعلان بورسعيد منطقة حرة تجارية، مما حولها إلى عاصمة التسوق والاستيراد لجميع المصريين.',
+      content: 'تدفقت البضائع الأوروبية والماركات العالمية والملابس والمنسوجات على أسواق بورسعيد (الحميدي، البازار، والتجاري). أصبحت رحلة قطار بورسعيد أو السفر بالسيارة طقساً أساسياً لكل أسرة مصرية للتسوق وشراء مستلزمات العرائس والاستمتاع بأكلات السمك البورسعيدي الطازج.',
+      image: '/assets/port-said/port-said-port-night.webp',
+      additional: JSON.stringify(['/assets/port-said/hero-02.webp']),
+      order: 5,
+    },
+    {
+      id: 'story-6',
+      title: 'حكاية المعدية التاريخية وقناة الاتصال وبورفؤاد',
+      era: '1920 م - اليوم',
+      summary: 'المعدية ليست مجرد وسيلة مواصلات بين قارتي إفريقيا وآسيا، بل هي روح بورسعيد الحية وصوت النوارس وطقوس إطعام الحمام والخبز في عرض القناة.',
+      content: 'أنشئت مدينة بورفؤاد عام 1920 على الضفة الشرقية لقناة السويس لتكون مقراً لورش وفيلات هيئة قناة السويس. ارتبطت المدينتان برحلة المعدية المجانية التي تستغرق 10 دقائق تعبر خلالها بين قارتين وتلتقي بالسفن العالمية العملاقة، لتظل المعدية أيقونة وجدانية لكل من زار بورسعيد أو عاش فيها.',
+      image: '/assets/port-said/gallery/ship.webp',
+      additional: JSON.stringify(['/assets/port-said/hero-03.webp']),
+      order: 6,
+    },
+  ];
+
+  for (const s of stories) {
+    try {
+      insertStory.run(s.id, s.title, s.era, s.summary, s.content, s.image, s.additional, s.order, 1, now);
+    } catch (e) {
+      // ignore
+    }
+  }
+}
+
+function seedBaselineMemories(db: DatabaseSync) {
+  const insertMemory = db.prepare(`
+    INSERT INTO community_memories (
+      id, user_id, user_name, user_avatar, image_url, caption, likes_count, comments_count, status, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const now = new Date().toISOString();
+
+  const memories = [
+    {
+      id: 'mem-1',
+      userId: '00000000-0000-0000-0000-000000000002',
+      userName: 'كريم محمود',
+      userAvatar: null,
+      imageUrl: '/assets/port-said/hero-01.webp',
+      caption: 'غروب الشمس الساحر من ممشى ديليسبس السياحي.. ما فيش أجمل من هواء القناة في بورسعيد 🌅⚓',
+      likes: 24,
+      comments: 3,
+    },
+    {
+      id: 'mem-2',
+      userId: '00000000-0000-0000-0000-000000000001',
+      userName: 'أحمد المصري',
+      userAvatar: null,
+      imageUrl: '/assets/port-said/gallery/ship.webp',
+      caption: 'رحلة المعدية الصباحية وصوت النوارس.. عبور بين قارة إفريقيا وآسيا في دقائق 🕊️⛴️',
+      likes: 42,
+      comments: 5,
+    },
+    {
+      id: 'mem-3',
+      userId: '00000000-0000-0000-0000-000000000003',
+      userName: 'سارة البورسعيدية',
+      userAvatar: null,
+      imageUrl: '/assets/port-said/gallery/balconies-street.webp',
+      caption: 'جمال الشرفات الخشبية في حي الشرق، تاريخ لا ينتهي وتراث معماري أصيل في كل تفصيلة 🏛️✨',
+      likes: 31,
+      comments: 2,
+    },
+  ];
+
+  for (const m of memories) {
+    try {
+      insertMemory.run(m.id, m.userId, m.userName, m.userAvatar, m.imageUrl, m.caption, m.likes, m.comments, 'approved', now);
+    } catch (e) {
+      // ignore
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Community Memories API Helpers
+// ---------------------------------------------------------------------------
+
+export function dbGetMemories(currentUserId?: string): MemoryPost[] {
+  const db = getLocalDb();
+  const rows = db.prepare(`
+    SELECT * FROM community_memories
+    WHERE status = 'approved'
+    ORDER BY created_at DESC
+    LIMIT 60
+  `).all() as any[];
+
+  return rows.map((r) => {
+    let likedByMe = false;
+    if (currentUserId) {
+      const checkLike = db.prepare(`
+        SELECT id FROM memory_likes WHERE memory_id = ? AND user_id = ?
+      `).get(r.id, currentUserId);
+      likedByMe = Boolean(checkLike);
+    }
+
+    return {
+      id: r.id,
+      user_id: r.user_id,
+      user_name: r.user_name,
+      user_avatar: r.user_avatar,
+      image_url: r.image_url,
+      caption: r.caption,
+      likes_count: r.likes_count || 0,
+      comments_count: r.comments_count || 0,
+      liked_by_me: likedByMe,
+      status: r.status,
+      created_at: r.created_at,
+    };
+  });
+}
+
+export function dbGetAllMemoriesForAdmin(): MemoryPost[] {
+  const db = getLocalDb();
+  const rows = db.prepare(`
+    SELECT * FROM community_memories
+    ORDER BY created_at DESC
+  `).all() as any[];
+
+  return rows.map((r) => ({
+    id: r.id,
+    user_id: r.user_id,
+    user_name: r.user_name,
+    user_avatar: r.user_avatar,
+    image_url: r.image_url,
+    caption: r.caption,
+    likes_count: r.likes_count || 0,
+    comments_count: r.comments_count || 0,
+    status: r.status,
+    created_at: r.created_at,
+  }));
+}
+
+export function dbCreateMemory(post: {
+  userId: string;
+  userName: string;
+  userAvatar?: string | null;
+  imageUrl: string;
+  caption?: string | null;
+}): MemoryPost {
+  const db = getLocalDb();
+  const id = `mem-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  const now = new Date().toISOString();
+
+  db.prepare(`
+    INSERT INTO community_memories (
+      id, user_id, user_name, user_avatar, image_url, caption, likes_count, comments_count, status, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, 0, 0, 'approved', ?)
+  `).run(id, post.userId, post.userName, post.userAvatar || null, post.imageUrl, post.caption || '', now);
+
+  return {
+    id,
+    user_id: post.userId,
+    user_name: post.userName,
+    user_avatar: post.userAvatar || null,
+    image_url: post.imageUrl,
+    caption: post.caption || '',
+    likes_count: 0,
+    comments_count: 0,
+    liked_by_me: false,
+    status: 'approved',
+    created_at: now,
+  };
+}
+
+export function dbToggleMemoryLike(userId: string, memoryId: string): { liked: boolean; count: number } {
+  const db = getLocalDb();
+  const existing = db.prepare(`
+    SELECT id FROM memory_likes WHERE memory_id = ? AND user_id = ?
+  `).get(memoryId, userId) as any;
+
+  db.exec('BEGIN TRANSACTION;');
+  try {
+    let liked = false;
+    if (existing) {
+      db.prepare(`DELETE FROM memory_likes WHERE id = ?`).run(existing.id);
+      db.prepare(`UPDATE community_memories SET likes_count = MAX(0, likes_count - 1) WHERE id = ?`).run(memoryId);
+      liked = false;
+    } else {
+      db.prepare(`
+        INSERT INTO memory_likes (memory_id, user_id, created_at) VALUES (?, ?, ?)
+      `).run(memoryId, userId, new Date().toISOString());
+      db.prepare(`UPDATE community_memories SET likes_count = likes_count + 1 WHERE id = ?`).run(memoryId);
+      liked = true;
+    }
+
+    db.exec('COMMIT;');
+
+    const row = db.prepare(`SELECT likes_count FROM community_memories WHERE id = ?`).get(memoryId) as any;
+    return { liked, count: row?.likes_count || 0 };
+  } catch (err) {
+    db.exec('ROLLBACK;');
+    throw err;
+  }
+}
+
+export function dbAddMemoryComment(comment: {
+  memoryId: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string | null;
+  comment: string;
+}): MemoryComment {
+  const db = getLocalDb();
+  const id = `comm-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  const now = new Date().toISOString();
+
+  db.exec('BEGIN TRANSACTION;');
+  try {
+    db.prepare(`
+      INSERT INTO memory_comments (id, memory_id, user_id, user_name, user_avatar, comment, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(id, comment.memoryId, comment.userId, comment.userName, comment.userAvatar || null, comment.comment, now);
+
+    db.prepare(`
+      UPDATE community_memories SET comments_count = comments_count + 1 WHERE id = ?
+    `).run(comment.memoryId);
+
+    db.exec('COMMIT;');
+
+    return {
+      id,
+      memory_id: comment.memoryId,
+      user_id: comment.userId,
+      user_name: comment.userName,
+      user_avatar: comment.userAvatar || null,
+      comment: comment.comment,
+      created_at: now,
+    };
+  } catch (err) {
+    db.exec('ROLLBACK;');
+    throw err;
+  }
+}
+
+export function dbGetMemoryComments(memoryId: string): MemoryComment[] {
+  const db = getLocalDb();
+  return db.prepare(`
+    SELECT * FROM memory_comments
+    WHERE memory_id = ?
+    ORDER BY created_at ASC
+  `).all(memoryId) as MemoryComment[];
+}
+
+export function dbDeleteMemory(memoryId: string, requestingUserId: string, isStaff: boolean): boolean {
+  const db = getLocalDb();
+  const mem = db.prepare(`SELECT * FROM community_memories WHERE id = ?`).get(memoryId) as any;
+  if (!mem) return false;
+
+  if (mem.user_id !== requestingUserId && !isStaff) {
+    return false;
+  }
+
+  db.exec('BEGIN TRANSACTION;');
+  try {
+    db.prepare(`DELETE FROM memory_likes WHERE memory_id = ?`).run(memoryId);
+    db.prepare(`DELETE FROM memory_comments WHERE memory_id = ?`).run(memoryId);
+    db.prepare(`DELETE FROM community_memories WHERE id = ?`).run(memoryId);
+    db.exec('COMMIT;');
+    return true;
+  } catch (err) {
+    db.exec('ROLLBACK;');
+    throw err;
+  }
+}
+
+export function dbUpdateMemoryStatus(memoryId: string, status: 'approved' | 'pending' | 'rejected'): boolean {
+  const db = getLocalDb();
+  const res = db.prepare(`
+    UPDATE community_memories SET status = ? WHERE id = ?
+  `).run(status, memoryId);
+  return res.changes > 0;
+}
+
+// ---------------------------------------------------------------------------
+// Historical Stories API Helpers
+// ---------------------------------------------------------------------------
+
+export function dbGetHistoricalStories(includeUnpublished = false): HistoricalStory[] {
+  const db = getLocalDb();
+  let query = 'SELECT * FROM historical_stories';
+  if (!includeUnpublished) {
+    query += ' WHERE is_published = 1';
+  }
+  query += ' ORDER BY sort_order ASC, created_at ASC';
+
+  const rows = db.prepare(query).all() as any[];
+  return rows.map((r) => {
+    let addImgs: string[] = [];
+    if (r.additional_images) {
+      try {
+        addImgs = JSON.parse(r.additional_images);
+      } catch (e) {
+        addImgs = [];
+      }
+    }
+    return {
+      id: r.id,
+      title_ar: r.title_ar,
+      era_year: r.era_year,
+      summary_ar: r.summary_ar,
+      content_ar: r.content_ar,
+      image_url: r.image_url,
+      additional_images: addImgs,
+      sort_order: r.sort_order || 0,
+      is_published: Boolean(r.is_published),
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+    };
+  });
+}
+
+export function dbSaveHistoricalStory(story: {
+  id?: string;
+  title_ar: string;
+  era_year?: string | null;
+  summary_ar: string;
+  content_ar: string;
+  image_url: string;
+  additional_images?: string[];
+  sort_order?: number;
+  is_published?: boolean;
+}): HistoricalStory {
+  const db = getLocalDb();
+  const now = new Date().toISOString();
+  const addImgsJson = JSON.stringify(story.additional_images || []);
+  const isPub = story.is_published !== false ? 1 : 0;
+  const sortOrd = story.sort_order ?? 0;
+
+  if (story.id) {
+    db.prepare(`
+      UPDATE historical_stories
+      SET title_ar = ?, era_year = ?, summary_ar = ?, content_ar = ?, image_url = ?,
+          additional_images = ?, sort_order = ?, is_published = ?, updated_at = ?
+      WHERE id = ?
+    `).run(
+      story.title_ar,
+      story.era_year || null,
+      story.summary_ar,
+      story.content_ar,
+      story.image_url,
+      addImgsJson,
+      sortOrd,
+      isPub,
+      now,
+      story.id
+    );
+
+    return {
+      id: story.id,
+      title_ar: story.title_ar,
+      era_year: story.era_year || null,
+      summary_ar: story.summary_ar,
+      content_ar: story.content_ar,
+      image_url: story.image_url,
+      additional_images: story.additional_images || [],
+      sort_order: sortOrd,
+      is_published: Boolean(isPub),
+      updated_at: now,
+    };
+  } else {
+    const newId = `story-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    db.prepare(`
+      INSERT INTO historical_stories (
+        id, title_ar, era_year, summary_ar, content_ar, image_url, additional_images, sort_order, is_published, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      newId,
+      story.title_ar,
+      story.era_year || null,
+      story.summary_ar,
+      story.content_ar,
+      story.image_url,
+      addImgsJson,
+      sortOrd,
+      isPub,
+      now,
+      now
+    );
+
+    return {
+      id: newId,
+      title_ar: story.title_ar,
+      era_year: story.era_year || null,
+      summary_ar: story.summary_ar,
+      content_ar: story.content_ar,
+      image_url: story.image_url,
+      additional_images: story.additional_images || [],
+      sort_order: sortOrd,
+      is_published: Boolean(isPub),
+      created_at: now,
+      updated_at: now,
+    };
+  }
+}
+
+export function dbDeleteHistoricalStory(id: string): boolean {
+  const db = getLocalDb();
+  const res = db.prepare(`DELETE FROM historical_stories WHERE id = ?`).run(id);
+  return res.changes > 0;
+}
+

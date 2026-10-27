@@ -150,10 +150,10 @@ function HousingPageContent() {
             >
               <HousingView
                 places={places}
-                onSelectPlace={(id) => setSelectedPlaceId(id)}
+                onSelectPlace={(id: string) => setSelectedPlaceId(id)}
                 onNavigate={handleNavigate}
                 onBack={() => router.push('/')}
-                onRequestCoupon={(p) => setActiveCouponPlace(p)}
+                onRequestCoupon={(p: Place) => setActiveCouponPlace(p)}
               />
             </motion.div>
           )}

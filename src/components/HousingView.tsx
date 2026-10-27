@@ -1,654 +1,174 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Place } from '@/types';
-import { INITIAL_PLACES } from '@/lib/constants';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   Bed,
   MapPin,
-  Search,
-  X,
-  Compass,
-  Star,
-  ExternalLink,
-  Heart,
-  SlidersHorizontal,
-  Info,
   ArrowRight,
+  Clock,
   Sparkles,
   Building,
-  RotateCcw,
-  CheckCircle2,
-  Navigation,
+  GraduationCap,
   ShieldCheck,
-  Palmtree,
-  Hotel,
-  Users,
+  CheckCircle2,
+  Phone,
+  Home,
+  Compass,
 } from 'lucide-react';
 
-const FAVORITES_KEY = 'ps_user_favorites';
+import { Place } from '@/types';
 
 interface HousingViewProps {
   places?: Place[];
-  onSelectPlace: (placeId: string) => void;
+  onSelectPlace?: (placeId: string) => void;
+  onRequestCoupon?: (place: Place) => void;
   onBack: () => void;
   onNavigate?: (view: string, arg?: string | null) => void;
-  onRequestCoupon?: (place: Place) => void;
 }
 
-// تعيين الصور الواقعية المحلية لأماكن الإقامة ببورسعيد
-export function getHousingPhoto(placeName: string, area: string): string {
-  const n = (placeName || '').toLowerCase();
-  const a = (area || '').toLowerCase();
+const DISTRICTS = [
+  { name: 'حي الشرق', desc: 'بالقرب من الكليات والممشى والخدمات', available: false },
+  { name: 'بورفؤاد', desc: 'هدوء تام وقريب من كليات بورفؤاد والمعدية', available: false },
+  { name: 'حي العرب', desc: 'وسط البلد والأسواق والأسعار الاقتصادية', available: false },
+  { name: 'حي الزهور', desc: 'سكن عائلي وقريب من كليات الطب والتمريض', available: false },
+  { name: 'حي المناخ', desc: 'موقع مركزي يتوسط خطوط المواصلات', available: false },
+  { name: 'حي الضواحي', desc: 'بالقرب من الميناء البري والمحطة الجديدة', available: false },
+];
 
-  if (n.includes('porto said') || n.includes('بورتو')) {
-    return '/assets/port-said/hero-01.webp';
-  }
-  if (n.includes('grand albatros') || n.includes('الباتروس') || a.includes('طرح البحر')) {
-    return '/assets/port-said/hero-03.webp';
-  }
-  if (n.includes('helnan') || n.includes('هلنان') || a.includes('بورفؤاد')) {
-    return '/assets/port-said/port-said-port-night.webp';
-  }
-  if (n.includes('marom') || n.includes('ماروم') || n.includes('poste') || n.includes('بوست')) {
-    return '/assets/port-said/port-said-lighthouse.webp';
-  }
-  if (n.includes('palma') || n.includes('بالما') || n.includes('hotel port said')) {
-    return '/assets/port-said/balconies-street.webp';
-  }
-  if (n.includes('شباب') || n.includes('youth')) {
-    return '/assets/port-said/martyrs-square.webp';
-  }
-  if (n.includes('بدر') || a.includes('الزهور')) {
-    return '/assets/port-said/hero-02.webp';
-  }
-  return '/assets/port-said/hero-02.webp';
-}
-
-// تصنيف أنواع الإقامة بناءً على البيانات الواقعية
-export type AccommodationType = 'all' | 'resort' | 'city' | 'hostel';
-
-export function getAccommodationType(placeName: string): {
-  type: 'resort' | 'city' | 'hostel';
-  label: string;
-  badgeBg: string;
-} {
-  const n = (placeName || '').toLowerCase();
-  if (
-    n.includes('resort') ||
-    n.includes('spa') ||
-    n.includes('albatros') ||
-    n.includes('helnan') ||
-    n.includes('marom') ||
-    n.includes('porto')
-  ) {
-    return {
-      type: 'resort',
-      label: 'منتجع وفندق ساحلي',
-      badgeBg: 'bg-blue-600 text-white',
-    };
-  }
-  if (n.includes('شباب') || n.includes('hostel')) {
-    return {
-      type: 'hostel',
-      label: 'بيت شباب وسكن اقتصادي',
-      badgeBg: 'bg-emerald-600 text-white',
-    };
-  }
-  return {
-    type: 'city',
-    label: 'فندق وسياحة داخلية',
-    badgeBg: 'bg-indigo-600 text-white',
-  };
-}
-
-export const HousingView: React.FC<HousingViewProps> = ({
-  places = INITIAL_PLACES,
-  onSelectPlace,
-  onBack,
-  onNavigate,
-}) => {
-  // حالات البحث والتصفية
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedType, setSelectedType] = useState<AccommodationType>('all');
-  const [selectedArea, setSelectedArea] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'featured' | 'points' | 'name'>('featured');
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  // استرجاع وتزامن المفضلة
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(FAVORITES_KEY);
-      if (stored) {
-        setFavorites(JSON.parse(stored));
-      }
-      fetch('/api/user/favorites')
-        .then((r) => r.json())
-        .then((res) => {
-          if (res.ok && res.favorites && res.favorites.length > 0) {
-            setFavorites((prev) => {
-              const merged = Array.from(new Set([...prev, ...res.favorites]));
-              localStorage.setItem(FAVORITES_KEY, JSON.stringify(merged));
-              return merged;
-            });
-          }
-        })
-        .catch(() => {});
-    } catch {}
-  }, []);
-
-  const toggleFavorite = (e: React.MouseEvent, id: string, name: string) => {
-    e.stopPropagation();
-    try {
-      let updated: string[];
-      let isAdded = false;
-      if (favorites.includes(id)) {
-        updated = favorites.filter((favId) => favId !== id);
-      } else {
-        updated = [...favorites, id];
-        isAdded = true;
-      }
-      setFavorites(updated);
-      localStorage.setItem(FAVORITES_KEY, JSON.stringify(updated));
-
-      // تزامن مع Supabase
-      fetch('/api/user/favorites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ placeId: id, action: isAdded ? 'add' : 'remove' }),
-      }).catch(() => {});
-
-      setToastMessage(isAdded ? `تمت إضافة «${name}» إلى مفضلتك ❤️` : `تمت إزالة «${name}» من مفضلتك`);
-      setTimeout(() => setToastMessage(null), 3000);
-    } catch {}
-  };
-
-  // استخراج كافة أماكن الإقامة المعتمدة
-  const allHousing = useMemo(() => {
-    return places.filter((p) => p.cat === 'housing');
-  }, [places]);
-
-  // استخراج الأحياء المتوفرة فعلياً في بيانات السكن
-  const availableAreas = useMemo(() => {
-    const set = new Set<string>();
-    allHousing.forEach((p) => {
-      if (p.a) set.add(p.a.trim());
-    });
-    return Array.from(set);
-  }, [allHousing]);
-
-  // تصنيفات الإقامة الثلاثة المعتمدة
-  const ACCOMMODATION_TYPES = [
-    { key: 'all', label: 'جميع أماكن الإقامة', icon: Building, count: allHousing.length },
-    {
-      key: 'resort',
-      label: 'منتجعات وفنادق ساحلية',
-      icon: Palmtree,
-      count: allHousing.filter((p) => getAccommodationType(p.n).type === 'resort').length,
-    },
-    {
-      key: 'city',
-      label: 'فنادق وسط المدينة',
-      icon: Hotel,
-      count: allHousing.filter((p) => getAccommodationType(p.n).type === 'city').length,
-    },
-    {
-      key: 'hostel',
-      label: 'بيوت شباب وسكن اقتصادي',
-      icon: Users,
-      count: allHousing.filter((p) => getAccommodationType(p.n).type === 'hostel').length,
-    },
-  ];
-
-  // تصفية وترتيب أماكن الإقامة بناءً على اختيارات المستخدم
-  const filteredHousing = useMemo(() => {
-    return allHousing
-      .filter((place) => {
-        // فلتر البحث النصي (الاسم، الحي، الوصف)
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase().trim();
-          const matchName = (place.n || '').toLowerCase().includes(q);
-          const matchArea = (place.a || '').toLowerCase().includes(q);
-          const matchDesc = (place.ds || '').toLowerCase().includes(q);
-          if (!matchName && !matchArea && !matchDesc) return false;
-        }
-
-        // فلتر نوع الإقامة
-        if (selectedType !== 'all') {
-          const info = getAccommodationType(place.n);
-          if (info.type !== selectedType) return false;
-        }
-
-        // فلتر المنطقة / الحي
-        if (selectedArea !== 'all') {
-          if (!place.a || !place.a.includes(selectedArea)) return false;
-        }
-
-        return true;
-      })
-      .sort((a, b) => {
-        if (sortBy === 'points') return (b.p || 0) - (a.p || 0);
-        if (sortBy === 'name') return a.n.localeCompare(b.n, 'ar');
-        // الافتراضي (الأكثر تميزاً: يضع المنتجعات والفنادق الكبرى في المقدمة)
-        return (b.p || 0) - (a.p || 0);
-      });
-  }, [allHousing, searchQuery, selectedType, selectedArea, sortBy]);
-
-  // إعادة ضبط كافة الفلاتر
-  const handleResetFilters = () => {
-    setSearchQuery('');
-    setSelectedType('all');
-    setSelectedArea('all');
-    setSortBy('featured');
-  };
-
-  const isFiltered = searchQuery !== '' || selectedType !== 'all' || selectedArea !== 'all' || sortBy !== 'featured';
+export const HousingView: React.FC<HousingViewProps> = ({ onBack, onNavigate }) => {
+  const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null);
 
   return (
-    <motion.div
-      className="space-y-6 max-w-6xl mx-auto pb-16"
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -15 }}
-      transition={{ duration: 0.35 }}
-    >
-      {/* Toast Notification */}
-      <AnimatePresence>
-        {toastMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-ocean-950/90 text-white px-5 py-2.5 rounded-2xl shadow-xl text-xs sm:text-sm font-bold border border-white/20 backdrop-blur-md flex items-center gap-2"
-          >
-            <span>{toastMessage}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 1. زر الرجوع والشارة الترحيبية */}
-      <div className="flex items-center justify-between">
-        <motion.button
+    <div className="space-y-6 sm:space-y-8 max-w-4xl mx-auto px-3 sm:px-4 py-2 sm:py-4" dir="rtl">
+      {/* 1. Header & Navigation */}
+      <div>
+        <button
           onClick={onBack}
           type="button"
-          className="inline-flex items-center gap-2 font-bold text-ocean-700 dark:text-teal2-400 hover:text-blue-600 transition group"
-          whileHover={{ x: 4 }}
-          whileTap={{ scale: 0.95 }}
+          className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition group py-1"
         >
-          <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-          <span>الرئيسية</span>
-        </motion.button>
+          <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+          <span>رجوع للرئيسية</span>
+        </button>
 
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40 text-xs font-bold">
-          <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-          <span>أماكن إقامة وفنادق معتمدة</span>
-        </span>
-      </div>
-
-      {/* 2. الهيدر والمقدمة البصرية */}
-      <div className="bg-gradient-to-br from-white via-sand-50/60 to-blue-50/30 dark:from-[#0d1825] dark:via-[#09131f] dark:to-[#0c1f36] p-6 sm:p-8 rounded-3xl border border-sand-200/80 dark:border-[#1d2d3e] shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-ocean-900 dark:text-white flex items-center gap-3">
-              <span className="w-11 h-11 rounded-2xl bg-blue-600 text-white grid place-items-center shadow-md shrink-0">
-                <Bed className="w-6 h-6" />
-              </span>
-              <span>دور على سكنك في بورسعيد</span>
+        <div className="flex items-center gap-2.5 mt-2">
+          <div className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 grid place-items-center">
+            <Bed className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+              السكن وشقق الطلاب والمغتربين
             </h1>
-            <p className="text-sm sm:text-base text-ocean-700/80 dark:text-ocean-100/70 font-semibold leading-relaxed max-w-2xl">
-              دليلك الشامل لاكتشاف خيارات الإقامة وأماكن السكن المعتمدة في بورسعيد وبورفؤاد، من الفنادق والمنتجعات الساحلية إلى بيوت الضيافة وسكن الشباب.
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
+              دليل شقق الإيجار، السكن الجامعي، والإقامة الشهرية لطلاب ومغتربي بورسعيد
             </p>
           </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="px-4 py-3 rounded-2xl bg-white dark:bg-[#132233] border border-sand-200 dark:border-[#22354a] text-center shadow-xs">
-              <span className="block text-xl font-black text-blue-600 dark:text-blue-400">{allHousing.length}</span>
-              <span className="text-[11px] font-bold text-ocean-700/70 dark:text-white/60">أماكن إقامة</span>
-            </div>
-            <div className="px-4 py-3 rounded-2xl bg-white dark:bg-[#132233] border border-sand-200 dark:border-[#22354a] text-center shadow-xs">
-              <span className="block text-xl font-black text-emerald-600 dark:text-emerald-400">{availableAreas.length}</span>
-              <span className="text-[11px] font-bold text-ocean-700/70 dark:text-white/60">أحياء ومناطق</span>
-            </div>
-            <div className="px-4 py-3 rounded-2xl bg-white dark:bg-[#132233] border border-sand-200 dark:border-[#22354a] text-center shadow-xs">
-              <span className="block text-xl font-black text-amber-600 dark:text-amber-400">100%</span>
-              <span className="text-[11px] font-bold text-ocean-700/70 dark:text-white/60">إحداثيات مؤكدة</span>
-            </div>
-          </div>
-        </div>
-
-        {/* شريط البحث المباشر */}
-        <div className="mt-6 relative">
-          <div className="relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ابحث باسم الفندق، المنتجع، أو المنطقة (مثال: بورتو، هلنان، حي الشرق)..."
-              className="w-full pl-10 pr-12 py-3.5 rounded-2xl border border-sand-300 dark:border-[#22354a] bg-white dark:bg-[#101c2b] text-sm font-bold text-ocean-900 dark:text-white placeholder:text-ocean-700/40 dark:placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition"
-            />
-            <Search className="w-5 h-5 text-blue-600 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-sand-200 dark:bg-[#1a2d42] text-ocean-700 dark:text-white/70 grid place-items-center hover:bg-sand-300 transition"
-                aria-label="مسح البحث"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
         </div>
       </div>
 
-      {/* 3. تصنيفات الإقامة وفلاتر الأحياء والترتيب */}
-      <div className="bg-white dark:bg-[#0f1a28] p-4 sm:p-5 rounded-3xl border border-sand-200/80 dark:border-[#1d2d3e] shadow-sm space-y-4">
-        {/* أزرار تصنيفات الإقامة */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-          {ACCOMMODATION_TYPES.map((t) => {
-            const IconComponent = t.icon;
-            const isSelected = selectedType === t.key;
-            return (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setSelectedType(t.key as AccommodationType)}
-                className={`px-3.5 py-2 rounded-2xl text-xs font-black transition flex items-center gap-2 shrink-0 border ${
-                  isSelected
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                    : 'bg-sand-50 dark:bg-[#142232] text-ocean-800 dark:text-white/80 border-sand-200 dark:border-[#22354a] hover:border-blue-400'
-                }`}
-              >
-                <IconComponent className="w-4 h-4" />
-                <span>{t.label}</span>
-                <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                    isSelected
-                      ? 'bg-white/20 text-white'
-                      : 'bg-sand-200 dark:bg-[#1b2d42] text-ocean-700 dark:text-white/70'
-                  }`}
-                >
-                  {t.count}
-                </span>
-              </button>
-            );
-          })}
+      {/* 2. Main Coming Soon Hero Card (بأسلوب بورسعيد هب القديم مع الهوية الحديثة) */}
+      <motion.div
+        className="rounded-3xl bg-gradient-to-br from-amber-50/90 via-white to-blue-50/40 dark:from-[#131d2b] dark:via-[#0c1622] dark:to-[#101b2a] border border-amber-200/70 dark:border-amber-900/40 p-6 sm:p-10 text-center space-y-4 shadow-sm"
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-3xl bg-amber-500/20 text-amber-600 dark:text-amber-400 grid place-items-center shadow-inner">
+          <Clock className="w-8 h-8 animate-pulse" />
         </div>
 
-        {/* فلاتر الأحياء والترتيب وزر المسح */}
-        <div className="pt-3 border-t border-sand-200/60 dark:border-[#1d2d3e] flex flex-wrap items-center justify-between gap-3 text-xs">
-          {/* فلتر الأحياء */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-ocean-700/80 dark:text-white/70 flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-blue-600" />
-              <span>المنطقة:</span>
-            </span>
+        <div className="space-y-2 max-w-lg mx-auto">
+          <span className="inline-block px-3 py-1 rounded-full text-xs font-black bg-amber-500 text-white shadow-2xs">
+            قيد الإعداد والتوثيق
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            محتوى السكن جاي قريب
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+            فريق العمل بيجمع ويوثق حالياً عروض شقق الإيجار وسكن الطلاب الموثوقة في أحياء بورسعيد، للتأكد من الأسعار وتوفير أرقام اتصال حقيقية ومباشرة بدون سماسرة أو بيانات وهمية.
+          </p>
+        </div>
 
+        {/* أوتيلات وفنادق بورسعيد البديلة */}
+        {onNavigate && (
+          <div className="pt-2">
             <button
               type="button"
-              onClick={() => setSelectedArea('all')}
-              className={`px-2.5 py-1 rounded-xl font-bold transition border ${
-                selectedArea === 'all'
-                  ? 'bg-ocean-900 text-white border-ocean-900 dark:bg-blue-600 dark:border-blue-600'
-                  : 'bg-sand-100 dark:bg-[#152332] text-ocean-700 dark:text-white/70 border-sand-200 dark:border-[#24374c]'
+              onClick={() => onNavigate('hotels')}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold shadow-xs transition"
+            >
+              <Building className="w-4 h-4" />
+              <span>بتدور على إقامة فندقية أو منتجعات؟ شوف قسم الفنادق</span>
+            </button>
+          </div>
+        )}
+      </motion.div>
+
+      {/* 3. اختيار المناطق المستهدفة (عايز السكن فين؟ على طريقة بورسعيد هب القديمة) */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-amber-500" />
+            <span>عايز السكن في أي منطقة؟</span>
+          </h3>
+          <span className="text-xs text-slate-400 font-bold">المناطق المخططة</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {DISTRICTS.map((district, idx) => (
+            <div
+              key={idx}
+              onClick={() => setSelectedDistrict(district.name)}
+              className={`p-4 rounded-2xl border transition-all text-right cursor-pointer ${
+                selectedDistrict === district.name
+                  ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-400 dark:border-amber-700 shadow-xs'
+                  : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-300'
               }`}
             >
-              الكل
-            </button>
-
-            {availableAreas.map((area) => (
-              <button
-                key={area}
-                type="button"
-                onClick={() => setSelectedArea(area)}
-                className={`px-2.5 py-1 rounded-xl font-bold transition border ${
-                  selectedArea === area
-                    ? 'bg-ocean-900 text-white border-ocean-900 dark:bg-blue-600 dark:border-blue-600'
-                    : 'bg-sand-100 dark:bg-[#152332] text-ocean-700 dark:text-white/70 border-sand-200 dark:border-[#24374c]'
-                }`}
-              >
-                {area}
-              </button>
-            ))}
-          </div>
-
-          {/* الترتيب وزر مسح الفلاتر */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 font-bold text-ocean-700/80 dark:text-white/70">
-              <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600" />
-              <span>الترتيب:</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-sand-50 dark:bg-[#142232] border border-sand-200 dark:border-[#22354a] rounded-xl px-2 py-1 text-xs font-bold text-ocean-900 dark:text-white focus:outline-none"
-              >
-                <option value="featured">الأكثر تميزاً</option>
-                <option value="points">الأعلى نقاطاً</option>
-                <option value="name">أبجدياً (أ-ي)</option>
-              </select>
-            </div>
-
-            {isFiltered && (
-              <button
-                type="button"
-                onClick={handleResetFilters}
-                className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 transition"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>مسح الفلاتر</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 4. عداد النتائج ومعلومات السعر والتوافر */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 text-xs text-ocean-700/70 dark:text-white/60">
-        <span className="font-bold">
-          عرض <strong className="text-blue-600 dark:text-blue-400 font-black">{filteredHousing.length}</strong> من أصل {allHousing.length} مكان إقامة معتمد
-        </span>
-
-        <span className="flex items-center gap-1 text-[11px] text-ocean-700/60 dark:text-white/50">
-          <Info className="w-3.5 h-3.5 text-blue-500" />
-          <span>الأسعار والتوافر يتم الاستعلام والتنسيق المباشر لها عبر المكان أو خرائط جوجل</span>
-        </span>
-      </div>
-
-      {/* 5. شبكة بطاقات أماكن الإقامة */}
-      {filteredHousing.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredHousing.map((place, index) => {
-            const photo = getHousingPhoto(place.n, place.a);
-            const typeInfo = getAccommodationType(place.n);
-            const isFav = favorites.includes(place.id);
-
-            return (
-              <motion.div
-                key={place.id}
-                layout
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25, delay: index * 0.04 }}
-                className="bg-white dark:bg-[#0f1a28] rounded-3xl border border-sand-200/80 dark:border-[#1d2d3e] overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between group"
-              >
-                {/* رأس البطاقة مع الصورة والشارات */}
-                <div>
-                  <div className="relative h-48 w-full overflow-hidden bg-sand-200 dark:bg-[#121c29]">
-                    <img
-                      src={photo}
-                      alt={place.n}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-
-                    {/* شارة نوع الإقامة */}
-                    <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                      <span className={`px-2.5 py-1 rounded-xl text-[11px] font-black shadow-md ${typeInfo.badgeBg}`}>
-                        {typeInfo.label}
-                      </span>
-                    </div>
-
-                    {/* زر المفضلة */}
-                    <button
-                      type="button"
-                      onClick={(e) => toggleFavorite(e, place.id, place.n)}
-                      aria-label="إضافة للمفضلة"
-                      className="absolute top-3 left-3 w-9 h-9 rounded-2xl bg-white/90 dark:bg-[#0f1a28]/90 text-ocean-900 dark:text-white grid place-items-center backdrop-blur-md shadow-md hover:scale-110 transition active:scale-95"
-                    >
-                      <Heart
-                        className={`w-4 h-4 transition ${
-                          isFav ? 'fill-rose-500 text-rose-500' : 'text-ocean-700/70 dark:text-white/70'
-                        }`}
-                      />
-                    </button>
-
-                    {/* المنطقة والشارات السفلية فوق الصورة */}
-                    <div className="absolute bottom-3 right-3 left-3 flex items-center justify-between text-white text-xs font-bold">
-                      <span className="flex items-center gap-1 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-xl">
-                        <MapPin className="w-3.5 h-3.5 text-blue-400" />
-                        <span>{place.a}</span>
-                      </span>
-
-                      {place.p > 0 && (
-                        <span className="flex items-center gap-1 bg-amber-500/90 text-ocean-950 px-2 py-0.5 rounded-lg text-[10px] font-black">
-                          <Star className="w-3 h-3 fill-current" />
-                          <span>{place.p} نقطة</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* محتوى البطاقة */}
-                  <div className="p-5 space-y-3">
-                    <h3 className="text-base sm:text-lg font-black text-ocean-900 dark:text-white line-clamp-1">
-                      {place.n}
-                    </h3>
-
-                    <p className="text-xs text-ocean-700/80 dark:text-white/70 line-clamp-2 leading-relaxed">
-                      {place.ds || 'إقامة مريحة وخدمات فندقية متميزة في موقع حيوي ببورسعيد.'}
-                    </p>
-
-                    {/* شريط الإيضاح */}
-                    <div className="pt-2 border-t border-sand-200/60 dark:border-[#1d2d3e] flex items-center justify-between text-[11px] text-ocean-700/70 dark:text-white/60">
-                      <span className="flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                        <span>موقع مسجل ومعتمد</span>
-                      </span>
-
-                      {place.disc > 0 && (
-                        <span className="font-extrabold text-blue-600 dark:text-blue-400">
-                          خصم {place.disc}% لحاملي البطاقة
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* أزرار الإجراءات */}
-                <div className="p-5 pt-0 grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onSelectPlace(place.id)}
-                    className="col-span-2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs transition text-center shadow-xs"
-                  >
-                    عرض التفاصيل
-                  </button>
-
-                  {place.maps_url ? (
-                    <a
-                      href={place.maps_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="py-2.5 rounded-xl bg-sand-100 hover:bg-sand-200 dark:bg-[#1a2d42] dark:hover:bg-[#233b56] text-ocean-700 dark:text-white/80 font-bold text-xs transition flex items-center justify-center gap-1 border border-sand-200 dark:border-[#24374c]"
-                      aria-label="الموقع على Google Maps"
-                    >
-                      <span>الخريطة</span>
-                      <ExternalLink className="w-3 h-3 text-blue-600" />
-                    </a>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => onNavigate && onNavigate('map', place.id)}
-                      className="py-2.5 rounded-xl bg-sand-100 hover:bg-sand-200 dark:bg-[#1a2d42] dark:hover:bg-[#233b56] text-ocean-700 dark:text-white/80 font-bold text-xs transition flex items-center justify-center gap-1 border border-sand-200 dark:border-[#24374c]"
-                    >
-                      <Navigation className="w-3 h-3 text-blue-600" />
-                      <span>الموقع</span>
-                    </button>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      ) : (
-        /* الحالة الفارغة عند عدم العثور على نتائج */
-        <div className="text-center py-16 bg-white dark:bg-[#0f1a28] rounded-3xl border border-dashed border-sand-300 dark:border-[#203042] p-8 space-y-4">
-          <div className="w-14 h-14 rounded-3xl bg-sand-100 dark:bg-[#182638] text-ocean-700 dark:text-white/70 grid place-items-center mx-auto text-2xl">
-            🏨
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-base font-black text-ocean-900 dark:text-white">لم نجد أماكن إقامة تطابق بحثك</h3>
-            <p className="text-xs text-ocean-700/70 dark:text-white/60 max-w-md mx-auto leading-relaxed">
-              جرّب تغيير كلمات البحث أو مسح الفلاتر المختارة لعرض جميع خيارات الإقامة المعتمدة في بورسعيد.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleResetFilters}
-            className="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition shadow-sm"
-          >
-            مسح خيارات البحث والفلاتر
-          </button>
-        </div>
-      )}
-
-      {/* 6. البوابات السفلية: استعراض الخريطة ومخطط الرحلات الذكي */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-        <motion.div
-          whileHover={{ y: -2 }}
-          onClick={() => onNavigate && onNavigate('map')}
-          className="p-5 rounded-3xl bg-white dark:bg-[#0f1a28] border border-sand-200/80 dark:border-[#1d2d3e] shadow-xs cursor-pointer flex items-center justify-between group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 grid place-items-center">
-              <Compass className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-sm font-black text-ocean-900 dark:text-white group-hover:text-blue-600 transition">
-                الخريطة التفاعلية لأماكن السكن
-              </h4>
-              <p className="text-[11px] text-ocean-700/70 dark:text-white/60">
-                استكشف مواقع الفنادق والمنتجعات جغرافياً على خريطة بورسعيد
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-black text-sm text-slate-900 dark:text-white">
+                  {district.name}
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                  قريباً
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
+                {district.desc}
               </p>
             </div>
-          </div>
-          <ArrowRight className="w-4 h-4 text-ocean-700/50 group-hover:text-blue-600 group-hover:-translate-x-1 transition" />
-        </motion.div>
+          ))}
+        </div>
 
-        <motion.div
-          whileHover={{ y: -2 }}
-          onClick={() => onNavigate && onNavigate('planner', 'أماكن إقامة وفنادق في بورسعيد')}
-          className="p-5 rounded-3xl bg-white dark:bg-[#0f1a28] border border-sand-200/80 dark:border-[#1d2d3e] shadow-xs cursor-pointer flex items-center justify-between group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 grid place-items-center">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-sm font-black text-ocean-900 dark:text-white group-hover:text-amber-600 transition">
-                مخطط الإقامة والجولات الذكي
-              </h4>
-              <p className="text-[11px] text-ocean-700/70 dark:text-white/60">
-                دع الذكاء الاصطناعي يرتب لك برنامج إقامة وزيارات متكاملاً
-              </p>
-            </div>
-          </div>
-          <ArrowRight className="w-4 h-4 text-ocean-700/50 group-hover:text-amber-600 group-hover:-translate-x-1 transition" />
-        </motion.div>
+        {selectedDistrict && (
+          <p className="text-xs text-center text-amber-700 dark:text-amber-400 font-bold p-3 rounded-2xl bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40">
+            سجلنا اهتمامك بـ «{selectedDistrict}»، وسيتم إشعارك فور توفر شقق موثقة في هذه المنطقة!
+          </p>
+        )}
       </div>
-    </motion.div>
+
+      {/* 4. معايير سكن الطلاب والمغتربين في بورسعيد هب */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 space-y-3">
+        <h3 className="font-black text-sm sm:text-base text-slate-900 dark:text-white flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-emerald-500" />
+          <span>معايير توثيق السكن التي نعمل عليها:</span>
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-600 dark:text-slate-300">
+          <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 space-y-1">
+            <span className="font-bold block text-slate-900 dark:text-white">1. أمان وموقع حيوي</span>
+            <p className="text-slate-500">القرب من الشوارع الرئيسية وخطوط سير السرفيس والمواصلات الجامعية.</p>
+          </div>
+          <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 space-y-1">
+            <span className="font-bold block text-slate-900 dark:text-white">2. أسعار عادلة ومباشرة</span>
+            <p className="text-slate-500">التعامل المباشر مع أصحاب الشقق بدون وسطاء أو عمولات مبالغ فيها.</p>
+          </div>
+          <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 space-y-1">
+            <span className="font-bold block text-slate-900 dark:text-white">3. معاينة حقيقية</span>
+            <p className="text-slate-500">صور حديثة وتفاصيل موثوقة لحالة الأثاث والمرافق والإنترنت.</p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
