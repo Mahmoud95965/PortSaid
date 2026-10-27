@@ -283,3 +283,44 @@ body {
 .stagger-7 { animation-delay: 0.35s; }
 .stagger-8 { animation-delay: 0.4s; }
 .stagger-9 { animation-delay: 0.45s; }
+
+/* ===================== MOBILE PERFORMANCE OPTIMIZATIONS ===================== */
+@media (max-width: 768px) {
+  /* Throttle expensive blur operations on mobile GPUs */
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  .backdrop-blur-xl,
+  .backdrop-blur-2xl,
+  .glass,
+  .glass-card {
+    -webkit-backdrop-filter: blur(6px) !important;
+    backdrop-filter: blur(6px) !important;
+  }
+
+  /* Disable heavy continuous CSS animations on mobile for maximum battery & 60fps scrolling */
+  .animate-bob,
+  .animate-float,
+  .animate-gradient-shift,
+  .animate-morph-blob,
+  .animate-wave-move,
+  .animate-text-glow,
+  .pulse-glow {
+    animation: none !important;
+  }
+
+  /* Remove 3D transform cost on small viewports */
+  .magnetic-hover:hover {
+    transform: none !important;
+  }
+
+  /* Optimize tap delays */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+.hardware-accel {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
+}

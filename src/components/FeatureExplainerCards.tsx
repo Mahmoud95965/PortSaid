@@ -388,10 +388,19 @@ export const FeatureExplainerCards: React.FC<FeatureExplainerCardsProps> = ({
 }) => {
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'roadmap' | 'all'>('roadmap');
-  const [isExpanded, setIsExpanded] = useState<boolean>(!hasSeenGuide);
+  const [isExpanded, setIsExpanded] = useState<boolean>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return false; // On mobile, start collapsed for maximum performance
+    }
+    return !hasSeenGuide;
+  });
 
   React.useEffect(() => {
-    setIsExpanded(!hasSeenGuide);
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setIsExpanded(false);
+    } else {
+      setIsExpanded(!hasSeenGuide);
+    }
   }, [hasSeenGuide]);
 
   const toggleExpand = (id: string) => {
@@ -656,32 +665,18 @@ export const FeatureExplainerCards: React.FC<FeatureExplainerCardsProps> = ({
                   </AnimatePresence>
                 </motion.div>
 
-                {/* ANIMATED DIRECTIONAL FLOW ARROW CONNECTOR */}
+                {/* DIRECTIONAL FLOW ARROW CONNECTOR */}
                 {!isLast && (
                   <div className="flex flex-col items-center justify-center py-1 sm:py-2 relative">
                     {/* Glowing flow line */}
                     <div className="w-0.5 h-4 sm:h-6 bg-gradient-to-b from-sand-300/80 via-amber-400 to-teal2-400/80 dark:from-sand-400/30 dark:to-teal2-500/30" />
 
-                    {/* Animated Arrow Badge with Horizontal/Vertical Motion */}
-                    <motion.div
-                      animate={{ y: [0, 4, 0] }}
-                      transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                      className="px-4 py-1.5 rounded-full bg-gradient-to-r from-ocean-900 via-ocean-800 to-teal2-800 text-sand-300 border border-amber-400/40 shadow-md flex items-center gap-2 text-[11px] sm:text-xs font-black z-10"
-                    >
-                      <motion.div
-                        animate={{ x: [0, -4, 0] }}
-                        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-                      >
-                        <ArrowLeft className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      </motion.div>
+                    {/* Arrow Badge */}
+                    <div className="px-4 py-1.5 rounded-full bg-gradient-to-r from-ocean-900 via-ocean-800 to-teal2-800 text-sand-300 border border-amber-400/40 shadow-sm flex items-center gap-2 text-[11px] sm:text-xs font-black z-10 select-none">
+                      <ArrowLeft className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                       <span>{step.arrowNextText}</span>
-                      <motion.div
-                        animate={{ x: [0, -4, 0] }}
-                        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-                      >
-                        <ArrowLeft className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      </motion.div>
-                    </motion.div>
+                      <ArrowLeft className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    </div>
 
                     <div className="w-0.5 h-4 sm:h-6 bg-gradient-to-b from-teal2-400/80 via-amber-400 to-sand-300/80 dark:from-teal2-500/30 dark:to-sand-400/30" />
                   </div>

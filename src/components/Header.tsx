@@ -100,10 +100,10 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <motion.header
-      className={`sticky top-0 z-40 text-white shadow-lg backdrop-blur-md transition-colors duration-300 border-b border-white/10 ${
+      className={`sticky top-0 z-40 text-white shadow-lg backdrop-blur-md transition-colors duration-300 border-b border-white/10 hardware-accel ${
         isMerchant
           ? 'bg-gradient-to-r from-[#2c1d58]/95 via-[#4a1d6e]/95 to-[#8c3d1b]/95'
-          : 'bg-[#061a3d]/95 dark:bg-[#051122]/95 waves-pattern'
+          : 'bg-[#061a3d]/98 dark:bg-[#051122]/98 waves-pattern'
       }`}
       initial={{ y: -80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
