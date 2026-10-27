@@ -27,6 +27,8 @@ import {
   BookOpen,
   Store,
   Layers,
+  Bell,
+  BellOff,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -47,12 +49,14 @@ export const Header: React.FC<HeaderProps> = ({
 
   // Dropdown states
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [exploreMenuOpen, setExploreMenuOpen] = useState(false);
   const [servicesMenuOpen, setServicesMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Refs for click outside
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
   const exploreRef = useRef<HTMLDivElement>(null);
   const servicesRef = useRef<HTMLDivElement>(null);
   const mobileRef = useRef<HTMLDivElement>(null);
@@ -62,6 +66,9 @@ export const Header: React.FC<HeaderProps> = ({
       const target = event.target as Node;
       if (userMenuRef.current && !userMenuRef.current.contains(target)) {
         setUserMenuOpen(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(target)) {
+        setNotificationsOpen(false);
       }
       if (exploreRef.current && !exploreRef.current.contains(target)) {
         setExploreMenuOpen(false);
@@ -372,6 +379,59 @@ export const Header: React.FC<HeaderProps> = ({
             </motion.button>
           )}
 
+          {/* Notifications Button (Completely Empty State as requested) */}
+          <div className="relative" ref={notificationsRef}>
+            <motion.button
+              onClick={() => {
+                setNotificationsOpen(!notificationsOpen);
+                setUserMenuOpen(false);
+              }}
+              type="button"
+              aria-label="الإشعارات"
+              title="الإشعارات (0)"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-white/15 border border-white/30 text-white grid place-items-center hover:bg-white/25 transition shadow-sm relative"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-white/90" />
+            </motion.button>
+
+            {/* Notifications Dropdown (Completely Empty State) */}
+            <AnimatePresence>
+              {notificationsOpen && (
+                <motion.div
+                  className="absolute left-0 top-12 sm:top-14 z-50 w-72 sm:w-80 bg-white dark:bg-[#121c29] text-ocean-900 dark:text-white rounded-3xl shadow-2xl p-4 border border-sand-200 dark:border-[#223246] space-y-3"
+                  variants={dropdownVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                >
+                  <div className="flex items-center justify-between pb-2.5 border-b border-sand-200 dark:border-[#223246]">
+                    <div className="flex items-center gap-2">
+                      <Bell className="w-4 h-4 text-ocean-700 dark:text-teal2-400" />
+                      <h4 className="font-extrabold text-sm text-ocean-900 dark:text-white">الإشعارات</h4>
+                    </div>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-sand-200 dark:bg-slate-800 text-ocean-700 dark:text-slate-300">
+                      0 جديدة
+                    </span>
+                  </div>
+
+                  <div className="py-6 px-3 text-center space-y-2">
+                    <div className="w-12 h-12 mx-auto rounded-2xl bg-sand-100 dark:bg-slate-800/80 text-ocean-500 dark:text-slate-400 grid place-items-center">
+                      <BellOff className="w-6 h-6" />
+                    </div>
+                    <p className="font-extrabold text-xs sm:text-sm text-ocean-900 dark:text-white">
+                      لا توجد إشعارات حالياً
+                    </p>
+                    <p className="text-[11px] text-ocean-700/60 dark:text-slate-400 max-w-xs mx-auto">
+                      ستصلك هنا أحدث العروض والفعاليات والتحديثات فور صدورها.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           {/* Theme Toggle Button */}
           <motion.button
             onClick={toggleTheme}
@@ -643,6 +703,15 @@ export const Header: React.FC<HeaderProps> = ({
                           <span>الملابس</span>
                         </button>
                       </div>
+                    </div>
+
+                    {/* Notifications in mobile drawer */}
+                    <div className="p-2.5 rounded-2xl bg-sand-100/70 dark:bg-[#162738]/70 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <Bell className="w-4 h-4 text-ocean-700 dark:text-teal2-400" />
+                        <span className="font-bold text-ocean-900 dark:text-white">الإشعارات</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">لا توجد إشعارات</span>
                     </div>
 
                     {/* Quick feedback action */}

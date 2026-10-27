@@ -37,7 +37,7 @@ import Link from 'next/link';
 import { HistoricalStory, MemoryPost } from '@/types';
 
 export const AdminDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('home');
 
   // Sample admin states
@@ -301,8 +301,60 @@ export const AdminDashboard: React.FC = () => {
     setRedeemCode('');
   };
 
+  // 1. Loading Guard
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-sand-50 dark:bg-[#071322] flex items-center justify-center p-4" dir="rtl">
+        <div className="text-center space-y-4 max-w-sm">
+          <div className="w-16 h-16 mx-auto rounded-3xl bg-blue-600/10 text-blue-600 dark:text-blue-400 grid place-items-center animate-pulse">
+            <Shield className="w-8 h-8" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-lg font-black text-slate-900 dark:text-white">جارٍ التحقق من الصلاحيات الأمنية...</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">يرجى الانتظار لحظات للتحقق من هوية المسؤول</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Strict Security Access Guard (Admin & Owner Only)
+  if (!user || (user.role !== 'admin' && user.role !== 'owner')) {
+    return (
+      <div className="min-h-screen bg-sand-50 dark:bg-[#071322] flex items-center justify-center p-4" dir="rtl">
+        <div className="max-w-md w-full bg-white dark:bg-[#0c1622] rounded-3xl p-6 sm:p-8 border border-red-200 dark:border-red-950/60 shadow-2xl text-center space-y-5">
+          <div className="w-20 h-20 mx-auto rounded-3xl bg-red-500/10 text-red-600 dark:text-red-400 grid place-items-center border border-red-500/20">
+            <ShieldAlert className="w-10 h-10" />
+          </div>
+
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-300 text-xs font-black">
+              <Lock className="w-3.5 h-3.5" />
+              <span>403 Forbidden · منطقة محمية</span>
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white">
+              غير مصرح بالدخول
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+              هذه الصفحة مخصصة فقط لمسؤولي وإدارة منصة <strong className="text-slate-900 dark:text-white">Port Said Hub</strong>. حسابك الحالي لا يمتلك الصلاحيات الإدارية اللازمة لتصفح هذه البيانات أو تعديلها.
+            </p>
+          </div>
+
+          <div className="pt-2 flex flex-col sm:flex-row items-center gap-3 justify-center">
+            <Link
+              href="/"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs sm:text-sm hover:opacity-90 transition shadow"
+            >
+              العودة للصفحة الرئيسية
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-sand-50 dark:bg-[#0b0f14] text-ocean-900 dark:text-white transition-colors">
+    <div className="min-h-screen bg-sand-50 dark:bg-[#071322] text-ocean-900 dark:text-white transition-colors" dir="rtl">
       {/* Top Bar */}
       <div className="hero-bg text-white p-4 sm:p-5 shadow-lg border-b border-white/20">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
@@ -314,17 +366,26 @@ export const AdminDashboard: React.FC = () => {
               <img src="/assets/logo/icon-192.png" alt="" className="w-6 h-6 object-contain" />
             </Link>
             <div>
-              <h1 className="text-xl sm:text-2xl font-black">لوحة التحكم الإدارية</h1>
-              <p className="text-xs text-white/80">Port Said Hub · إدارة المحتوى والشركاء والمستخدمين</p>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg sm:text-2xl font-black">لوحة التحكم الإدارية</h1>
+                <span className="px-2 py-0.5 rounded-md bg-sand-400 text-ocean-950 text-[10px] font-black">
+                  {user.role === 'owner' ? 'المالك الرئيسي' : 'مشرف معتمد'}
+                </span>
+              </div>
+              <p className="text-xs text-white/80">
+                Port Said Hub · مرحباً بك يا {user.name}
+              </p>
             </div>
           </div>
 
-          <Link
-            href="/"
-            className="px-4 py-2 rounded-xl bg-white/15 border border-white/30 text-white font-bold text-xs sm:text-sm hover:bg-white/25 transition"
-          >
-            العودة للموقع
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <Link
+              href="/"
+              className="px-4 py-2 rounded-xl bg-white/15 border border-white/30 text-white font-bold text-xs sm:text-sm hover:bg-white/25 transition"
+            >
+              العودة للموقع
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -336,8 +397,8 @@ export const AdminDashboard: React.FC = () => {
             onClick={() => setActiveTab('home')}
             className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
               activeTab === 'home'
-                ? 'bg-ocean-900 text-white border-ocean-900'
-                : 'bg-white dark:bg-[#161616] text-ocean-900 dark:text-white border-sand-200 dark:border-[#2a2a2a]'
+                ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
+                : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
             }`}
           >
             <Gauge className="w-4 h-4" />
@@ -348,8 +409,8 @@ export const AdminDashboard: React.FC = () => {
             onClick={() => setActiveTab('users')}
             className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
               activeTab === 'users'
-                ? 'bg-ocean-900 text-white border-ocean-900'
-                : 'bg-white dark:bg-[#161616] text-ocean-900 dark:text-white border-sand-200 dark:border-[#2a2a2a]'
+                ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
+                : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
             }`}
           >
             <Users className="w-4 h-4" />
@@ -361,8 +422,8 @@ export const AdminDashboard: React.FC = () => {
               onClick={() => setActiveTab('staff')}
               className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
                 activeTab === 'staff'
-                  ? 'bg-ocean-900 text-white border-ocean-900'
-                  : 'bg-white dark:bg-[#161616] text-ocean-900 dark:text-white border-sand-200 dark:border-[#2a2a2a]'
+                  ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
+                  : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
               }`}
             >
               <Shield className="w-4 h-4" />
@@ -374,8 +435,8 @@ export const AdminDashboard: React.FC = () => {
             onClick={() => setActiveTab('places')}
             className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
               activeTab === 'places'
-                ? 'bg-ocean-900 text-white border-ocean-900'
-                : 'bg-white dark:bg-[#161616] text-ocean-900 dark:text-white border-sand-200 dark:border-[#2a2a2a]'
+                ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
+                : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
             }`}
           >
             <MapPin className="w-4 h-4" />
@@ -386,8 +447,8 @@ export const AdminDashboard: React.FC = () => {
             onClick={() => setActiveTab('partners')}
             className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border relative ${
               activeTab === 'partners'
-                ? 'bg-ocean-900 text-white border-ocean-900'
-                : 'bg-white dark:bg-[#161616] text-ocean-900 dark:text-white border-sand-200 dark:border-[#2a2a2a]'
+                ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
+                : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
             }`}
           >
             <Handshake className="w-4 h-4" />
@@ -403,8 +464,8 @@ export const AdminDashboard: React.FC = () => {
             onClick={() => setActiveTab('stats')}
             className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
               activeTab === 'stats'
-                ? 'bg-ocean-900 text-white border-ocean-900'
-                : 'bg-white dark:bg-[#161616] text-ocean-900 dark:text-white border-sand-200 dark:border-[#2a2a2a]'
+                ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
+                : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
             }`}
           >
             <BarChart3 className="w-4 h-4" />
@@ -415,20 +476,20 @@ export const AdminDashboard: React.FC = () => {
             onClick={() => setActiveTab('history')}
             className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
               activeTab === 'history'
-                ? 'bg-ocean-900 text-white border-ocean-900'
-                : 'bg-white dark:bg-[#161616] text-ocean-900 dark:text-white border-sand-200 dark:border-[#2a2a2a]'
+                ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
+                : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
             }`}
           >
             <BookOpen className="w-4 h-4" />
-            <span>الدليل التاريخي</span>
+            <span>الدليل التاريخي (استكشف)</span>
           </button>
 
           <button
             onClick={() => setActiveTab('memories')}
             className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
               activeTab === 'memories'
-                ? 'bg-ocean-900 text-white border-ocean-900'
-                : 'bg-white dark:bg-[#161616] text-ocean-900 dark:text-white border-sand-200 dark:border-[#2a2a2a]'
+                ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
+                : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
             }`}
           >
             <Camera className="w-4 h-4" />
@@ -439,8 +500,8 @@ export const AdminDashboard: React.FC = () => {
             onClick={() => setActiveTab('redeem')}
             className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
               activeTab === 'redeem'
-                ? 'bg-ocean-900 text-white border-ocean-900'
-                : 'bg-white dark:bg-[#161616] text-ocean-900 dark:text-white border-sand-200 dark:border-[#2a2a2a]'
+                ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
+                : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
             }`}
           >
             <Ticket className="w-4 h-4" />
@@ -452,8 +513,8 @@ export const AdminDashboard: React.FC = () => {
               onClick={() => setActiveTab('logs')}
               className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
                 activeTab === 'logs'
-                  ? 'bg-ocean-900 text-white border-ocean-900'
-                  : 'bg-white dark:bg-[#161616] text-ocean-900 dark:text-white border-sand-200 dark:border-[#2a2a2a]'
+                  ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
+                  : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
               }`}
             >
               <Video className="w-4 h-4" />
@@ -467,22 +528,22 @@ export const AdminDashboard: React.FC = () => {
           <div className="space-y-6 pop-in">
             {/* Stats Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="rounded-3xl bg-white dark:bg-[#161616] p-5 shadow border border-sand-200/60 dark:border-[#2a2a2a]">
+              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
                 <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">المستخدمين المسجلين</p>
                 <p className="text-2xl sm:text-3xl font-black mt-2 text-ocean-900 dark:text-white">1,248</p>
               </div>
 
-              <div className="rounded-3xl bg-white dark:bg-[#161616] p-5 shadow border border-sand-200/60 dark:border-[#2a2a2a]">
+              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
                 <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">الأماكن النشطة</p>
                 <p className="text-2xl sm:text-3xl font-black mt-2 text-teal2-600 dark:text-teal2-400">42</p>
               </div>
 
-              <div className="rounded-3xl bg-white dark:bg-[#161616] p-5 shadow border border-sand-200/60 dark:border-[#2a2a2a]">
+              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
                 <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">الكوبونات المستبدلة</p>
                 <p className="text-2xl sm:text-3xl font-black mt-2 text-sand-500">319</p>
               </div>
 
-              <div className="rounded-3xl bg-white dark:bg-[#161616] p-5 shadow border border-sand-200/60 dark:border-[#2a2a2a]">
+              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
                 <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">إجمالي الزيارات المؤكدة</p>
                 <p className="text-2xl sm:text-3xl font-black mt-2 text-ocean-700 dark:text-ocean-300">2,840</p>
               </div>
@@ -490,7 +551,7 @@ export const AdminDashboard: React.FC = () => {
 
             {/* Security Alerts (Owner Only) */}
             {isOwner && (
-              <div className="rounded-3xl bg-white dark:bg-[#161616] p-6 shadow border border-sand-200/60 dark:border-[#2a2a2a] space-y-4">
+              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-6 shadow border border-sand-200/60 dark:border-[#1d2d3e] space-y-4">
                 <h3 className="text-lg font-black flex items-center gap-2">
                   <ShieldAlert className="w-5 h-5 text-sand-500" />
                   <span>مراقبة الأمان والنزاهة التشفيرية</span>
@@ -525,12 +586,12 @@ export const AdminDashboard: React.FC = () => {
                   placeholder="ابحث بالاسم أو البريد أو الهاتف..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
-                  className="w-full rounded-2xl border border-sand-200 dark:border-[#2a2a2a] bg-white dark:bg-[#161616] px-4 py-2.5 text-sm"
+                  className="w-full rounded-2xl border border-sand-200 dark:border-[#1d2d3e] bg-white dark:bg-[#0c1622] px-4 py-2.5 text-sm"
                 />
               </div>
             </div>
 
-            <div className="rounded-3xl bg-white dark:bg-[#161616] shadow overflow-hidden border border-sand-200/60 dark:border-[#2a2a2a]">
+            <div className="rounded-3xl bg-white dark:bg-[#0c1622] shadow overflow-hidden border border-sand-200/60 dark:border-[#1d2d3e]">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-right">
                   <thead className="bg-sand-100 dark:bg-[#212d37] text-xs font-black">
@@ -585,7 +646,7 @@ export const AdminDashboard: React.FC = () => {
               {partnerApps.map((app) => (
                 <div
                   key={app.id}
-                  className="rounded-3xl bg-white dark:bg-[#161616] p-5 shadow border border-sand-200/60 dark:border-[#2a2a2a] space-y-3"
+                  className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e] space-y-3"
                 >
                   <div className="flex items-center justify-between">
                     <h4 className="font-extrabold text-lg">{app.business_name}</h4>
@@ -600,7 +661,7 @@ export const AdminDashboard: React.FC = () => {
                   <p className="text-xs text-ocean-700/70 dark:text-white/60">
                     المالك: {app.owner_name} · الهاتف: {app.phone} · المنطقة: {app.area}
                   </p>
-                  <div className="flex gap-4 text-xs font-bold pt-2 border-t border-sand-200/60 dark:border-[#2a2a2a]">
+                  <div className="flex gap-4 text-xs font-bold pt-2 border-t border-sand-200/60 dark:border-[#1d2d3e]">
                     <span>خصم العميل: {app.discount}%</span>
                     <span>عمولة Alpha: {app.commission} ج</span>
                   </div>
@@ -613,7 +674,7 @@ export const AdminDashboard: React.FC = () => {
         {/* Tab Content: Redeem Coupon */}
         {activeTab === 'redeem' && (
           <div className="max-w-md mx-auto space-y-4 pop-in">
-            <div className="rounded-3xl bg-white dark:bg-[#161616] p-6 shadow border border-sand-200/60 dark:border-[#2a2a2a]">
+            <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-6 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
               <h3 className="text-lg font-black mb-1">تسوية كود كوبون الخصم</h3>
               <p className="text-xs text-ocean-700/70 dark:text-white/60 mb-4">
                 أدخل الكود المقروء من كاميرا QR للمحل لتسجيل الخصم والعمولة.
@@ -625,7 +686,7 @@ export const AdminDashboard: React.FC = () => {
                   placeholder="مثال: PSC.20000000-0000......."
                   value={redeemCode}
                   onChange={(e) => setRedeemCode(e.target.value)}
-                  className="w-full rounded-xl border border-sand-200 dark:border-[#2a2a2a] bg-sand-50 dark:bg-[#1a242d] px-3.5 py-2.5 text-xs font-mono"
+                  className="w-full rounded-xl border border-sand-200 dark:border-[#1d2d3e] bg-sand-50 dark:bg-[#1a242d] px-3.5 py-2.5 text-xs font-mono"
                   required
                 />
                 <button
@@ -678,8 +739,8 @@ export const AdminDashboard: React.FC = () => {
 
             {/* Story Edit / Create Form Modal */}
             {storyFormOpen && editingStory && (
-              <div className="p-6 rounded-3xl bg-white dark:bg-[#161616] border border-sand-300 dark:border-[#2a2a2a] shadow-lg space-y-4">
-                <div className="flex items-center justify-between border-b pb-3 border-sand-200 dark:border-[#2a2a2a]">
+              <div className="p-6 rounded-3xl bg-white dark:bg-[#0c1622] border border-sand-300 dark:border-[#1d2d3e] shadow-lg space-y-4">
+                <div className="flex items-center justify-between border-b pb-3 border-sand-200 dark:border-[#1d2d3e]">
                   <h4 className="font-black text-base">
                     {editingStory.id ? 'تعديل قصة تاريخية' : 'إضافة قصة تاريخية جديدة'}
                   </h4>
@@ -704,7 +765,7 @@ export const AdminDashboard: React.FC = () => {
                         value={editingStory.title_ar || ''}
                         onChange={(e) => setEditingStory({ ...editingStory, title_ar: e.target.value })}
                         placeholder="مثال: فنار بورسعيد التاريخي..."
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#2a2a2a] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#1d2d3e] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
                         required
                       />
                     </div>
@@ -715,7 +776,7 @@ export const AdminDashboard: React.FC = () => {
                         value={editingStory.era_year || ''}
                         onChange={(e) => setEditingStory({ ...editingStory, era_year: e.target.value })}
                         placeholder="مثال: 1869 م"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#2a2a2a] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#1d2d3e] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
                       />
                     </div>
                   </div>
@@ -728,7 +789,7 @@ export const AdminDashboard: React.FC = () => {
                         value={editingStory.image_url || ''}
                         onChange={(e) => setEditingStory({ ...editingStory, image_url: e.target.value })}
                         placeholder="/assets/port-said/..."
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#2a2a2a] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold font-mono"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#1d2d3e] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold font-mono"
                         required
                       />
                     </div>
@@ -738,7 +799,7 @@ export const AdminDashboard: React.FC = () => {
                         type="number"
                         value={editingStory.sort_order ?? 1}
                         onChange={(e) => setEditingStory({ ...editingStory, sort_order: parseInt(e.target.value, 10) || 1 })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#2a2a2a] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#1d2d3e] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
                       />
                     </div>
                   </div>
@@ -749,7 +810,7 @@ export const AdminDashboard: React.FC = () => {
                       rows={2}
                       value={editingStory.summary_ar || ''}
                       onChange={(e) => setEditingStory({ ...editingStory, summary_ar: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#2a2a2a] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#1d2d3e] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
                       required
                     />
                   </div>
@@ -760,7 +821,7 @@ export const AdminDashboard: React.FC = () => {
                       rows={5}
                       value={editingStory.content_ar || ''}
                       onChange={(e) => setEditingStory({ ...editingStory, content_ar: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#2a2a2a] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#1d2d3e] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
                       required
                     />
                   </div>
@@ -802,7 +863,7 @@ export const AdminDashboard: React.FC = () => {
             )}
 
             {/* Stories Table */}
-            <div className="rounded-3xl bg-white dark:bg-[#161616] shadow border border-sand-200/60 dark:border-[#2a2a2a] overflow-hidden">
+            <div className="rounded-3xl bg-white dark:bg-[#0c1622] shadow border border-sand-200/60 dark:border-[#1d2d3e] overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-right text-xs">
                   <thead className="bg-sand-100/60 dark:bg-[#1f1f1f] text-ocean-700 dark:text-white/70 font-black">
@@ -899,7 +960,7 @@ export const AdminDashboard: React.FC = () => {
                 adminMemories.map((mem) => (
                   <div
                     key={mem.id}
-                    className="rounded-3xl bg-white dark:bg-[#161616] border border-sand-200/60 dark:border-[#2a2a2a] p-4 shadow space-y-3 flex flex-col justify-between"
+                    className="rounded-3xl bg-white dark:bg-[#0c1622] border border-sand-200/60 dark:border-[#1d2d3e] p-4 shadow space-y-3 flex flex-col justify-between"
                   >
                     <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-sand-100 dark:bg-[#1e1e1e]">
                       <img src={mem.image_url} alt="" className="w-full h-full object-cover" />
@@ -919,7 +980,7 @@ export const AdminDashboard: React.FC = () => {
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-sand-200 dark:border-[#2a2a2a]">
+                    <div className="flex items-center justify-between pt-2 border-t border-sand-200 dark:border-[#1d2d3e]">
                       <span className="text-[11px] font-bold text-sand-500">
                         ❤️ {mem.likes_count} إعجاب · 💬 {mem.comments_count} تعليق
                       </span>

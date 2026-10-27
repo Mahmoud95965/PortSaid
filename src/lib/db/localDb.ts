@@ -233,10 +233,8 @@ export function getLocalDb(): DatabaseSync {
     seedBaselineUsers(db);
   }
 
-  const storyCountRow = db.prepare('SELECT COUNT(*) as cnt FROM historical_stories').get() as { cnt: number };
-  if (!storyCountRow || storyCountRow.cnt === 0) {
-    seedBaselineHistoricalStories(db);
-  }
+  // Clear baseline/hardcoded stories so stories are exclusively added by admin
+  db.exec("DELETE FROM historical_stories WHERE id LIKE 'story-%';");
 
   const memoryCountRow = db.prepare('SELECT COUNT(*) as cnt FROM community_memories').get() as { cnt: number };
   if (!memoryCountRow || memoryCountRow.cnt === 0) {

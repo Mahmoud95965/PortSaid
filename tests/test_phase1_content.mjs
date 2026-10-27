@@ -15,16 +15,14 @@ async function testPhase1() {
     console.log(`✅ Page ${p} loaded successfully (HTTP 200, size: ${text.length} bytes)`);
   }
 
-  // 2. Test Historical Stories API
+  // 2. Test Historical Stories API (Starts empty until added by Admin as requested)
   console.log('\nTesting Historical Stories API...');
   const histRes = await fetch(`${BASE_URL}/api/historical-stories`);
   assert.strictEqual(histRes.status, 200, 'GET /api/historical-stories should return 200');
   const histData = await histRes.json();
   assert.strictEqual(histData.ok, true, 'histData.ok should be true');
   assert.ok(Array.isArray(histData.stories), 'stories should be an array');
-  assert.ok(histData.stories.length >= 6, `Should have at least 6 historical stories, got ${histData.stories.length}`);
-  console.log(`✅ Historical Stories loaded (${histData.stories.length} stories found)`);
-  console.log(`   Sample Story: "${histData.stories[0].title_ar}" (${histData.stories[0].era_year})`);
+  console.log(`✅ Historical Stories verified (${histData.stories.length} stories found - completely admin-driven)`);
 
   // 3. Test Memories API Public Feed
   console.log('\nTesting Memories Public Feed API...');

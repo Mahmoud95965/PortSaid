@@ -29,6 +29,7 @@ import { QRModal } from '@/components/QRModal';
 import { AssistantChat } from '@/components/AssistantChat';
 import { SiteGuideModal } from '@/components/SiteGuideModal';
 import { FeatureExplainerCards } from '@/components/FeatureExplainerCards';
+import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Place } from '@/types';
 import { INITIAL_PLACES } from '@/lib/constants';
@@ -43,6 +44,7 @@ import {
   Bus,
   Star,
   ArrowLeft,
+  Camera,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -690,6 +692,36 @@ export default function HomePage() {
         onOpenPoints={() => handleNavigate('points')}
         onNavigate={handleNavigate}
       />
+
+      {/* Floating "ارفع ذكرياتك" Side Action Button (outside on the side) */}
+      {currentView !== 'memories' && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8, x: 20 }}
+          animate={{ opacity: 1, scale: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
+          className="fixed right-3 sm:right-5 bottom-4 sm:bottom-6 z-30 hardware-accel"
+        >
+          <button
+            onClick={() => handleNavigate('memories')}
+            type="button"
+            className="group flex items-center gap-2.5 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-full bg-gradient-to-r from-teal-600 via-teal2-600 to-ocean-800 text-white font-black text-xs sm:text-sm shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 border border-white/20 backdrop-blur-md"
+            aria-label="ارفع ذكرياتك في بورسعيد"
+          >
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/20 grid place-items-center shrink-0 group-hover:rotate-12 transition-transform">
+              <Camera className="w-4 h-4 text-sand-300" />
+            </div>
+            <div className="text-right">
+              <span className="block leading-none">ارفع ذكرياتك 📷</span>
+              <span className="text-[10px] text-sand-200/90 font-medium hidden sm:block mt-0.5">
+                شارك صورك من بورسعيد
+              </span>
+            </div>
+          </button>
+        </motion.div>
+      )}
+
+      {/* PWA App Installation Prompt Banner */}
+      <PwaInstallPrompt />
 
       {/* Footer */}
       <Footer />
