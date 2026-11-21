@@ -17,14 +17,12 @@ import { TransportView } from '@/components/TransportView';
 import { HousingView } from '@/components/HousingView';
 import { HotelsView } from '@/components/HotelsView';
 import { ClothesView } from '@/components/ClothesView';
-import { MemoriesView } from '@/components/MemoriesView';
 import { SportsView } from '@/components/SportsView';
 import { ExploreView } from '@/components/ExploreView';
 import { MapView } from '@/components/MapView';
 import { FeedbackView } from '@/components/FeedbackView';
 import { PartnerView } from '@/components/PartnerView';
 import { AccountView } from '@/components/AccountView';
-import { PointsDetailsView } from '@/components/PointsDetailsView';
 import { QRModal } from '@/components/QRModal';
 import { AssistantChat } from '@/components/AssistantChat';
 import { SiteGuideModal } from '@/components/SiteGuideModal';
@@ -42,11 +40,8 @@ import {
   Compass,
   MapPin,
   Bus,
-  Star,
   ArrowLeft,
-  Camera,
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
 
 const pageVariants: Variants = {
   initial: { opacity: 0, y: 16 },
@@ -56,7 +51,7 @@ const pageVariants: Variants = {
 
 export default function HomePage() {
   const router = useRouter();
-  const { user, loading, hasSeenWelcome, setHasSeenWelcome, claimShareReward } = useAuth();
+  const { user, loading, hasSeenWelcome, setHasSeenWelcome } = useAuth();
 
   const [currentView, setCurrentView] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState<string>('fun');
@@ -221,21 +216,12 @@ export default function HomePage() {
       '🌊 بورسعيد في جيبك!\n\nلقيت موقع Port Said Hub هيفرق معاك جداً:\n' +
       '🚌 مواصلات من السكن للكلية\n' +
       '🍽️ أحسن المطاعم والكافيهات\n' +
-      '🏠 سكن وأماكن قريبة منك\n' +
-      '⭐ ونقاط ومكافآت على كل زيارة!\n\n' +
+      '🏠 سكن وأماكن قريبة منك\n\n' +
       'جرب الموقع من هنا 👇\n' +
       window.location.origin;
 
     const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     window.open(waUrl, '_blank');
-
-    const res = await claimShareReward();
-    showToast(res.message);
-    if (res.ok) {
-      try {
-        confetti({ particleCount: 75, spread: 65, origin: { y: 0.6 } });
-      } catch (e) {}
-    }
   };
 
   const handleRequestCoupon = (place: Place) => {
@@ -304,7 +290,6 @@ export default function HomePage() {
       <Header
         onNavigate={handleNavigate}
         onOpenFeedback={() => handleNavigate('feedback')}
-        onOpenPoints={() => handleNavigate('points')}
       />
 
       {/* Main Dynamic View Content with AnimatePresence */}
@@ -341,19 +326,11 @@ export default function HomePage() {
                   <span>خريطة بورسعيد التفاعلية</span>
                 </button>
 
-                <button
-                  onClick={() => handleNavigate('points')}
-                  type="button"
-                  className="shrink-0 px-3.5 sm:px-4 py-2 rounded-2xl bg-amber-500/15 dark:bg-amber-500/20 text-amber-900 dark:text-amber-200 text-xs sm:text-sm font-black border border-amber-400/40 hover:bg-amber-500/25 flex items-center gap-2 transition-transform active:scale-95"
-                >
-                  <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                  <span>رصيد نقاطك: {user.points} نقطة</span>
-                </button>
               </div>
 
               <CategoryGrid
                 onSelectCategory={(key) => {
-                  if (['bus', 'housing', 'hotels', 'clothes', 'memories', 'explore', 'map'].includes(key)) {
+                  if (['bus', 'housing', 'hotels', 'clothes', 'explore', 'map'].includes(key)) {
                     handleNavigate(key);
                   } else {
                     handleNavigate('list', key);
@@ -409,30 +386,6 @@ export default function HomePage() {
                   </div>
                   <div className="relative z-10 flex items-center justify-between text-xs font-black text-cyan-200 pt-1 border-t border-white/10">
                     <span>افتح الخريطة الآن</span>
-                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1.5 transition-transform" />
-                  </div>
-                </button>
-
-                {/* 3. Points & Rewards */}
-                <button
-                  onClick={() => handleNavigate('points')}
-                  type="button"
-                  className="group relative overflow-hidden rounded-3xl p-5 text-right bg-gradient-to-br from-[#ffd97a] via-[#ffb938] to-[#f59e0b] text-ocean-950 shadow-xl shadow-amber-500/15 border border-amber-300 flex flex-col justify-between gap-4 transition-transform active:scale-[0.98] touch-manipulation"
-                >
-                  <div className="relative z-10 space-y-2">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-ocean-900 text-sand-300 text-[10px] font-black">
-                      <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                      <span>رصيدك: {user.points} نقطة</span>
-                    </span>
-                    <h4 className="font-black text-base sm:text-lg leading-tight text-ocean-950">
-                      كوبونات وخصومات بورسعيد
-                    </h4>
-                    <p className="text-xs text-ocean-900/85 font-bold leading-relaxed line-clamp-2">
-                      سجّل حضورك بالـ GPS واستبدل نقاطك بخصومات 10% إلى 20% حقيقية عند الكاشير.
-                    </p>
-                  </div>
-                  <div className="relative z-10 flex items-center justify-between text-xs font-black text-ocean-950 pt-1 border-t border-ocean-950/15">
-                    <span>استبدل نقاطك بكوبونات</span>
                     <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1.5 transition-transform" />
                   </div>
                 </button>
@@ -562,15 +515,6 @@ export default function HomePage() {
             </motion.div>
           )}
 
-          {currentView === 'memories' && (
-            <motion.div key="memories-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
-              <MemoriesView
-                onNavigate={handleNavigate}
-                onBack={() => handleNavigate('home')}
-              />
-            </motion.div>
-          )}
-
           {(currentView === 'sport' || currentView === 'sports') && (
             <motion.div key="sport-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
               <SportsView
@@ -610,16 +554,6 @@ export default function HomePage() {
           {currentView === 'account' && (
             <motion.div key="account-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
               <AccountView onBack={() => handleNavigate('home')} />
-            </motion.div>
-          )}
-
-          {currentView === 'points' && (
-            <motion.div key="points-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
-              <PointsDetailsView
-                onBack={() => handleNavigate('home')}
-                onSelectPlace={(id) => handleNavigate('place', id)}
-                onOpenCouponModal={handleRequestCoupon}
-              />
             </motion.div>
           )}
 
@@ -691,37 +625,7 @@ export default function HomePage() {
       />
 
       {/* Assistant AI Chatbot FAB */}
-      <AssistantChat
-        onOpenPoints={() => handleNavigate('points')}
-        onNavigate={handleNavigate}
-      />
-
-      {/* Floating "ارفع ذكرياتك" Side Action Button (outside on the side) */}
-      {currentView !== 'memories' && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8, x: 20 }}
-          animate={{ opacity: 1, scale: 1, x: 0 }}
-          transition={{ duration: 0.3 }}
-          className="fixed right-3 sm:right-5 bottom-4 sm:bottom-6 z-30 hardware-accel"
-        >
-          <button
-            onClick={() => handleNavigate('memories')}
-            type="button"
-            className="group flex items-center gap-2.5 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-full bg-gradient-to-r from-teal-600 via-teal2-600 to-ocean-800 text-white font-black text-xs sm:text-sm shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 border border-white/20 backdrop-blur-md"
-            aria-label="ارفع ذكرياتك في بورسعيد"
-          >
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/20 grid place-items-center shrink-0 group-hover:rotate-12 transition-transform">
-              <Camera className="w-4 h-4 text-sand-300" />
-            </div>
-            <div className="text-right">
-              <span className="block leading-none">ارفع ذكرياتك 📷</span>
-              <span className="text-[10px] text-sand-200/90 font-medium hidden sm:block mt-0.5">
-                شارك صورك من بورسعيد
-              </span>
-            </div>
-          </button>
-        </motion.div>
-      )}
+      <AssistantChat onNavigate={handleNavigate} />
 
       {/* PWA App Installation Prompt Banner */}
       <PwaInstallPrompt />
