@@ -177,7 +177,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart }) => {
         <div className="relative z-10 w-full max-w-lg mx-auto px-5 flex flex-col items-center text-center">
           {/* Logo */}
           <motion.div
-            className="w-28 h-28 rounded-full bg-gradient-to-b from-[#f8f4ea] to-[#ffe3a8] border-4 border-white/50 shadow-[0_0_0_8px_rgba(255,255,255,0.12),0_0_56px_rgba(255,185,56,0.45)] flex items-center justify-center mb-5 pulse-glow relative"
+            className="w-60 sm:w-72 aspect-square rounded-[2rem] bg-[#f2ede7] border-4 border-white/50 shadow-[0_0_0_8px_rgba(255,255,255,0.12),0_0_56px_rgba(255,185,56,0.45)] flex items-center justify-center mb-5 pulse-glow relative overflow-hidden"
             initial={{ opacity: 0, scale: 0.3, y: 40 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{
@@ -187,12 +187,10 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart }) => {
               delay: 0.2,
             }}
           >
-            <motion.img
-              src="/assets/logo/icon-192.png"
+            <img
+              src="/assets/logo/logo-lockup.jpg"
               alt="Port Said Hub"
-              className="w-[80%] h-[80%] object-contain"
-              animate={{ rotate: [0, 5, -5, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+              className="w-full h-full object-cover"
             />
             {/* Sparkle effects around logo */}
             {[0, 60, 120, 180, 240, 300].map((deg, i) => (
@@ -220,15 +218,6 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart }) => {
           </motion.div>
 
           {/* Title */}
-          <motion.p
-            dir="ltr"
-            className="text-xs font-black tracking-[0.25em] uppercase text-sand-400 drop-shadow mb-2"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.6 }}
-          >
-            Port Said Hub
-          </motion.p>
           <motion.h1
             className="text-4xl sm:text-5xl font-black leading-[1.7] overflow-visible pb-2 pt-1 drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]"
             initial={{ opacity: 0, y: 30 }}
@@ -255,6 +244,16 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart }) => {
             transition={{ delay: 1, duration: 0.6 }}
           >
             دليلك الشامل في المدينة الباسلة — مواصلات، مطاعم، سكن، وأماكن تستاهل.
+          </motion.p>
+
+          <motion.p
+            dir="ltr"
+            className="mt-3 text-[11px] font-bold tracking-[0.3em] uppercase text-white/60"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.15, duration: 0.6 }}
+          >
+            EXPLORE &bull; DISCOVER &bull; EXPERIENCE
           </motion.p>
 
           {/* Feature Chips */}
