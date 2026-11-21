@@ -231,25 +231,13 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart }) => {
             Port Said Hub
           </motion.p>
           <motion.h1
-            className="text-4xl sm:text-5xl font-black leading-tight drop-shadow-xl"
+            className="text-4xl sm:text-5xl font-black leading-[1.7] overflow-visible pb-2 pt-1 drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.65, duration: 0.7, ease: 'easeOut' }}
           >
             مرحبًا بك{' '}
-            <motion.span
-              className="animate-text-glow inline-block"
-              style={{
-                background: 'linear-gradient(135deg, #ffe3a8 0%, #ffb938 50%, #ff9800 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundSize: '200% 200%',
-              }}
-              animate={{
-                backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-              }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-            >
+            <motion.span className="inline-block text-[#ffb938]">
               في بورسعيد
             </motion.span>
           </motion.h1>
