@@ -33,7 +33,7 @@ export const Footer: React.FC = () => {
             >
               <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500 inline" />
             </motion.span>
-            <span>بواسطة <strong className="font-black text-ocean-900 dark:text-white">Alpha Team</strong> · بالشراكة مع <strong className="font-black text-ocean-900 dark:text-white">TOLZY Team</strong> (تصميم الموقع) © 2026</span>
+            <span>بواسطة <strong className="font-black text-ocean-900 dark:text-white">Alpha Team</strong> · بالشراكة مع <strong className="font-black text-ocean-900 dark:text-white">Genie</strong> © 2026</span>
           </p>
         </div>
 
