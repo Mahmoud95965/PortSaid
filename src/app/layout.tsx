@@ -14,7 +14,8 @@ const SITE_URL = 'https://port-said-hub.site';
 const SITE_TITLE = 'Port Said Hub | دليل بورسعيد - مطاعم ومواصلات وسكن';
 const SITE_DESCRIPTION =
   'دليلك الشامل في بورسعيد: اكتشف أفضل المطاعم والكافيهات، مواصلات بورسعيد، سكن وفنادق، وأماكن الخروج والترفيه، واجمع النقاط والمكافآت في مكان واحد.';
-const SITE_IMAGE = `${SITE_URL}/assets/logo/icon-192.png`;
+const SITE_IMAGE = `${SITE_URL}/og-image.jpg`;
+const SITE_LOGO = `${SITE_URL}/assets/logo/logo-lockup.jpg`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -58,8 +59,8 @@ export const metadata: Metadata = {
     images: [
       {
         url: SITE_IMAGE,
-        width: 192,
-        height: 192,
+        width: 1200,
+        height: 630,
         alt: 'Port Said Hub - دليلك في بورسعيد',
       },
     ],
@@ -107,7 +108,7 @@ const jsonLd = {
       '@id': `${SITE_URL}/#organization`,
       name: 'Port Said Hub',
       url: `${SITE_URL}/`,
-      logo: SITE_IMAGE,
+      logo: SITE_LOGO,
       description: SITE_DESCRIPTION,
     },
   ],
