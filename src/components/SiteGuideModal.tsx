@@ -11,7 +11,6 @@ import {
   Bus,
   Bed,
   Bot,
-  Store,
   ArrowRight,
   ArrowLeft,
   X,
@@ -21,8 +20,6 @@ import {
   ChevronRight,
   HelpCircle,
   Eye,
-  Zap,
-  TrendingUp,
 } from 'lucide-react';
 
 interface SiteGuideModalProps {
@@ -182,33 +179,6 @@ const GUIDE_STEPS: GuideStep[] = [
         { label: 'النقاط', value: 'إزاي أستفيد من النقط والكوبونات؟', icon: Star },
         { label: 'الأكل', value: 'أحسن مطعم سمك وسي فود فين؟', icon: Compass },
         { label: 'المواصلات', value: 'إزاي أروح كلية الهندسة بالمينى باص؟', icon: Bus },
-      ],
-    },
-  },
-  {
-    id: 'merchants',
-    badge: 'الخطوة السادسة',
-    title: 'انضمام التجار وأصحاب الأنشطة',
-    subtitle: 'لوحة تحكم شريك وعروض لآلاف الزوار',
-    description:
-      'إذا كنت صاحب مطعم، كافيه، أو متجر في بورسعيد، يمكنك الانضمام لمنصة Port Said Hub من خلال قسم "سجل متجرك". ستحصل على صفحة خاصة لمتجرك وتحدد نسبة الخصم والعمولة لجذب المزيد من الزبائن.',
-    features: [
-      'ظهور متجرك لآلاف الطلبة وزوار وسكان بورسعيد.',
-      'لوحة تحكم مخصصة لإدارة العروض ونسب الخصم والعمولة.',
-      'مراجعة سريعة وتفعيل للمتجر من قِبل إدارة المنصة.',
-    ],
-    arrowText: 'سجل متجرك ➔ انضم لشبكة تجار وشركاء بورسعيد',
-    tip: 'نصيحة: يمكنك التسجيل ببيانات متجرك من الرابط أسفل الصفحة الرئيسية.',
-    icon: Store,
-    accentColor: 'text-sand-400',
-    bgGradient: 'from-[#4a1d6e] via-[#2c1d58] to-ocean-950',
-    targetView: 'partner',
-    visualPreview: {
-      title: 'مزايا انضمام التجار',
-      items: [
-        { label: 'زيادة المبيعات', value: 'جذب الطلبة وزوار المحافظة', icon: TrendingUp },
-        { label: 'إدارة العروض', value: 'تحديد نسب الخصم والعمولة', icon: Zap },
-        { label: 'لوحة خاصة', value: 'متابعة الطلبات والإحصائيات', icon: Store },
       ],
     },
   },

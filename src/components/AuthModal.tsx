@@ -392,10 +392,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome
               </div>
 
               {/* Account type */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 {[
                   { key: 'user', Icon: UserIcon, label: 'مستخدم عادي', sub: 'طالب / زائر / بورسعيدي' },
-                  { key: 'merchant', Icon: Store, label: 'تاجر / شريك', sub: 'صاحب محل أو نشاط' },
                 ].map((at) => (
                   <motion.button
                     key={at.key}

@@ -34,7 +34,6 @@ import { INITIAL_PLACES } from '@/lib/constants';
 import {
   Share2,
   MessageSquare,
-  Store,
   Sparkles,
   ChevronLeft,
   Compass,
@@ -569,45 +568,6 @@ export default function HomePage() {
           )}
         </AnimatePresence>
       </main>
-
-      {/* Partner Callout Section (on Home) */}
-      {currentView === 'home' && user.role !== 'merchant' && (
-        <section className="max-w-6xl mx-auto px-3 min-[400px]:px-4 sm:px-5 lg:px-8 pb-8 sm:pb-12 w-full">
-          <motion.div
-            initial={{ opacity: 0, y: 25 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-40px' }}
-            transition={{ duration: 0.6 }}
-            className="rounded-3xl bg-gradient-to-br from-ocean-900 via-ocean-800 to-teal2-700 text-white p-5 sm:p-7 md:p-8 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-5 sm:gap-6 text-center md:text-right border border-white/10 relative overflow-hidden"
-          >
-            {/* Ambient Animated Blob */}
-            <div className="absolute top-0 right-0 w-80 h-80 bg-teal2-400/10 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="relative z-10 max-w-xl">
-              <span className="inline-flex items-center gap-1.5 bg-white/15 border border-white/25 rounded-full px-3 py-1 text-xs font-bold mb-2.5 backdrop-blur-sm">
-                <Sparkles className="w-3.5 h-3.5 text-sand-400" />
-                <span>تسجيل فوري — حسابك التجاري جاهز في دقيقة</span>
-              </span>
-              <h3 className="text-lg sm:text-xl md:text-2xl font-black leading-snug">
-                عندك مطعم أو كافيه أو نشاط تجاري في بورسعيد؟
-              </h3>
-              <p className="mt-1.5 text-xs sm:text-sm text-white/85 leading-relaxed font-medium">
-                انضم لشبكة شركائنا ووصّل مكانك لآلاف الزوار والطلاب، وقدّم كوبونات وعروض حصرية.
-              </p>
-            </div>
-            <motion.button
-              onClick={() => handleNavigate('partner')}
-              type="button"
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-              className="relative z-10 w-full md:w-auto shrink-0 inline-flex items-center justify-center gap-2.5 bg-gradient-to-b from-[#ffd27a] to-[#ffb938] text-ocean-900 font-black px-6 sm:px-8 py-3.5 rounded-2xl shadow-xl hover:shadow-2xl transition text-sm sm:text-base touch-manipulation"
-            >
-              <Store className="w-5 h-5 text-ocean-900" />
-              <span>سجّل متجرك كشريك</span>
-            </motion.button>
-          </motion.div>
-        </section>
-      )}
 
       {/* Dynamic QR Code Modal */}
       {activeCouponPlace && (
