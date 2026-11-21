@@ -32,55 +32,6 @@ export interface SweetsViewProps {
 
 const FAVORITES_KEY = 'portsaid_favorite_places';
 
-// ربط محلات الحلويات بالصور الأصلية المتوفرة في أصول المشروع الحقيقية
-const SWEETS_PHOTOS: Record<string, string> = {
-  // Lord Sweets (حي الشرق)
-  '20000000-0000-0000-0000-000000000018': '/assets/port-said/gallery/balconies-street.webp',
-  // سلسبيل كريم (حي الشرق)
-  '20000000-0000-0000-0000-000000000085': '/assets/port-said/hero-02.webp',
-  // أبو يوسف (حي الشرق)
-  '20000000-0000-0000-0000-000000000086': '/assets/port-said/hero-03.webp',
-  // حلواني سامي سالم (حي الشرق) - أشهر حلواني كاساتا
-  '20000000-0000-0000-0000-000000000087': '/assets/port-said/hero-03.webp',
-  // Nola Cupcakes (حي المناخ)
-  '20000000-0000-0000-0000-000000000160': '/assets/port-said/hero-01.webp',
-  // Taby's Bakery (بورفؤاد)
-  '20000000-0000-0000-0000-000000000172': '/assets/port-said/gallery/ship.webp',
-  // Twist Frozzy (بورفؤاد)
-  '20000000-0000-0000-0000-000000000194': '/assets/port-said/hero-02.webp',
-  // Maker Waffle (بورفؤاد)
-  '20000000-0000-0000-0000-000000000195': '/assets/port-said/hero-03.webp',
-  // Mille Feuille Pastry (بورفؤاد)
-  '20000000-0000-0000-0000-000000000196': '/assets/port-said/gallery/ship.webp',
-  // حلواني لورد (بورفؤاد)
-  '20000000-0000-0000-0000-000000000206': '/assets/port-said/hero-01.webp',
-  // Samy Salem Patisserie (بورفؤاد)
-  '20000000-0000-0000-0000-000000000239': '/assets/port-said/hero-03.webp',
-  // Saad Crepe (بورفؤاد)
-  '20000000-0000-0000-0000-000000000242': '/assets/port-said/hero-03.webp',
-  // Karweya Bakery (بورفؤاد)
-  '20000000-0000-0000-0000-000000000246': '/assets/port-said/gallery/ship.webp',
-};
-
-function getSweetPhoto(place: Place): string {
-  if (SWEETS_PHOTOS[place.id]) {
-    return SWEETS_PHOTOS[place.id];
-  }
-  const name = (place.n || '').toLowerCase();
-  const area = (place.a || '').toLowerCase();
-
-  if (name.includes('سالم') || name.includes('شرقي')) {
-    return '/assets/port-said/hero-03.webp';
-  }
-  if (name.includes('كريم') || name.includes('frozzy') || name.includes('آيس')) {
-    return '/assets/port-said/hero-02.webp';
-  }
-  if (area.includes('بورفؤاد')) {
-    return '/assets/port-said/gallery/ship.webp';
-  }
-  return '/assets/port-said/gallery/balconies-street.webp';
-}
-
 // تصنيفات الحلويات الأربعة المطلوبة بناءً على البيانات والتخصص
 const SWEETS_CATEGORIES = [
   { key: 'all', label: 'جميع الحلويات', icon: '🍰' },
@@ -100,7 +51,7 @@ export const SweetsView: React.FC<SweetsViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedArea, setSelectedArea] = useState('all');
-  const [sortBy, setSortBy] = useState<'featured' | 'discount' | 'points' | 'name'>('featured');
+  const [sortBy, setSortBy] = useState<'featured' | 'discount' | 'name'>('featured');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -257,8 +208,6 @@ export const SweetsView: React.FC<SweetsViewProps> = ({
     // 4. الترتيب
     if (sortBy === 'discount') {
       result.sort((a, b) => (b.disc || 0) - (a.disc || 0));
-    } else if (sortBy === 'points') {
-      result.sort((a, b) => (b.p || 0) - (a.p || 0));
     } else if (sortBy === 'name') {
       result.sort((a, b) => a.n.localeCompare(b.n, 'ar'));
     }
@@ -332,9 +281,6 @@ export const SweetsView: React.FC<SweetsViewProps> = ({
             </span>
             <span className="px-3 py-1 rounded-xl bg-white/10 border border-white/15">
               🏷️ خصومات حصرية 10% إلى 15%
-            </span>
-            <span className="px-3 py-1 rounded-xl bg-white/10 border border-white/15">
-              ✨ نقاط حضور بالـ GPS
             </span>
           </div>
         </div>
@@ -444,7 +390,6 @@ export const SweetsView: React.FC<SweetsViewProps> = ({
             >
               <option value="featured">المقترحة أولاً</option>
               <option value="discount">الأعلى خصماً</option>
-              <option value="points">الأكثر نقاطاً</option>
               <option value="name">الاسم أبجدياً</option>
             </select>
           </div>
@@ -472,7 +417,6 @@ export const SweetsView: React.FC<SweetsViewProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
           {displayedSweets.map((sweet, index) => {
             const isFav = favorites.includes(sweet.id);
-            const photoUrl = getSweetPhoto(sweet);
 
             return (
               <motion.article
@@ -481,59 +425,36 @@ export const SweetsView: React.FC<SweetsViewProps> = ({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.3) }}
                 onClick={() => onSelectPlace && onSelectPlace(sweet.id)}
-                className="group bg-white dark:bg-slate-900 rounded-3xl overflow-hidden border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-blue-400 dark:hover:border-blue-500 transition-all duration-300 flex flex-col justify-between cursor-pointer"
+                className="group bg-white dark:bg-slate-900 rounded-3xl overflow-hidden border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-blue-400 dark:hover:border-blue-500 transition-all duration-300 active:scale-95 flex flex-col justify-between cursor-pointer"
               >
                 <div>
-                  {/* Photo & Badges Container */}
-                  <div className="relative aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-800">
-                    <img
-                      src={photoUrl}
-                      alt={sweet.n}
-                      loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
-
-                    {/* Area Badge (Top Right) */}
-                    <div className="absolute top-3 right-3 z-10">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-900/85 backdrop-blur-md text-white text-[11px] font-black border border-white/20 shadow-sm">
-                        <MapPin className="w-3 h-3 text-amber-300" />
-                        <span>{sweet.a}</span>
-                      </span>
-                    </div>
-
-                    {/* Favorite Button (Top Left) */}
-                    <button
-                      onClick={(e) => toggleFavorite(e, sweet.id, sweet.n)}
-                      className="absolute top-3 left-3 z-10 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md grid place-items-center shadow-md hover:scale-110 active:scale-95 transition"
-                      title={isFav ? 'إزالة من المفضلة' : 'إضافة للمفضلة'}
-                    >
-                      <Heart
-                        className={`w-4 h-4 ${
-                          isFav ? 'fill-rose-500 text-rose-500' : 'text-slate-600 dark:text-slate-300'
-                        }`}
-                      />
-                    </button>
-
-                    {/* Bottom Badges on Photo */}
-                    <div className="absolute bottom-2.5 right-3 left-3 z-10 flex items-center justify-between text-xs font-bold text-white">
-                      {/* Visit Points Badge */}
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-600/90 backdrop-blur-sm text-[10px] font-black">
-                        <span>+{sweet.p || 20} نقطة</span>
-                      </span>
-
-                      {/* Discount Badge */}
-                      {sweet.disc > 0 && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-600/95 backdrop-blur-sm text-[11px] font-black text-white shadow-sm">
-                          <Percent className="w-3 h-3" />
-                          <span>خصم {sweet.disc}%</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
                   {/* Body Content */}
                   <div className="p-4 sm:p-5 space-y-2.5">
+                    {/* Badges (relocated from photo) */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-black">
+                          <MapPin className="w-3 h-3 text-amber-500 dark:text-amber-300" />
+                          <span>{sweet.a}</span>
+                        </span>
+                        {sweet.disc > 0 && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-600/95 backdrop-blur-sm text-[11px] font-black text-white shadow-sm">
+                            <Percent className="w-3 h-3" />
+                            <span>خصم {sweet.disc}%</span>
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => toggleFavorite(e, sweet.id, sweet.n)}
+                        className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 grid place-items-center shadow-sm hover:scale-110 active:scale-95 transition shrink-0"
+                        title={isFav ? 'إزالة من المفضلة' : 'إضافة للمفضلة'}
+                      >
+                        <Heart
+                          className={`w-4 h-4 ${isFav ? 'fill-rose-500 text-rose-500' : 'text-slate-600 dark:text-slate-300'}`}
+                        />
+                      </button>
+                    </div>
+
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-black text-base sm:text-lg text-slate-900 dark:text-white leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         {sweet.n}
