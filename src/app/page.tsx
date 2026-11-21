@@ -553,8 +553,11 @@ export default function HomePage() {
           {currentView === 'clothes' && (
             <motion.div key="clothes-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
               <ClothesView
+                places={places}
+                onSelectPlace={(id) => handleNavigate('place', id)}
                 onNavigate={handleNavigate}
                 onBack={() => handleNavigate('home')}
+                onRequestCoupon={handleRequestCoupon}
               />
             </motion.div>
           )}

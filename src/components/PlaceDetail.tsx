@@ -27,6 +27,8 @@ import {
   Tag,
   DollarSign,
   Map as MapIcon,
+  Phone,
+  AlertTriangle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -545,8 +547,23 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
         </div>
       </div>
 
+      {/* Status Alert Banner if place is temp closed or reported closed */}
+      {place.status_note && (
+        <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/50 flex items-start gap-3 text-right">
+          <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <h4 className="font-black text-sm text-amber-900 dark:text-amber-200">
+              تنبيه حول حالة المكان: {place.status_note}
+            </h4>
+            <p className="text-xs text-amber-800/80 dark:text-amber-300/80 font-medium leading-relaxed">
+              وفقاً لتحديثات خرائط جوجل ومراجعي الدليل، يُرجى التأكد من المكان هاتفياً أو عبر الزيارة قبل الذهاب.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* 3. Place Overview & Description Card */}
-      <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-xs text-right space-y-3">
+      <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-xs text-right space-y-4">
         <h2 className="text-base sm:text-lg font-black text-ocean-950 dark:text-white">
           عن المكان وتفاصيل الزيارة
         </h2>
@@ -555,6 +572,63 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
           <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
             {place.ds}
           </p>
+        )}
+
+        {/* Detailed Info Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-100 dark:border-[#152332]">
+          {place.address && (
+            <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-[#121c29] border border-slate-200/60 dark:border-[#1d2d3e]">
+              <MapPin className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <div className="space-y-0.5 min-w-0">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block">العنوان التفصيلي</span>
+                <p className="text-xs text-slate-800 dark:text-slate-200 font-bold leading-snug">{place.address}</p>
+              </div>
+            </div>
+          )}
+
+          {place.hours && place.hours !== 'غير متوفر' && (
+            <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-[#121c29] border border-slate-200/60 dark:border-[#1d2d3e]">
+              <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="space-y-0.5 min-w-0">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block">مواعيد العمل</span>
+                <p className="text-xs text-slate-800 dark:text-slate-200 font-bold leading-snug">{place.hours}</p>
+              </div>
+            </div>
+          )}
+
+          {place.phone && (
+            <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-[#121c29] border border-slate-200/60 dark:border-[#1d2d3e]">
+              <Phone className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="space-y-0.5 min-w-0">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block">رقم الهاتف والتواصل</span>
+                <a
+                  href={`tel:${place.phone.replace(/\s+/g, '')}`}
+                  className="text-xs text-emerald-700 dark:text-emerald-400 font-black hover:underline block"
+                  dir="ltr"
+                >
+                  {place.phone}
+                </a>
+              </div>
+            </div>
+          )}
+
+          {(place.in_garage || place.garage_relation) && (
+            <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200/60 dark:border-purple-800/40">
+              <Sparkles className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+              <div className="space-y-0.5 min-w-0">
+                <span className="text-[10px] text-purple-700 dark:text-purple-300 font-bold block">مجمع الجراج / ديليسيبس باي</span>
+                <p className="text-xs text-purple-950 dark:text-purple-200 font-bold leading-snug">
+                  {place.in_garage ? 'داخل مجمع الجراج (ديليسيبس باي)' : place.garage_relation}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {place.notes && (
+          <div className="p-3 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-900/40 text-xs text-blue-900 dark:text-blue-200 font-medium">
+            💡 <strong className="font-bold">ملاحظة المراجع:</strong> {place.notes}
+          </div>
         )}
 
         {meta?.tags && meta.tags.length > 0 && (
@@ -581,7 +655,7 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
           </a>
 
           <a
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.n + ' بورسعيد')}`}
+            href={place.maps_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.n + ' بورسعيد')}`}
             target="_blank"
             rel="noopener noreferrer"
             className="py-2.5 px-3 rounded-2xl bg-slate-100 dark:bg-[#152332] text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-[#1d2d3e] text-xs font-bold transition flex items-center justify-center gap-1.5"

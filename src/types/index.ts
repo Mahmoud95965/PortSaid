@@ -37,7 +37,7 @@ export interface Place {
   cost: number; // coupon cost points
   commission?: number;
   radius?: number;
-  status?: 'active' | 'draft' | 'hidden';
+  status?: 'active' | 'draft' | 'hidden' | string;
   steps?: string[];
   visited?: boolean;
   coupon?: {
@@ -46,6 +46,17 @@ export interface Place {
     discount: number;
   } | null;
   maps_url?: string;
+  phone?: string;
+  hours?: string;
+  rating?: number;
+  reviews_count?: number;
+  address?: string;
+  type_ar?: string;
+  place_id?: string;
+  status_note?: string;
+  notes?: string;
+  in_garage?: boolean;
+  garage_relation?: string;
 }
 
 export interface Review {

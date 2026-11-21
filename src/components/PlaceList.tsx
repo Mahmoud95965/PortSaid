@@ -142,8 +142,11 @@ export const PlaceList: React.FC<PlaceListProps> = ({
   if (categoryKey === 'clothes') {
     return (
       <ClothesView
+        places={places}
+        onSelectPlace={onSelectPlace}
         onNavigate={onNavigate}
         onBack={onBack}
+        onRequestCoupon={onRequestCoupon}
       />
     );
   }

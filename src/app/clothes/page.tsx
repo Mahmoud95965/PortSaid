@@ -33,6 +33,7 @@ export default function ClothesPage() {
 
       <main className="max-w-6xl mx-auto px-3 min-[400px]:px-4 sm:px-5 lg:px-8 py-6 flex-1 w-full relative z-10">
         <ClothesView
+          onSelectPlace={(id) => router.push(`/?view=place&arg=${id}`)}
           onNavigate={handleNavigate}
           onBack={() => router.push('/')}
         />
