@@ -10,11 +10,9 @@ import {
   Search,
   X,
   Compass,
-  Star,
   ExternalLink,
   Heart,
   SlidersHorizontal,
-  Info,
   ArrowRight,
   Sparkles,
   Trophy,
@@ -118,7 +116,7 @@ export const SportsView: React.FC<SportsViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<SportCategory>('all');
   const [selectedArea, setSelectedArea] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'featured' | 'discount' | 'points' | 'name'>('featured');
+  const [sortBy, setSortBy] = useState<'featured' | 'discount' | 'name'>('featured');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -241,10 +239,9 @@ export const SportsView: React.FC<SportsViewProps> = ({
       })
       .sort((a, b) => {
         if (sortBy === 'discount') return (b.disc || 0) - (a.disc || 0);
-        if (sortBy === 'points') return (b.p || 0) - (a.p || 0);
         if (sortBy === 'name') return a.n.localeCompare(b.n, 'ar');
-        // الافتراضي (الأكثر تميزاً: يراعي الخصم والنقاط)
-        return (b.disc || 0) - (a.disc || 0) || (b.p || 0) - (a.p || 0);
+        // الافتراضي (الأكثر تميزاً: يراعي الخصم)
+        return (b.disc || 0) - (a.disc || 0);
       });
   }, [allSports, searchQuery, selectedCategory, selectedArea, sortBy]);
 
@@ -438,7 +435,6 @@ export const SportsView: React.FC<SportsViewProps> = ({
               >
                 <option value="featured">الأكثر تميزاً</option>
                 <option value="discount">الأعلى خصماً</option>
-                <option value="points">نقاط الزيارة</option>
                 <option value="name">أبجدياً (أ-ي)</option>
               </select>
             </div>
@@ -463,17 +459,12 @@ export const SportsView: React.FC<SportsViewProps> = ({
           عرض <strong className="text-blue-600 dark:text-blue-400 font-black">{filteredSports.length}</strong> من أصل {allSports.length} مكان ونشاط رياضي معتمد
         </span>
 
-        <span className="flex items-center gap-1 text-[11px] text-ocean-700/60 dark:text-white/50">
-          <Info className="w-3.5 h-3.5 text-blue-500" />
-          <span>اكسب نقاط مكافآت مع كل زيارة وسجل حضورك عبر كود الـ QR</span>
-        </span>
       </div>
 
       {/* 5. شبكة بطاقات الأماكن الرياضية */}
       {filteredSports.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredSports.map((place, index) => {
-            const photo = getSportPhoto(place.n, place.a);
             const categoryInfo = getSportCategory(place.n);
             const isFav = favorites.includes(place.id);
 
@@ -484,58 +475,34 @@ export const SportsView: React.FC<SportsViewProps> = ({
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25, delay: index * 0.03 }}
-                className="bg-white dark:bg-[#0f1a28] rounded-3xl border border-sand-200/80 dark:border-[#1d2d3e] overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between group"
+                className="bg-white dark:bg-[#0f1a28] rounded-3xl border border-sand-200/80 dark:border-[#1d2d3e] overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 active:scale-95 flex flex-col justify-between group"
               >
-                {/* رأس البطاقة مع الصورة والشارات */}
+                {/* رأس البطاقة والشارات */}
                 <div>
-                  <div className="relative h-48 w-full overflow-hidden bg-sand-200 dark:bg-[#121c29]">
-                    <img
-                      src={photo}
-                      alt={place.n}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
-
-                    {/* شارة نوع النشاط */}
-                    <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                  {/* محتوى البطاقة */}
+                  <div className="p-5 space-y-3">
+                    {/* Badges & Area (relocated from photo) */}
+                    <div className="flex items-center justify-between gap-2">
                       <span className={`px-2.5 py-1 rounded-xl text-[11px] font-black shadow-md ${categoryInfo.badgeBg}`}>
                         {categoryInfo.label}
                       </span>
+                      <button
+                        type="button"
+                        onClick={(e) => toggleFavorite(e, place.id, place.n)}
+                        aria-label="إضافة للمفضلة"
+                        className="w-9 h-9 rounded-2xl bg-sand-100 dark:bg-[#1a2d42] text-ocean-900 dark:text-white grid place-items-center shadow-md hover:scale-110 transition active:scale-95 shrink-0"
+                      >
+                        <Heart
+                          className={`w-4 h-4 transition ${
+                            isFav ? 'fill-rose-500 text-rose-500' : 'text-ocean-700/70 dark:text-white/70'
+                          }`}
+                        />
+                      </button>
                     </div>
-
-                    {/* زر المفضلة */}
-                    <button
-                      type="button"
-                      onClick={(e) => toggleFavorite(e, place.id, place.n)}
-                      aria-label="إضافة للمفضلة"
-                      className="absolute top-3 left-3 w-9 h-9 rounded-2xl bg-white/90 dark:bg-[#0f1a28]/90 text-ocean-900 dark:text-white grid place-items-center backdrop-blur-md shadow-md hover:scale-110 transition active:scale-95"
-                    >
-                      <Heart
-                        className={`w-4 h-4 transition ${
-                          isFav ? 'fill-rose-500 text-rose-500' : 'text-ocean-700/70 dark:text-white/70'
-                        }`}
-                      />
-                    </button>
-
-                    {/* المنطقة وشارة النقاط فوق الصورة */}
-                    <div className="absolute bottom-3 right-3 left-3 flex items-center justify-between text-white text-xs font-bold">
-                      <span className="flex items-center gap-1 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-xl">
-                        <MapPin className="w-3.5 h-3.5 text-blue-400" />
-                        <span>{place.a}</span>
-                      </span>
-
-                      {place.p > 0 && (
-                        <span className="flex items-center gap-1 bg-amber-500/90 text-ocean-950 px-2 py-0.5 rounded-lg text-[10px] font-black">
-                          <Star className="w-3 h-3 fill-current" />
-                          <span>{place.p} نقطة</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* محتوى البطاقة */}
-                  <div className="p-5 space-y-3">
+                    <span className="flex items-center gap-1 text-xs font-bold text-slate-500 dark:text-slate-400">
+                      <MapPin className="w-3.5 h-3.5 text-blue-500" />
+                      <span>{place.a}</span>
+                    </span>
                     <h3 className="text-base sm:text-lg font-black text-ocean-900 dark:text-white line-clamp-1">
                       {place.n}
                     </h3>
