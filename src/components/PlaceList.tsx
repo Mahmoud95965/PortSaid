@@ -4,7 +4,7 @@ import React from 'react';
 import { motion, Variants } from 'framer-motion';
 import { Place } from '@/types';
 import { CATS } from '@/lib/constants';
-import { ArrowRight, MapPin, Sparkles, Tag, ChevronDown } from 'lucide-react';
+import { ArrowRight, MapPin, Tag, ChevronDown } from 'lucide-react';
 import { SightsView } from '@/components/SightsView';
 import { RestaurantsView } from '@/components/RestaurantsView';
 import { CafesView } from '@/components/CafesView';
@@ -267,12 +267,6 @@ export const PlaceList: React.FC<PlaceListProps> = ({
                   >
                     <MapPin className="w-5 h-5" />
                   </span>
-                  {p.p > 0 && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40">
-                      <Sparkles className="w-3 h-3" />
-                      +{p.p} نقطة
-                    </span>
-                  )}
                 </div>
 
                 <p className="text-base sm:text-lg font-black text-ocean-900 dark:text-white leading-snug group-hover:text-teal2-600 dark:group-hover:text-teal2-400 transition-colors">

@@ -34,35 +34,6 @@ export interface SightsViewProps {
 
 const FAVORITES_KEY = 'portsaid_favorite_places';
 
-// ربط المعالم بالصور الأصلية المتوفرة في المشروع
-const SIGHTS_PHOTOS: Record<string, string> = {
-  // قاعدة تمثال ديليسبس
-  '20000000-0000-0000-0000-000000000100': '/assets/port-said/hero-01.webp',
-  // De Lesseps Bay
-  '20000000-0000-0000-0000-000000000128': '/assets/port-said/port-said-port-night.webp',
-  // الممشى السياحي
-  '20000000-0000-0000-0000-000000000253': '/assets/port-said/hero-01.webp',
-  // متحف النصر للفن الحديث
-  '20000000-0000-0000-0000-000000000256': '/assets/port-said/gallery/martyrs-square.webp',
-  // ميناء بورسعيد وقناة السويس
-  'default-port': '/assets/port-said/port-said-port-night.webp',
-  // ميدان الشهداء
-  'default-square': '/assets/port-said/gallery/martyrs-square.webp',
-};
-
-function getSightPhoto(place: Place): string {
-  if (SIGHTS_PHOTOS[place.id]) {
-    return SIGHTS_PHOTOS[place.id];
-  }
-  const name = place.n.toLowerCase();
-  if (name.includes('فنار')) return '/assets/port-said/port-said-lighthouse.webp';
-  if (name.includes('ديليسبس') || name.includes('ممشى')) return '/assets/port-said/hero-01.webp';
-  if (name.includes('سلام') || name.includes('مسجد')) return '/assets/port-said/port-said-mosque.webp';
-  if (name.includes('شهداء') || name.includes('مسلة')) return '/assets/port-said/gallery/martyrs-square.webp';
-  if (name.includes('سفينة') || name.includes('قناة')) return '/assets/port-said/gallery/ship.webp';
-  return '/assets/port-said/hero-01.webp';
-}
-
 // تصنيفات فلاتر المعالم حسب النوع الحقيقي
 const SIGHT_TYPES = [
   { key: 'all', label: 'جميع المعالم' },
@@ -386,7 +357,6 @@ export const SightsView: React.FC<SightsViewProps> = ({
           <div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
               {filteredPlaces.slice(0, visibleCount).map((place) => {
-                const photo = getSightPhoto(place);
                 const meta = PLACES_METADATA[place.id];
                 const isFav = favorites.includes(place.id);
 
@@ -394,58 +364,32 @@ export const SightsView: React.FC<SightsViewProps> = ({
                   <div
                     key={place.id}
                     onClick={() => handleOpenPlace(place.id)}
-                    className="group bg-white dark:bg-[#0c1622] rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-[#1d2d3e] overflow-hidden shadow-xs hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500/50 transition-all duration-200 cursor-pointer flex flex-col justify-between text-right"
+                    className="group bg-white dark:bg-[#0c1622] rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-[#1d2d3e] overflow-hidden shadow-xs hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500/50 transition-all duration-200 active:scale-95 cursor-pointer flex flex-col justify-between text-right"
                   >
-                  {/* Place Real Image */}
-                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100 dark:bg-slate-900">
-                    <img
-                      src={photo}
-                      alt={place.n}
-                      loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-
-                    {/* Gradient Overlay for Text Readability */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                    {/* Top Badges */}
-                    <div className="absolute top-2.5 inset-x-2.5 flex items-center justify-between">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-white/95 dark:bg-[#0c1622]/95 text-ocean-950 dark:text-white shadow-xs backdrop-blur-xs">
+                  {/* Place Content Details */}
+                  <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
+                    {/* Badges & Area (relocated from photo) */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-100 dark:bg-[#152332] text-ocean-950 dark:text-white shadow-xs">
                         معلم سياحي
                       </span>
-
-                      {/* Favorite Button */}
                       <button
                         type="button"
                         onClick={(e) => toggleFavorite(e, place.id, place.n)}
-                        className={`p-1.5 rounded-full backdrop-blur-xs transition shadow-xs ${
+                        className={`p-1.5 rounded-full transition shadow-xs shrink-0 ${
                           isFav
                             ? 'bg-rose-500 text-white'
-                            : 'bg-black/30 hover:bg-black/50 text-white'
+                            : 'bg-slate-100 dark:bg-[#152332] text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#1d2d3e]'
                         }`}
                         title={isFav ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'}
                       >
                         <Heart className={`w-3.5 h-3.5 ${isFav ? 'fill-current' : ''}`} />
                       </button>
                     </div>
-
-                    {/* Bottom Area Tag on Image */}
-                    <div className="absolute bottom-2.5 inset-x-2.5 flex items-center justify-between text-white text-xs">
-                      <span className="inline-flex items-center gap-1 font-bold text-[11px] drop-shadow-sm">
-                        <MapPin className="w-3.5 h-3.5 text-rose-400" />
-                        <span>{place.a}</span>
-                      </span>
-
-                      {place.p > 0 && (
-                        <span className="text-[10px] font-bold text-amber-300 drop-shadow-sm">
-                          +{place.p} نقطة
-                        </span>
-                      )}
+                    <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                      <MapPin className="w-3.5 h-3.5 text-rose-400" />
+                      <span>{place.a}</span>
                     </div>
-                  </div>
-
-                  {/* Place Content Details */}
-                  <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
                     <div>
                       <h3 className="font-black text-sm sm:text-base text-ocean-950 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition leading-snug">
                         {place.n}

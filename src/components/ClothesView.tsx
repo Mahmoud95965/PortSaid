@@ -44,29 +44,6 @@ const CLOTHES_FILTER_TABS = [
   { key: 'shoes', label: 'أحذية وسنيكرز وشنط', icon: '👟' },
 ];
 
-function getClothesPhoto(place: Place): string {
-  const n = (place.n || '').toLowerCase();
-  const type = (place.type_ar || '').toLowerCase();
-  const a = (place.a || '').toLowerCase();
-
-  if (n.includes('shoes') || n.includes('أحذية') || n.includes('شنط') || type.includes('أحذية')) {
-    return '/assets/port-said/gallery/martyrs-square.webp';
-  }
-  if (n.includes('dima') || n.includes('حريمي') || type.includes('حريمي')) {
-    return '/assets/port-said/gallery/balconies-street.webp';
-  }
-  if (n.includes('men') || n.includes('رجالي') || n.includes('khoder') || n.includes('بدل')) {
-    return '/assets/port-said/hero-01.webp';
-  }
-  if (n.includes('outlet') || n.includes('كيلو') || n.includes('ستوك')) {
-    return '/assets/port-said/hero-03.webp';
-  }
-  if (n.includes('kids') || n.includes('أطفال')) {
-    return '/assets/port-said/gallery/balconies-street.webp';
-  }
-  return '/assets/port-said/hero-02.webp';
-}
-
 export const ClothesView: React.FC<ClothesViewProps> = ({
   places = INITIAL_PLACES,
   onSelectPlace,
@@ -381,58 +358,39 @@ export const ClothesView: React.FC<ClothesViewProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {displayedPlaces.map((place) => {
             const isFav = favorites.includes(place.id);
-            const photo = getClothesPhoto(place);
 
             return (
               <div
                 key={place.id}
                 onClick={() => onSelectPlace && onSelectPlace(place.id)}
-                className="group rounded-3xl bg-white dark:bg-[#0c1622] border border-sand-300/80 dark:border-[#1d2d3e] shadow-sm hover:shadow-xl hover:border-indigo-500/50 transition-all duration-300 overflow-hidden flex flex-col cursor-pointer relative"
+                className="group rounded-3xl bg-white dark:bg-[#0c1622] border border-sand-300/80 dark:border-[#1d2d3e] shadow-sm hover:shadow-xl hover:border-indigo-500/50 transition-all duration-300 active:scale-95 overflow-hidden flex flex-col cursor-pointer relative"
               >
-                {/* Photo & Badges */}
-                <div className="relative h-44 overflow-hidden bg-sand-100 dark:bg-[#121c29]">
-                  <img
-                    src={photo}
-                    alt={place.n}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-
-                  {/* Favorite Button */}
-                  <button
-                    onClick={(e) => toggleFavorite(e, place.id, place.n)}
-                    className="absolute top-3 right-3 p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md text-white transition z-10"
-                  >
-                    <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-                  </button>
-
-                  {/* Discount / Points Badge */}
-                  <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
-                    {place.disc > 0 && (
-                      <span className="px-2.5 py-1 rounded-xl bg-coral-500 text-white text-[11px] font-black shadow flex items-center gap-1">
-                        <Tag className="w-3 h-3" />
-                        <span>خصم {place.disc}%</span>
-                      </span>
-                    )}
-                    {place.p > 0 && (
-                      <span className="px-2.5 py-1 rounded-xl bg-ocean-900/80 text-sand-300 border border-sand-400/30 text-[10px] font-bold backdrop-blur-sm">
-                        +{place.p} نقطة
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Name and Type in Image Footer */}
-                  <div className="absolute bottom-3 right-3 left-3 text-white">
-                    <span className="inline-block px-2.5 py-0.5 rounded-lg bg-indigo-600/80 backdrop-blur-sm text-[10px] font-black text-white mb-1">
-                      {place.type_ar || 'ملابس وأزياء'}
-                    </span>
-                    <h3 className="font-black text-base sm:text-lg leading-snug line-clamp-1">{place.n}</h3>
-                  </div>
-                </div>
-
                 {/* Content */}
                 <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                   <div className="space-y-2">
+                    {/* Badges & Name (relocated from photo) */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="inline-block px-2.5 py-0.5 rounded-lg bg-indigo-600 text-[10px] font-black text-white">
+                          {place.type_ar || 'ملابس وأزياء'}
+                        </span>
+                        {place.disc > 0 && (
+                          <span className="px-2.5 py-1 rounded-xl bg-coral-500 text-white text-[11px] font-black shadow flex items-center gap-1">
+                            <Tag className="w-3 h-3" />
+                            <span>خصم {place.disc}%</span>
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => toggleFavorite(e, place.id, place.n)}
+                        className="p-2 rounded-full bg-sand-100 dark:bg-[#121c29] text-ocean-700 dark:text-white/80 transition shrink-0"
+                        title={isFav ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'}
+                      >
+                        <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : ''}`} />
+                      </button>
+                    </div>
+                    <h3 className="font-black text-base sm:text-lg leading-snug text-ocean-950 dark:text-white">{place.n}</h3>
                     {/* Area and Rating */}
                     <div className="flex items-center justify-between text-xs">
                       <span className="inline-flex items-center gap-1 text-ocean-700/80 dark:text-white/70 font-bold">

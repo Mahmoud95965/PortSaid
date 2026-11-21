@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import {
-  Star,
   Moon,
   Sun,
   User as UserIcon,
@@ -17,9 +16,7 @@ import {
   Home,
   Sparkles,
   MapPin,
-  Settings,
   Hotel,
-  Camera,
   Shirt,
   ChevronDown,
   Menu,
@@ -35,14 +32,12 @@ import Link from 'next/link';
 interface HeaderProps {
   onNavigate: (view: string, arg?: string | null) => void;
   onOpenFeedback: () => void;
-  onOpenPoints: () => void;
   onOpenGuide?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onNavigate,
   onOpenFeedback,
-  onOpenPoints,
   onOpenGuide,
 }) => {
   const { user, theme, toggleTheme, logout } = useAuth();
@@ -209,22 +204,6 @@ export const Header: React.FC<HeaderProps> = ({
                     </button>
 
                     <button
-                      onClick={() => navigateAndClose('memories')}
-                      type="button"
-                      className="w-full text-right p-2.5 rounded-xl hover:bg-sand-100 dark:hover:bg-[#162738] transition flex items-start gap-2.5"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-teal2-100 dark:bg-teal2-950/60 text-teal2-700 dark:text-teal2-300 grid place-items-center shrink-0 mt-0.5">
-                        <Camera className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-black text-xs text-ocean-900 dark:text-white">ذكريات بورسعيد</p>
-                        <p className="text-[10px] text-ocean-700/60 dark:text-white/50 truncate">
-                          صور وتجارب مجتمع بورسعيد هب
-                        </p>
-                      </div>
-                    </button>
-
-                    <button
                       onClick={() => navigateAndClose('map')}
                       type="button"
                       className="w-full text-right p-2.5 rounded-xl hover:bg-sand-100 dark:hover:bg-[#162738] transition flex items-start gap-2.5"
@@ -362,23 +341,6 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Actions: Points, Theme, Profile, Mobile Menu Button */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-          {/* Points Badge */}
-          {!isMerchant && (
-            <motion.button
-              onClick={onOpenPoints}
-              type="button"
-              aria-label="عرض تفاصيل رصيد النقاط والمكافآت"
-              title="رصيدك من النقاط - اضغط لعرض التفاصيل الكاملة"
-              className="inline-flex items-center gap-1 sm:gap-1.5 bg-white/15 hover:bg-white/25 border border-white/25 rounded-xl sm:rounded-2xl px-2.5 sm:px-3 py-1 sm:py-1.5 font-black text-xs sm:text-sm transition cursor-pointer select-none"
-              whileHover={{ scale: 1.05, y: -1 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sand-400 fill-sand-400 shrink-0" />
-              <span className="text-sand-300 font-extrabold">{user?.points ?? 0}</span>
-              <span className="hidden min-[480px]:inline text-[11px] sm:text-xs text-white/90">نقطة</span>
-            </motion.button>
-          )}
-
           {/* Notifications Button (Completely Empty State as requested) */}
           <div className="relative" ref={notificationsRef}>
             <motion.button
@@ -535,21 +497,6 @@ export const Header: React.FC<HeaderProps> = ({
                       </span>
                     </button>
 
-                    {/* 2. الإعدادات */}
-                    <button
-                      onClick={() => navigateAndClose('account')}
-                      type="button"
-                      className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-sand-50 dark:bg-[#1a2739] text-ocean-900 dark:text-white font-bold text-sm hover:bg-sand-100 dark:hover:bg-[#22334a] transition border border-sand-200/80 dark:border-[#2a3a4f]"
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <Settings className="w-4 h-4 text-teal2-600 dark:text-teal2-400" />
-                        <span>الإعدادات والتفضيلات</span>
-                      </span>
-                      <span className="text-[10px] font-black text-ocean-600 dark:text-sand-300 bg-sand-200/60 dark:bg-white/10 px-2 py-0.5 rounded-full">
-                        إعدادات
-                      </span>
-                    </button>
-
                     {/* لوحة التحكم للمالك والمشرف */}
                     {(user?.role === 'admin' || user?.role === 'owner') && (
                       <Link
@@ -644,15 +591,6 @@ export const Header: React.FC<HeaderProps> = ({
                         </button>
 
                         <button
-                          onClick={() => navigateAndClose('memories')}
-                          type="button"
-                          className="flex items-center gap-2 p-2 rounded-xl bg-sand-50 dark:bg-[#162738] text-xs font-bold hover:bg-sand-100"
-                        >
-                          <Camera className="w-4 h-4 text-teal2-600" />
-                          <span>الذكريات</span>
-                        </button>
-
-                        <button
                           onClick={() => navigateAndClose('map')}
                           type="button"
                           className="flex items-center gap-2 p-2 rounded-xl bg-sand-50 dark:bg-[#162738] text-xs font-bold hover:bg-sand-100"
@@ -728,17 +666,6 @@ export const Header: React.FC<HeaderProps> = ({
                         <span>عندك اقتراح؟ شاركنا</span>
                       </button>
 
-                      <button
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          onOpenPoints();
-                        }}
-                        type="button"
-                        className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1"
-                      >
-                        <Star className="w-3.5 h-3.5 fill-current" />
-                        <span>نقاطي: {user?.points ?? 0}</span>
-                      </button>
                     </div>
                   </motion.div>
                 )}

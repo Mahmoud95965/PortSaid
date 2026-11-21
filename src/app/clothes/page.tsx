@@ -14,8 +14,6 @@ export default function ClothesPage() {
       router.push('/');
     } else if (view === 'hotels') {
       router.push('/hotels');
-    } else if (view === 'memories') {
-      router.push('/memories');
     } else if (view === 'housing') {
       router.push('/housing');
     } else {
@@ -28,7 +26,6 @@ export default function ClothesPage() {
       <Header
         onNavigate={handleNavigate}
         onOpenFeedback={() => handleNavigate('feedback')}
-        onOpenPoints={() => handleNavigate('points')}
       />
 
       <main className="max-w-6xl mx-auto px-3 min-[400px]:px-4 sm:px-5 lg:px-8 py-6 flex-1 w-full relative z-10">

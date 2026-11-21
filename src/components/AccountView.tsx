@@ -8,11 +8,6 @@ import {
   Camera,
   CheckCircle,
   User as UserIcon,
-  Lock,
-  Eye,
-  EyeOff,
-  Star,
-  Sparkles,
   Sliders,
   Sun,
   Moon,
@@ -67,20 +62,10 @@ const INTEREST_OPTIONS = [
 ];
 
 export const AccountView: React.FC<AccountViewProps> = ({ onBack }) => {
-  const { user, updateAvatar, changePassword, theme, setThemeExplicitly, toggleTheme } = useAuth();
+  const { user, updateAvatar, theme, setThemeExplicitly, toggleTheme } = useAuth();
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  // حالة كلمة المرور
-  const [currentPass, setCurrentPass] = useState('');
-  const [newPass, setNewPass] = useState('');
-  const [confirmPass, setConfirmPass] = useState('');
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-
-  const [passMsg, setPassMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [avatarMsg, setAvatarMsg] = useState('');
-  const [verMsg, setVerMsg] = useState('');
 
   // حالة التفضيلات
   const [prefs, setPrefs] = useState<UserPreferences>(DEFAULT_PREFERENCES);
@@ -143,18 +128,6 @@ export const AccountView: React.FC<AccountViewProps> = ({ onBack }) => {
     }
   };
 
-  const calcStrength = (p: string) => {
-    let s = 0;
-    if (p.length >= 8) s++;
-    if (p.length >= 12) s++;
-    if (/[a-z]/.test(p) && /[A-Z]/.test(p)) s++;
-    if (/\d/.test(p)) s++;
-    if (/[^A-Za-z0-9]/.test(p)) s++;
-    return s;
-  };
-
-  const strength = calcStrength(newPass);
-
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -162,33 +135,6 @@ export const AccountView: React.FC<AccountViewProps> = ({ onBack }) => {
     updateAvatar(url);
     setAvatarMsg('تم تحديث صورتك الشخصية بنجاح ✓');
     setTimeout(() => setAvatarMsg(''), 3000);
-  };
-
-  const handleChangePassSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPassMsg(null);
-    if (!currentPass) {
-      setPassMsg({ text: 'اكتب كلمة المرور الحالية.', ok: false });
-      return;
-    }
-    if (newPass.length < 8) {
-      setPassMsg({ text: 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل.', ok: false });
-      return;
-    }
-    if (newPass !== confirmPass) {
-      setPassMsg({ text: 'كلمتا المرور الجديدتان غير متطابقتين.', ok: false });
-      return;
-    }
-
-    const res = await changePassword(currentPass, newPass);
-    if (res.ok) {
-      setPassMsg({ text: 'تم تغيير كلمة المرور وحفظها بنجاح.', ok: true });
-      setCurrentPass('');
-      setNewPass('');
-      setConfirmPass('');
-    } else {
-      setPassMsg({ text: res.message || 'حدث خطأ.', ok: false });
-    }
   };
 
   const userRoleTitle =
@@ -263,7 +209,6 @@ export const AccountView: React.FC<AccountViewProps> = ({ onBack }) => {
         <div className="flex-1 min-w-0 relative z-10 space-y-2">
           <h2 className="text-xl sm:text-2xl font-black flex items-center justify-center sm:justify-start gap-2 truncate">
             <span>{user?.name || 'مستخدم بورسعيد'}</span>
-            {user?.email_verified && <CheckCircle className="w-5 h-5 text-sky-400 fill-sky-400 shrink-0" />}
           </h2>
 
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs font-bold">
@@ -285,16 +230,6 @@ export const AccountView: React.FC<AccountViewProps> = ({ onBack }) => {
           {avatarMsg && <p className="text-xs text-sand-300 font-bold">{avatarMsg}</p>}
         </div>
 
-        <motion.div
-          className="shrink-0 rounded-2xl bg-white/15 border border-white/30 px-5 py-3 text-center relative z-10 backdrop-blur-sm self-stretch sm:self-auto"
-          whileHover={{ scale: 1.05 }}
-        >
-          <p className="text-2xl sm:text-3xl font-black text-sand-400 flex items-center justify-center gap-1.5">
-            <Star className="w-6 h-6 fill-sand-400" />
-            <span>{user?.points ?? 0}</span>
-          </p>
-          <p className="text-xs text-white/90 font-bold mt-0.5">نقطة مكافآت بورسعيد</p>
-        </motion.div>
       </motion.section>
 
       {/* 1. NEW: Preferences Section (قسم التفضيلات في الإعدادات) */}
@@ -468,49 +403,49 @@ export const AccountView: React.FC<AccountViewProps> = ({ onBack }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
           <div
             onClick={() => setPrefs((p) => ({ ...p, notificationsEnabled: !p.notificationsEnabled }))}
-            className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#121f2f] border border-slate-200 dark:border-[#1e2f42] flex items-center justify-between cursor-pointer select-none"
+            className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#121f2f] border border-slate-200 dark:border-[#1e2f42] flex items-center gap-3 cursor-pointer select-none"
           >
-            <div className="flex items-center gap-2">
-              <Bell className="w-4 h-4 text-blue-600" />
-              <div>
-                <p className="text-xs sm:text-sm font-black text-ocean-950 dark:text-white">تنبيهات العروض والنقاط</p>
-                <p className="text-[10px] text-slate-500">إشعار عند إضافة كوبونات أو مكافآت جديدة</p>
-              </div>
-            </div>
             <div
-              className={`w-11 h-6 rounded-full transition-colors relative flex items-center px-1 ${
+              className={`w-11 h-6 shrink-0 rounded-full transition-colors relative flex items-center px-1 ${
                 prefs.notificationsEnabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'
               }`}
             >
               <div
-                className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                  prefs.notificationsEnabled ? 'translate-x-5' : 'translate-x-0'
+                className={`w-4 h-4 shrink-0 rounded-full bg-white transition-transform ${
+                  prefs.notificationsEnabled ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-0'
                 }`}
               />
+            </div>
+            <div className="flex-1 min-w-0 flex items-center gap-2">
+              <Bell className="w-4 h-4 text-blue-600 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-black text-ocean-950 dark:text-white">تنبيهات العروض</p>
+                <p className="text-[10px] text-slate-500">إشعار عند إضافة عروض جديدة</p>
+              </div>
             </div>
           </div>
 
           <div
             onClick={() => setPrefs((p) => ({ ...p, soundEffectsEnabled: !p.soundEffectsEnabled }))}
-            className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#121f2f] border border-slate-200 dark:border-[#1e2f42] flex items-center justify-between cursor-pointer select-none"
+            className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#121f2f] border border-slate-200 dark:border-[#1e2f42] flex items-center gap-3 cursor-pointer select-none"
           >
-            <div className="flex items-center gap-2">
-              <Volume2 className="w-4 h-4 text-teal2-600" />
-              <div>
-                <p className="text-xs sm:text-sm font-black text-ocean-950 dark:text-white">أصوات التفاعل</p>
-                <p className="text-[10px] text-slate-500">مؤثرات صوتية هادئة عند إنجاز الحضور</p>
-              </div>
-            </div>
             <div
-              className={`w-11 h-6 rounded-full transition-colors relative flex items-center px-1 ${
+              className={`w-11 h-6 shrink-0 rounded-full transition-colors relative flex items-center px-1 ${
                 prefs.soundEffectsEnabled ? 'bg-teal2-600' : 'bg-slate-300 dark:bg-slate-700'
               }`}
             >
               <div
-                className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                  prefs.soundEffectsEnabled ? 'translate-x-5' : 'translate-x-0'
+                className={`w-4 h-4 shrink-0 rounded-full bg-white transition-transform ${
+                  prefs.soundEffectsEnabled ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-0'
                 }`}
               />
+            </div>
+            <div className="flex-1 min-w-0 flex items-center gap-2">
+              <Volume2 className="w-4 h-4 text-teal2-600 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-black text-ocean-950 dark:text-white">أصوات التفاعل</p>
+                <p className="text-[10px] text-slate-500">مؤثرات صوتية هادئة عند إنجاز الحضور</p>
+              </div>
             </div>
           </div>
         </div>
@@ -595,151 +530,8 @@ export const AccountView: React.FC<AccountViewProps> = ({ onBack }) => {
             )}
           </div>
 
-          {/* Email Verification Box */}
-          <div className="mt-4 rounded-2xl bg-slate-50 dark:bg-[#121f2f] p-4 border border-slate-200 dark:border-[#1d2d3e]">
-            {user?.email_verified ? (
-              <p className="text-xs font-bold text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
-                <CheckCircle className="w-4 h-4 text-blue-600" />
-                <span>بريدك الإلكتروني موثّق بالعلامة الزرقاء ✓</span>
-              </p>
-            ) : (
-              <div>
-                <p className="text-xs text-slate-700 dark:text-slate-300 font-bold mb-2">
-                  بريدك الإلكتروني غير موثق حالياً.
-                </p>
-                <motion.button
-                  type="button"
-                  onClick={() => setVerMsg('تم إرسال رابط التوثيق إلى بريدك الإلكتروني بنجاح.')}
-                  className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  إرسال رابط التوثيق
-                </motion.button>
-                {verMsg && <p className="text-xs text-blue-600 font-bold mt-2">{verMsg}</p>}
-              </div>
-            )}
-          </div>
         </motion.section>
 
-        {/* Security & Password */}
-        <motion.section
-          className="bg-white dark:bg-[#0c1622] rounded-3xl shadow-xl p-5 sm:p-7 border border-slate-200 dark:border-[#1d2d3e] space-y-4"
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <h3 className="text-base sm:text-lg font-black text-ocean-950 dark:text-white flex items-center gap-2">
-            <Lock className="w-5 h-5 text-blue-600" />
-            <span>الأمان وتغيير كلمة المرور</span>
-          </h3>
-
-          <form onSubmit={handleChangePassSubmit} className="space-y-3.5">
-            <div>
-              <label className="block text-xs font-bold mb-1 text-ocean-950 dark:text-white">
-                كلمة المرور الحالية
-              </label>
-              <div className="relative">
-                <input
-                  type={showCurrent ? 'text' : 'password'}
-                  dir="ltr"
-                  value={currentPass}
-                  onChange={(e) => setCurrentPass(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 dark:border-[#203042] bg-slate-50 dark:bg-[#121f2f] text-ocean-950 dark:text-white px-3.5 py-2.5 text-xs sm:text-sm pl-10 outline-none focus:border-blue-600 font-medium"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrent(!showCurrent)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold mb-1 text-ocean-950 dark:text-white">
-                كلمة المرور الجديدة
-              </label>
-              <div className="relative">
-                <input
-                  type={showNew ? 'text' : 'password'}
-                  dir="ltr"
-                  value={newPass}
-                  onChange={(e) => setNewPass(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 dark:border-[#203042] bg-slate-50 dark:bg-[#121f2f] text-ocean-950 dark:text-white px-3.5 py-2.5 text-xs sm:text-sm pl-10 outline-none focus:border-blue-600 font-medium"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNew(!showNew)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-
-              {/* Strength Meter */}
-              {newPass && (
-                <div className="mt-2 space-y-1">
-                  <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-[#203246] overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-300 ${
-                        strength <= 1
-                          ? 'bg-red-500 w-1/4'
-                          : strength <= 3
-                          ? 'bg-amber-500 w-2/3'
-                          : 'bg-emerald-500 w-full'
-                      }`}
-                    />
-                  </div>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">
-                    {strength <= 1 ? 'ضعيفة' : strength <= 3 ? 'متوسطة' : 'قوية جداً ✓'}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold mb-1 text-ocean-950 dark:text-white">
-                تأكيد كلمة المرور الجديدة
-              </label>
-              <div className="relative">
-                <input
-                  type={showConfirm ? 'text' : 'password'}
-                  dir="ltr"
-                  value={confirmPass}
-                  onChange={(e) => setConfirmPass(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 dark:border-[#203042] bg-slate-50 dark:bg-[#121f2f] text-ocean-950 dark:text-white px-3.5 py-2.5 text-xs sm:text-sm pl-10 outline-none focus:border-blue-600 font-medium"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            {passMsg && (
-              <p className={`text-xs font-bold ${passMsg.ok ? 'text-emerald-600' : 'text-red-600'}`}>
-                {passMsg.text}
-              </p>
-            )}
-
-            <motion.button
-              type="submit"
-              className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs sm:text-sm shadow-md transition"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              حفظ كلمة المرور
-            </motion.button>
-          </form>
-        </motion.section>
       </div>
     </motion.div>
   );

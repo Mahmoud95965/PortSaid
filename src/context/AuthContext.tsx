@@ -14,11 +14,14 @@ interface AuthContextType {
   hasSeenWelcome: boolean;
   setHasSeenWelcome: (seen: boolean) => void;
   login: (identifier: string, pass: string) => Promise<{ ok: boolean; message?: string }>;
+  // Google sign-in (Supabase Auth): no password anywhere in the UI.
+  googleUser: { id: string; email: string; name: string } | null;
+  signInWithGoogle: () => Promise<{ ok: boolean; message?: string }>;
   registerUser: (data: {
     name: string;
     email: string;
     phone: string;
-    password: string;
+    password?: string;
     gender: GenderType;
     user_type: UserTypeCategory;
     governorate?: string;
@@ -28,7 +31,7 @@ interface AuthContextType {
     name: string;
     email: string;
     phone: string;
-    password: string;
+    password?: string;
     business_name: string;
     category: string;
     area: string;
@@ -53,6 +56,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  // Identity returned by Google (Supabase Auth). Email + name come from Google;
+  // the server account is then created password-less via registerUser/registerMerchant.
+  const [googleUser, setGoogleUser] = useState<{ id: string; email: string; name: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [hasSeenWelcome, setHasSeenWelcomeState] = useState(false);
@@ -104,6 +110,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     }
   }, []);
+
+  // Keep the Google identity in sync with the Supabase client session so the
+  // registration form can pre-fill the name from user_metadata (full_name/name).
+  useEffect(() => {
+    if (!supabase) return;
+    const toGoogleUser = (u: { id: string; email?: string; user_metadata?: Record<string, unknown> } | null) => {
+      if (!u) return null;
+      const meta = u.user_metadata || {};
+      const fullName = (meta.full_name as string) || (meta.name as string) || '';
+      return { id: u.id, email: u.email || '', name: fullName };
+    };
+    supabase.auth
+      .getSession()
+      .then(({ data }) => setGoogleUser(toGoogleUser(data.session?.user ?? null)))
+      .catch(() => {});
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setGoogleUser(toGoogleUser(session?.user ?? null));
+    });
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  /**
+   * تسجيل الدخول بحساب Google عبر Supabase Auth (OAuth redirect).
+   * Requires the Google provider to be enabled in the Supabase dashboard and
+   * the site URL / redirect URL to allow the app origin.
+   */
+  const signInWithGoogle = async (): Promise<{ ok: boolean; message?: string }> => {
+    if (!supabase || !isSupabaseConfigured()) {
+      return { ok: false, message: 'تسجيل الدخول بحساب Google غير مفعّل بعد. فعّل مزوّد Google في Supabase أولاً.' };
+    }
+    try {
+      const redirectTo = typeof window !== 'undefined' ? window.location.origin : undefined;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo },
+      });
+      if (error) {
+        return { ok: false, message: error.message || 'تعذّر بدء تسجيل الدخول بحساب Google.' };
+      }
+      return { ok: true };
+    } catch (err: any) {
+      console.warn('Google sign-in error:', err);
+      return { ok: false, message: 'تعذّر بدء تسجيل الدخول بحساب Google.' };
+    }
+  };
 
   const toggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
@@ -166,13 +219,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     name: string;
     email: string;
     phone: string;
-    password: string;
+    password?: string;
     gender: GenderType;
     user_type: UserTypeCategory;
     governorate?: string;
     institution?: string;
   }): Promise<{ ok: boolean; message?: string }> => {
-    if (!data.name || !data.email || !data.phone || !data.password) {
+    // Password-less registration: email + identity come from Google sign-in.
+    // NOTE: the server /api/auth/register endpoint must accept a registration
+    // without a password (Google-verified email) for this to work end-to-end.
+    if (!data.name || !data.email || !data.phone) {
       return { ok: false, message: 'جميع الحقول الأساسية مطلوبة.' };
     }
 
@@ -201,7 +257,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     name: string;
     email: string;
     phone: string;
-    password: string;
+    password?: string;
     business_name: string;
     category: string;
     area: string;
@@ -423,6 +479,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         hasSeenWelcome,
         setHasSeenWelcome,
         login,
+        googleUser,
+        signInWithGoogle,
         registerUser,
         registerMerchant,
         logout,

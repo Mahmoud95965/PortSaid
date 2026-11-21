@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -9,7 +9,6 @@ import {
   Bus,
   Utensils,
   Bed,
-  Star,
   User as UserIcon,
   Store,
   GraduationCap,
@@ -17,14 +16,9 @@ import {
   Home,
   Sun,
   Moon,
-  Eye,
-  EyeOff,
   CheckCircle2,
   MapPin,
   Phone,
-  Mail,
-  Lock,
-  Sparkles,
   Loader2,
 } from 'lucide-react';
 import { GOVERNORATES, INSTITUTIONS } from '@/lib/constants';
@@ -35,19 +29,59 @@ interface AuthModalProps {
   onBackToWelcome: () => void;
 }
 
-const STEPS = ['البيانات الأساسية', 'التفاصيل', 'كلمة المرور'];
+const STEPS = ['البيانات الأساسية', 'التفاصيل'];
+
+const GoogleSignInButton: React.FC<{ label: string; loading: boolean; onClick: () => void }> = ({
+  label,
+  loading,
+  onClick,
+}) => (
+  <motion.button
+    type="button"
+    onClick={onClick}
+    disabled={loading}
+    className="w-full py-3.5 rounded-2xl bg-white dark:bg-white text-[#1f1f1f] font-black text-sm shadow-md border border-sand-200 hover:bg-sand-50 transition flex items-center justify-center gap-3 disabled:opacity-60"
+    whileHover={{ scale: 1.02 }}
+    whileTap={{ scale: 0.98 }}
+  >
+    {loading ? (
+      <Loader2 className="w-5 h-5 animate-spin text-ocean-900" />
+    ) : (
+      <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          fill="#4285F4"
+          d="M23.49 12.27c0-.85-.08-1.66-.21-2.45H12v4.64h6.45a5.52 5.52 0 0 1-2.39 3.62v3h3.86c2.26-2.09 3.57-5.16 3.57-8.81z"
+        />
+        <path
+          fill="#34A853"
+          d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09A12 12 0 0 0 12 24z"
+        />
+        <path
+          fill="#FBBC05"
+          d="M5.27 14.29A7.2 7.2 0 0 1 4.89 12c0-.8.14-1.57.38-2.29V6.62H1.29a12 12 0 0 0 0 10.76l3.98-3.09z"
+        />
+        <path
+          fill="#EA4335"
+          d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42A11.98 11.98 0 0 0 12 0 12 12 0 0 0 1.29 6.62l3.98 3.09C6.22 6.86 8.87 4.75 12 4.75z"
+        />
+      </svg>
+    )}
+    <span>{loading ? 'جارٍ التحويل إلى Google...' : label}</span>
+  </motion.button>
+);
 
 export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome }) => {
-  const { login, registerUser, registerMerchant, theme, toggleTheme } = useAuth();
+  // Google-only sign-in.
+  // login() stays defined in AuthContext (API layer) but is no longer called from the UI.
+  const { registerUser, registerMerchant, theme, toggleTheme, signInWithGoogle, googleUser } = useAuth();
   const [tab, setTab] = useState<'login' | 'signup'>('login');
   const [accountType, setAccountType] = useState<'user' | 'merchant'>('user');
 
-  // Login
-  const [loginId, setLoginId] = useState('');
-  const [loginPass, setLoginPass] = useState('');
-  const [loginErr, setLoginErr] = useState('');
-  const [loginLoading, setLoginLoading] = useState(false);
-  const [showLoginPass, setShowLoginPass] = useState(false);
+  // Google sign-in
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleErr, setGoogleErr] = useState('');
+  // Email comes from the Google account (read-only); never typed by the user.
+  const googleEmail = googleUser?.email || '';
 
   // Signup wizard
   const [step, setStep] = useState(1);
@@ -57,10 +91,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome
   const [institution, setInstitution] = useState('');
   const [governorate, setGovernorate] = useState('');
   const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [passwordConfirm, setPasswordConfirm] = useState('');
-  const [showPass, setShowPass] = useState(false);
 
   // Merchant
   const [bizName, setBizName] = useState('');
@@ -74,26 +104,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome
   const [signupLoading, setSignupLoading] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
 
-  const passStrength = (p: string) => {
-    let score = 0;
-    if (p.length >= 8) score++;
-    if (/[A-Z]/.test(p)) score++;
-    if (/[0-9]/.test(p)) score++;
-    if (/[^A-Za-z0-9]/.test(p)) score++;
-    return score;
-  };
-  const ps = passStrength(password);
-  const psColors = ['bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-teal2-500'];
-  const psLabels = ['', 'ضعيفة', 'مقبولة', 'جيدة', 'قوية'];
+  // Pre-fill the name from the Google account (user_metadata full_name) for
+  // review/confirmation — the field stays editable.
+  useEffect(() => {
+    if (googleUser?.name && !name) {
+      setName(googleUser.name);
+    }
+  }, [googleUser, name]);
 
-  const handleLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginErr('');
-    setLoginLoading(true);
-    const res = await login(loginId, loginPass);
-    setLoginLoading(false);
-    if (!res.ok) setLoginErr(res.message || 'بيانات الدخول غير صحيحة.');
-    else onSuccess();
+  const handleGoogleSignIn = async () => {
+    setGoogleErr('');
+    setGoogleLoading(true);
+    const res = await signInWithGoogle();
+    setGoogleLoading(false);
+    if (!res.ok) setGoogleErr(res.message || 'تعذّر تسجيل الدخول بحساب Google.');
+    // On success Supabase redirects to Google; after returning, AuthContext
+    // picks up the session and googleUser is set, so the form below appears.
   };
 
   const handleSignupNext = (e: React.FormEvent) => {
@@ -104,14 +130,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome
       if (accountType === 'merchant' && !bizName.trim()) return setSignupErr('برجاء كتابة اسم المتجر.');
       setStep(2);
     } else if (step === 2) {
-      if (accountType === 'user' && userType === 'student' && !institution) return setSignupErr('برجاء اختيار الكلية.');
+      if (accountType === 'user' && userType === 'student' && !institution)
+        return setSignupErr('برجاء اختيار الكلية.');
+      if (accountType === 'user' && userType !== 'local' && !governorate)
+        return setSignupErr('برجاء اختيار المحافظة.');
       if (!phone.trim()) return setSignupErr('برجاء كتابة رقم الهاتف.');
       if (!phone.startsWith('01') || phone.length !== 11) return setSignupErr('رقم الهاتف يجب 11 رقم ويبدأ بـ 01.');
-      setStep(3);
-    } else if (step === 3) {
-      if (!email.trim() || !email.includes('@')) return setSignupErr('برجاء كتابة بريد إلكتروني صحيح.');
-      if (password.length < 8) return setSignupErr('كلمة المرور 8 أحرف على الأقل.');
-      if (password !== passwordConfirm) return setSignupErr('كلمتا المرور غير متطابقتين.');
       handleFinalSignup();
     }
   };
@@ -119,13 +143,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome
   const handleFinalSignup = async () => {
     setSignupLoading(true);
     setSignupErr('');
+    // Email comes from the Google account; nothing is invented or sent in
+    // its place. The server register endpoint must accept this.
     const res =
       accountType === 'merchant'
         ? await registerMerchant({
             name,
-            email,
+            email: googleEmail,
             phone,
-            password,
             business_name: bizName,
             category: bizCategory,
             area: bizArea || 'حي الشرق',
@@ -135,9 +160,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome
           })
         : await registerUser({
             name,
-            email,
+            email: googleEmail,
             phone,
-            password,
             gender,
             user_type: userType,
             governorate: userType === 'local' ? 'بورسعيد' : governorate,
@@ -193,7 +217,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome
                 { icon: <Bus className="w-4 h-4" />, text: 'مواصلات السكن للكلية' },
                 { icon: <Utensils className="w-4 h-4" />, text: 'أفضل المطاعم والكافيهات' },
                 { icon: <Bed className="w-4 h-4" />, text: 'سكن وأماكن قريبة منك' },
-                { icon: <Star className="w-4 h-4" />, text: 'نقاط ومكافآت على كل زيارة' },
               ].map((item, i) => (
                 <motion.li
                   key={i}
@@ -211,7 +234,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome
             </ul>
           </div>
           <div className="text-white/70 text-xs font-semibold relative z-10">
-            فريق Alpha Team · بالشراكة مع TOLZY Team &copy; 2026
+            فريق Alpha Team · بالشراكة مع Genie &copy; 2026
           </div>
         </aside>
 
@@ -262,77 +285,92 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome
             ))}
           </div>
 
-          {/* ============ LOGIN ============ */}
+          {/* ============ LOGIN (Google only) ============ */}
           {tab === 'login' && (
-            <motion.form
-              onSubmit={handleLoginSubmit}
+            <motion.div
               className="space-y-4 flex-1"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <div>
-                <label className="block text-xs sm:text-sm font-bold mb-2 text-ocean-900 dark:text-white/90">
-                  <Mail className="w-4 h-4 inline ml-1.5 text-teal2-500" />
-                  رقم الهاتف / البريد الإلكتروني
-                </label>
-                <input
-                  type="text"
-                  dir="ltr"
-                  placeholder="01xxxxxxxxx أو name@example.com"
-                  value={loginId}
-                  onChange={(e) => setLoginId(e.target.value)}
-                  className="ps-input"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs sm:text-sm font-bold mb-2 text-ocean-900 dark:text-white/90">
-                  <Lock className="w-4 h-4 inline ml-1.5 text-teal2-500" />
-                  كلمة المرور
-                </label>
-                <div className="relative">
-                  <input
-                    type={showLoginPass ? 'text' : 'password'}
-                    dir="ltr"
-                    value={loginPass}
-                    onChange={(e) => setLoginPass(e.target.value)}
-                    className="ps-input pl-11"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowLoginPass(!showLoginPass)}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-                  >
-                    {showLoginPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-              {loginErr && (
+              <p className="text-xs sm:text-sm text-ocean-700/80 dark:text-white/70 font-medium leading-relaxed">
+                سجّل دخولك بحساب Google للمتابعة إلى Port Said Hub — بدون كلمة مرور.
+              </p>
+              <GoogleSignInButton
+                label="تسجيل الدخول بحساب Google"
+                loading={googleLoading}
+                onClick={handleGoogleSignIn}
+              />
+              {googleErr && (
                 <motion.p
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="text-xs text-red-500 font-bold bg-red-50 dark:bg-red-950/30 rounded-xl px-3 py-2 border border-red-200/50"
                 >
-                  {loginErr}
+                  {googleErr}
                 </motion.p>
               )}
-              <motion.button
-                type="submit"
-                disabled={loginLoading}
-                className="ps-btn-primary mt-2 flex items-center justify-center gap-2"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                {loginLoading && <Loader2 className="w-4 h-4 animate-spin text-white" />}
-                <span>{loginLoading ? 'جارٍ تسجيل الدخول...' : 'دخول'}</span>
-              </motion.button>
-            </motion.form>
+              {googleUser && (
+                <div className="rounded-2xl bg-teal2-50 dark:bg-teal2-950/40 border border-teal2-200 dark:border-teal2-800/40 px-3.5 py-3 text-xs font-bold text-teal2-800 dark:text-teal2-300 space-y-1">
+                  <p className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>تم التحقق من حساب Google الخاص بك</span>
+                  </p>
+                  <p dir="ltr" className="text-right text-ocean-900 dark:text-white">
+                    {googleEmail}
+                  </p>
+                  <p className="font-medium text-ocean-700/80 dark:text-white/70">
+                    أكمل بيانات التسجيل من تبويب «إنشاء حساب جديد» لإنشاء حسابك على المنصة.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTab('signup');
+                      setStep(1);
+                    }}
+                    className="mt-1 px-3.5 py-2 rounded-xl bg-teal2-600 hover:bg-teal2-500 text-white font-black text-xs transition"
+                  >
+                    إكمال بيانات التسجيل
+                  </button>
+                </div>
+              )}
+              <p className="text-[11px] text-ocean-700/50 dark:text-white/40 font-medium leading-relaxed">
+                بالمتابعة أنت توافق على استخدام حساب Google الخاص بك لتسجيل الدخول فقط؛
+                لن نطلب منك كلمة مرور أبداً.
+              </p>
+            </motion.div>
           )}
 
           {/* ============ SIGNUP ============ */}
-          {tab === 'signup' && (
+          {tab === 'signup' && !googleUser && (
+            <motion.div
+              className="space-y-4 flex-1"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <p className="text-xs sm:text-sm text-ocean-700/80 dark:text-white/70 font-medium leading-relaxed">
+                ابدأ بتسجيل الدخول بحساب Google — سنأخذ اسمك وبريدك منه، ثم نطلب منك
+                باقي البيانات فقط (المحافظة، النوع، الكلية، ورقم الموبايل).
+              </p>
+              <GoogleSignInButton
+                label="المتابعة بحساب Google"
+                loading={googleLoading}
+                onClick={handleGoogleSignIn}
+              />
+              {googleErr && (
+                <motion.p
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-xs text-red-500 font-bold bg-red-50 dark:bg-red-950/30 rounded-xl px-3 py-2 border border-red-200/50"
+                >
+                  {googleErr}
+                </motion.p>
+              )}
+            </motion.div>
+          )}
+
+          {tab === 'signup' && googleUser && (
             <motion.form
               onSubmit={handleSignupNext}
               className="space-y-4 flex-1"
@@ -340,6 +378,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
             >
+              {/* Google account (email comes from Google, read-only) */}
+              <div className="flex items-center gap-2.5 rounded-2xl bg-teal2-50 dark:bg-teal2-950/40 border border-teal2-200 dark:border-teal2-800/40 px-3.5 py-2.5">
+                <CheckCircle2 className="w-5 h-5 text-teal2-600 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs font-black text-teal2-800 dark:text-teal2-300">
+                    مسجّل بحساب Google
+                  </p>
+                  <p dir="ltr" className="text-xs font-bold text-ocean-900 dark:text-white truncate text-right">
+                    {googleEmail}
+                  </p>
+                </div>
+              </div>
+
               {/* Account type */}
               <div className="grid grid-cols-2 gap-2">
                 {[
@@ -597,6 +648,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome
                             value={governorate}
                             onChange={(e) => setGovernorate(e.target.value)}
                             className="ps-select"
+                            required
                           >
                             <option value="">اختر المحافظة</option>
                             {GOVERNORATES.map((g) => (
@@ -628,84 +680,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome
                 </div>
               )}
 
-              {/* Step 3 */}
-              {step === 3 && (
-                <div className="space-y-3 fade-slide-up">
-                  <div>
-                    <label className="block text-xs sm:text-sm font-bold mb-1.5">
-                      <Mail className="w-4 h-4 inline ml-1.5 text-teal2-500" />
-                      البريد الإلكتروني
-                    </label>
-                    <input
-                      type="email"
-                      dir="ltr"
-                      placeholder="name@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="ps-input"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs sm:text-sm font-bold mb-1.5">
-                      <Lock className="w-4 h-4 inline ml-1.5 text-teal2-500" />
-                      كلمة المرور (8 أحرف على الأقل)
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPass ? 'text' : 'password'}
-                        dir="ltr"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="ps-input pl-11"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPass(!showPass)}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-                      >
-                        {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    {password.length > 0 && (
-                      <div className="mt-2">
-                        <div className="flex gap-1">
-                          {[0, 1, 2, 3].map((i) => (
-                            <div
-                              key={i}
-                              className={`h-1.5 flex-1 rounded-full transition ${
-                                i < ps ? psColors[ps - 1] : 'bg-sand-200 dark:bg-[#2a3a4a]'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <p className="text-xs mt-1 text-ocean-700/60 dark:text-white/50">{psLabels[ps]}</p>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-xs sm:text-sm font-bold mb-1.5">
-                      <Lock className="w-4 h-4 inline ml-1.5 text-teal2-500" />
-                      تأكيد كلمة المرور
-                    </label>
-                    <input
-                      type="password"
-                      dir="ltr"
-                      value={passwordConfirm}
-                      onChange={(e) => setPasswordConfirm(e.target.value)}
-                      className="ps-input"
-                      required
-                    />
-                    {passwordConfirm && password === passwordConfirm && (
-                      <p className="text-xs text-teal2-600 mt-1 flex items-center gap-1 font-bold">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> كلمتا المرور متطابقتان
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
               {signupErr && (
                 <p className="text-xs text-red-500 font-bold bg-red-50 dark:bg-red-950/30 rounded-xl px-3 py-2 border border-red-200/50">
                   {signupErr}
@@ -732,7 +706,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome
                   className="flex-1 ps-btn-primary text-xs sm:text-sm flex items-center justify-center gap-2"
                 >
                   {signupLoading && <Loader2 className="w-4 h-4 animate-spin text-white" />}
-                  <span>{signupLoading ? 'جارٍ المعالجة...' : step < 3 ? `التالي (${step}/3)` : 'إنشاء الحساب'}</span>
+                  <span>{signupLoading ? 'جارٍ المعالجة...' : step < 2 ? `التالي (${step}/2)` : 'إنشاء الحساب'}</span>
                 </motion.button>
               </div>
             </motion.form>

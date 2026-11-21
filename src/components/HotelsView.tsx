@@ -331,7 +331,6 @@ export const HotelsView: React.FC<HotelsViewProps> = ({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {filteredHotels.map((hotel) => {
-            const photo = getHotelPhoto(hotel.n, hotel.a);
             const catInfo = getHotelCategory(hotel.n);
             const isFav = favorites.includes(hotel.id);
 
@@ -339,52 +338,40 @@ export const HotelsView: React.FC<HotelsViewProps> = ({
               <motion.div
                 key={hotel.id}
                 onClick={() => onSelectPlace(hotel.id)}
-                className="group bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-xs hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500 transition-all cursor-pointer flex flex-col justify-between"
+                className="group bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-xs hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500 transition-all active:scale-95 cursor-pointer flex flex-col justify-between"
                 whileHover={{ y: -4 }}
               >
-                {/* Image Cover */}
-                <div className="relative aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-800">
-                  <img
-                    src={photo}
-                    alt={hotel.n}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
-
-                  {/* Badges on Top */}
-                  <div className="absolute top-3 inset-x-3 flex items-center justify-between gap-2">
-                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-black shadow-xs ${catInfo.badgeBg}`}>
-                      {catInfo.label}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={(e) => toggleFavorite(e, hotel.id)}
-                      className="w-8 h-8 rounded-full bg-white/90 dark:bg-slate-900/90 text-slate-700 dark:text-slate-300 grid place-items-center shadow-xs hover:scale-110 transition"
-                      title={isFav ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
-                    >
-                      <Heart className={`w-4 h-4 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
-                    </button>
-                  </div>
-
-                  {/* Name and Area over image */}
-                  <div className="absolute bottom-3 inset-x-3 text-white">
-                    <h2 className="text-base sm:text-lg font-black leading-tight drop-shadow-sm truncate">
-                      {hotel.n}
-                    </h2>
-                    <p className="text-xs text-white/80 flex items-center gap-1 mt-0.5 font-medium">
-                      <MapPin className="w-3 h-3 text-rose-400 shrink-0" />
-                      <span className="truncate">{hotel.a}</span>
-                    </p>
-                  </div>
-                </div>
-
                 {/* Content */}
                 <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
-                  <p className="text-xs text-slate-600 dark:text-slate-400 font-medium line-clamp-2 leading-relaxed">
+                  <div className="space-y-2">
+                    {/* Badges & Name (relocated from photo) */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`px-2.5 py-1 rounded-full text-[11px] font-black shadow-xs ${catInfo.badgeBg}`}>
+                        {catInfo.label}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => toggleFavorite(e, hotel.id)}
+                        className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 grid place-items-center shadow-xs hover:scale-110 transition shrink-0"
+                        title={isFav ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
+                      >
+                        <Heart className={`w-4 h-4 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
+                      </button>
+                    </div>
+                    <div>
+                      <h2 className="text-base sm:text-lg font-black leading-tight text-ocean-950 dark:text-white">
+                        {hotel.n}
+                      </h2>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5 font-medium">
+                        <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
+                        <span className="truncate">{hotel.a}</span>
+                      </p>
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 font-medium line-clamp-2 leading-relaxed">
                     {hotel.ds || `إقامة فندقية مريحة وموقع متميز في ${hotel.a} بالقرب من أهم معالم بورسعيد.`}
                   </p>
+
+                  </div>
 
                   {/* Footer Action Strip */}
                   <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2">

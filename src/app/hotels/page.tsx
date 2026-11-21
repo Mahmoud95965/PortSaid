@@ -45,7 +45,6 @@ export default function HotelsPage() {
       <Header
         onNavigate={handleNavigate}
         onOpenFeedback={() => router.push('/')}
-        onOpenPoints={() => router.push('/')}
       />
 
       <main className="flex-1 w-full max-w-6xl mx-auto px-3 sm:px-6 py-4">

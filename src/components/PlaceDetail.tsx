@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Place, Review } from '@/types';
 import { CATS, AREA_STOP, HOME_STOP, planRoute } from '@/lib/constants';
@@ -10,7 +10,6 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import {
   ArrowRight,
   MapPin,
-  Camera,
   Navigation,
   Star,
   CheckCircle,
@@ -18,7 +17,6 @@ import {
   QrCode,
   Sparkles,
   Send,
-  Loader2,
   Clock,
   Compass,
   Heart,
@@ -92,13 +90,9 @@ function getPlaceHeroPhoto(place: Place): string {
 }
 
 export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onRequestCoupon }) => {
-  const { user, recordVisit } = useAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
 
   const [fromStop, setFromStop] = useState(HOME_STOP);
-  const [visited, setVisited] = useState(!!place.visited);
-  const [checkinMsg, setCheckinMsg] = useState('');
-  const [checkinLoading, setCheckinLoading] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -246,73 +240,6 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
   const targetStop = AREA_STOP[normArea] || 'حي العرب';
   const routePlan = planRoute(fromStop, targetStop);
 
-  // حساب المسافات
-  const calcDistanceMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371000;
-    const dLat = (lat2 - lat1) * (Math.PI / 180);
-    const dLon = (lon2 - lon1) * (Math.PI / 180);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
-  };
-
-  const handleCameraCheckin = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.length) return;
-    setCheckinLoading(true);
-    setCheckinMsg('بنتأكد إنك في المكان عبر GPS...');
-
-    if (!navigator.geolocation) {
-      setCheckinLoading(false);
-      setCheckinMsg('متصفحك مش بيدعم تحديد الموقع.');
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const userLat = pos.coords.latitude;
-        const userLon = pos.coords.longitude;
-        const dist = calcDistanceMeters(userLat, userLon, place.lat, place.lon);
-
-        if (!user) {
-          setCheckinLoading(false);
-          setCheckinMsg('يرجى تسجيل الدخول أولاً لتسجيل الحضور.');
-          return;
-        }
-
-        const res = await recordVisit({
-          placeId: place.id,
-          lat: userLat,
-          lon: userLon,
-          distanceM: Math.round(dist),
-        });
-
-        setCheckinLoading(false);
-        setCheckinMsg(res.message);
-
-        if (res.ok) {
-          setVisited(true);
-          try {
-            confetti({
-              particleCount: 90,
-              spread: 70,
-              origin: { y: 0.6 },
-            });
-          } catch (err) {}
-        }
-      },
-      (err) => {
-        setCheckinLoading(false);
-        setCheckinMsg('برجاء تفعيل الموقع (Location) في المتصفح للتأكد من تواجدك في المكان.');
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  };
-
   const handleAddReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -373,15 +300,6 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
       exit={{ opacity: 0, y: -15 }}
       transition={{ duration: 0.35 }}
     >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleFileChange}
-        className="hidden"
-      />
-
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMsg && (
@@ -456,13 +374,6 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
           </span>
 
           <div className="flex items-center gap-1.5">
-            {place.p > 0 && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/90 text-ocean-950 text-xs font-black shadow-sm backdrop-blur-md">
-                <Sparkles className="w-3.5 h-3.5 fill-current" />
-                <span>+{place.p} نقطة</span>
-              </span>
-            )}
-
             {place.disc > 0 && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-teal2-600/90 text-white text-xs font-black shadow-sm backdrop-blur-md">
                 <Tag className="w-3.5 h-3.5" />
@@ -535,16 +446,6 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
           </p>
         </div>
 
-        {/* Points Reward */}
-        <div className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] text-right space-y-1">
-          <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>نقاط الحضور</span>
-          </span>
-          <p className="font-black text-xs sm:text-sm text-ocean-950 dark:text-white truncate">
-            +{place.p || 20} نقطة مكافأة
-          </p>
-        </div>
       </div>
 
       {/* Status Alert Banner if place is temp closed or reported closed */}
@@ -685,7 +586,7 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
               خصم {place.disc}% متاح لرواد Port Said Hub
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
-              استبدل {place.cost || 50} نقطة من رصيدك للحصول على كود خصم QR صالح للاستخدام فوراً عند الكاشير.
+              احصل على كود خصم QR صالح للاستخدام فوراً عند الكاشير.
             </p>
           </div>
 
@@ -699,49 +600,6 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
           </button>
         </div>
       )}
-
-      {/* 5. GPS Check-in & Points Reward Section */}
-      <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-xs text-right space-y-3">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 grid place-items-center shrink-0">
-            <Sparkles className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="font-black text-sm sm:text-base text-ocean-950 dark:text-white">
-              تسجيل الحضور وكسب النقاط (+{place.p || 20} نقطة)
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              التقط صورة أثناء تواجدك في المكان، وسيتم التحقق من موقعك بـ GPS وإضافة النقاط لمحفظتك فوراً.
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={handleCameraCheckin}
-          disabled={visited || checkinLoading}
-          type="button"
-          className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-ocean-950 font-black text-xs sm:text-sm shadow-xs transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {checkinLoading ? (
-            <Loader2 className="w-4 h-4 animate-spin text-ocean-950" />
-          ) : (
-            <Camera className="w-4 h-4" />
-          )}
-          <span>
-            {visited
-              ? 'تم تسجيل زيارتك واحتساب النقاط بنجاح ✓'
-              : checkinLoading
-              ? 'جارٍ التحقق من موقعك الفعلي...'
-              : `التقط صورة وسجّل حضورك (+${place.p || 20} نقطة)`}
-          </span>
-        </button>
-
-        {checkinMsg && (
-          <p className="text-xs font-bold text-teal2-600 dark:text-teal2-400 text-center pt-1">
-            {checkinMsg}
-          </p>
-        )}
-      </div>
 
       {/* 6. Transit & Route Guide (أروح إزاي بالمواصلات؟) */}
       <div

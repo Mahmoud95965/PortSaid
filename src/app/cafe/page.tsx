@@ -101,7 +101,6 @@ function CafePageContent() {
       <Header
         onNavigate={handleNavigate}
         onOpenFeedback={() => router.push('/')}
-        onOpenPoints={() => router.push('/')}
       />
 
       {/* Main Container */}
@@ -152,7 +151,6 @@ function CafePageContent() {
 
       {/* Floating Assistant Chat */}
       <AssistantChat
-        onOpenPoints={() => router.push('/')}
         onNavigate={handleNavigate}
       />
     </div>
