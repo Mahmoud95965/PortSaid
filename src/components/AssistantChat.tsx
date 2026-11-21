@@ -105,7 +105,6 @@ const TypewriterMessageText: React.FC<{
 };
 
 export interface AssistantChatProps {
-  onOpenPoints?: () => void;
   onNavigate?: (view: string, arg?: string | null) => void;
 }
 
@@ -120,7 +119,7 @@ const PRIMARY_PROMPTS: QuickPrompt[] = [
   { label: 'خروجة لشخصين 500 ج.م', text: 'خطط لي خروجة لشخصين لمدة 5 ساعات بميزانية 500 جنيه تشمل كافيه ومطعم سمك', icon: '🧭' },
   { label: 'أقرب سمك لموقعي', text: 'إيه أقرب مطعم سمك وسي فود لموقعي الحالي وفيه خصومات؟', icon: '📍' },
   { label: 'كافيهات ممشى القناة', text: 'رشح لي أحسن كافيهات على ممشى القناة لمشاهدة السفن في بورسعيد', icon: '☕' },
-  { label: 'النقاط والكوبونات', text: 'إزاي أستفيد من نقاط الزيارة وأحصل على كوبونات خصم للمطاعم؟', icon: '⭐' },
+  { label: 'الكوبونات والخصومات', text: 'إزاي أحصل على كوبونات خصم للمطاعم؟', icon: '⭐' },
 ];
 
 const SECONDARY_PROMPTS: QuickPrompt[] = [
@@ -129,7 +128,7 @@ const SECONDARY_PROMPTS: QuickPrompt[] = [
   { label: 'كاساتا وحلويات سيلفر', text: 'إيه أشهر حلويات بورسعيد وفين ألاقي كاساتا سيلفر الأصلية؟', icon: '🍨' },
 ];
 
-export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNavigate }) => {
+export const AssistantChat: React.FC<AssistantChatProps> = ({ onNavigate }) => {
   const [open, setOpen] = useState(false);
   const [showTooltip, setShowTooltip] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -146,7 +145,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onOpenPoints, onNa
     {
       id: 'welcome-1',
       role: 'bot',
-      text: 'أهلاً بيك في Port Said Hub! 👋 أنا مساعدك البورسعيدي الذكي.\n\nجاهز لمساعدتك في:\n• اقتراح أفضل المطاعم والكافيهات والمعالم 🌊\n• تحديد موقعك بالـ GPS وحساب المسافة لأقرب الأماكن 📍\n• معلومات الخروجات والمواصلات ونقاط الخصم ⭐\n\nاضغط على أي سؤال سريع بالأسفل أو اكتب استفسارك مباشرة 👇',
+      text: 'أهلاً بيك في Port Said Hub! 👋 أنا مساعدك البورسعيدي الذكي.\n\nجاهز لمساعدتك في:\n• اقتراح أفضل المطاعم والكافيهات والمعالم 🌊\n• تحديد موقعك بالـ GPS وحساب المسافة لأقرب الأماكن 📍\n• معلومات الخروجات والمواصلات والخصومات ⭐\n\nاضغط على أي سؤال سريع بالأسفل أو اكتب استفسارك مباشرة 👇',
       timestamp: 'الآن',
     },
   ]);
