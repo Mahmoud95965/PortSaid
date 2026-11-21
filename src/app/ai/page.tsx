@@ -46,7 +46,6 @@ function AIPageContent() {
       <Header
         onNavigate={handleNavigate}
         onOpenFeedback={() => router.push('/')}
-        onOpenPoints={() => router.push('/')}
       />
 
       {/* Main Unified AI Workspace (Full-Screen Chat Canvas without Footer) */}

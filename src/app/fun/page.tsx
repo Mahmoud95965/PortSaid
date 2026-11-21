@@ -101,7 +101,6 @@ function SightsPageContent() {
       <Header
         onNavigate={handleNavigate}
         onOpenFeedback={() => router.push('/')}
-        onOpenPoints={() => router.push('/')}
       />
 
       {/* Main Container */}
@@ -151,7 +150,6 @@ function SightsPageContent() {
 
       {/* Floating Assistant Chat */}
       <AssistantChat
-        onOpenPoints={() => router.push('/')}
         onNavigate={handleNavigate}
       />
     </div>
