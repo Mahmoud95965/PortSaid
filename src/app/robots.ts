@@ -6,6 +6,6 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: '*',
       allow: '/',
     },
-    sitemap: 'https://port-said-hub.site/sitemap.xml',
+    sitemap: 'https://www.port-said-hub.site/sitemap.xml',
   };
 }
