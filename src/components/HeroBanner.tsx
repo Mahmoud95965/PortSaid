@@ -98,7 +98,7 @@ export const HeroBanner: React.FC = () => {
           </h2>
 
           <p className="mt-1.5 sm:mt-2 text-xs min-[400px]:text-sm sm:text-base text-white/90 leading-relaxed max-w-xl font-medium">
-            اكتشف أفضل مطاعم الأسماك، الكافيهات على القناة، ومعالم بورسعيد وبورفؤاد.. واكسب نقاط وهدايا حقيقية مع كل زيارة!
+            اكتشف أفضل مطاعم الأسماك، الكافيهات على القناة، ومعالم بورسعيد وبورفؤاد.. واستمتع بكوبونات وخصومات حقيقية!
           </p>
 
           {/* Quick Info Tags */}

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Bus, Utensils, Bed, Star, Sun, Moon, Waves, Sparkles } from 'lucide-react';
+import { ArrowLeft, Bus, Utensils, Bed, Sun, Moon, Waves, Sparkles } from 'lucide-react';
 
 interface WelcomeModalProps {
   onStart: () => void;
@@ -78,7 +78,6 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart }) => {
     { icon: <Bus className="w-4 h-4" />, label: 'مواصلات' },
     { icon: <Utensils className="w-4 h-4" />, label: 'مطاعم' },
     { icon: <Bed className="w-4 h-4" />, label: 'سكن' },
-    { icon: <Star className="w-4 h-4" />, label: 'نقاط ومكافآت' },
   ];
 
   return (
@@ -316,7 +315,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart }) => {
             animate={{ opacity: 1 }}
             transition={{ delay: 2, duration: 0.5 }}
           >
-            بورسعيد .. المدينة الباسلة &middot; فريق Alpha Team بالشراكة مع TOLZY Team &copy; 2026
+            بورسعيد .. المدينة الباسلة &middot; فريق Alpha Team بالشراكة مع Genie &copy; 2026
           </motion.p>
         </div>
       )}
