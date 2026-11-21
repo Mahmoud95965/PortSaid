@@ -84,7 +84,6 @@ export default function MapPage() {
       <Header
         onNavigate={handleNavigate}
         onOpenFeedback={() => router.push('/')}
-        onOpenPoints={() => router.push('/')}
       />
 
       {/* Main Map Container */}
@@ -128,7 +127,6 @@ export default function MapPage() {
 
       {/* Assistant AI Chatbot */}
       <AssistantChat
-        onOpenPoints={() => router.push('/')}
         onNavigate={handleNavigate}
       />
 

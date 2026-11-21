@@ -117,7 +117,6 @@ function TransportPageContent() {
       <Header
         onNavigate={handleNavigate}
         onOpenFeedback={() => router.push('/')}
-        onOpenPoints={() => router.push('/')}
       />
 
       {/* Main Container */}
@@ -166,7 +165,6 @@ function TransportPageContent() {
 
       {/* Floating Assistant Chat */}
       <AssistantChat
-        onOpenPoints={() => router.push('/')}
         onNavigate={handleNavigate}
       />
     </div>
