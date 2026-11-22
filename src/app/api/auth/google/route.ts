@@ -120,7 +120,7 @@ export async function POST(req: Request) {
         avatar: dbUser.avatar,
         email_verified: !!dbUser.email_verified_at,
         staff: roleCode === 'owner' || roleCode === 'admin',
-        must_change_password: <redacted>
+        must_change_password: dbUser.must_change_password,
       },
     });
   } catch (err: unknown) {
