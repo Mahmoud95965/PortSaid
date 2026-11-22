@@ -37,6 +37,17 @@ export const Footer: React.FC = () => {
           </p>
         </div>
 
+        {/* Legal Links */}
+        <nav className="flex items-center gap-4 text-xs min-[400px]:text-sm font-semibold" aria-label="روابط قانونية">
+          <a href="/privacy" className="hover:text-ocean-900 dark:hover:text-white transition">
+            سياسة الخصوصية
+          </a>
+          <span className="text-sand-400">·</span>
+          <a href="/terms" className="hover:text-ocean-900 dark:hover:text-white transition">
+            شروط الاستخدام
+          </a>
+        </nav>
+
         {/* Social Links with Magnetic Spring Hover */}
         <div className="flex items-center gap-2.5">
           <motion.a
