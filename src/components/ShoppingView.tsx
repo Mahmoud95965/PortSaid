@@ -52,7 +52,7 @@ export const ShoppingView: React.FC<ShoppingViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedArea, setSelectedArea] = useState('all');
-  const [sortBy, setSortBy] = useState<'featured' | 'discount' | 'name'>('featured');
+  const [sortBy, setSortBy] = useState<'featured' | 'name'>('featured');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -220,9 +220,7 @@ export const ShoppingView: React.FC<ShoppingViewProps> = ({
     }
 
     // 4. الترتيب
-    if (sortBy === 'discount') {
-      result.sort((a, b) => (b.disc || 0) - (a.disc || 0));
-    } else if (sortBy === 'name') {
+    if (sortBy === 'name') {
       result.sort((a, b) => a.n.localeCompare(b.n, 'ar'));
     }
 
@@ -282,7 +280,7 @@ export const ShoppingView: React.FC<ShoppingViewProps> = ({
           </h1>
 
           <p className="text-sm sm:text-base text-slate-200 font-medium leading-relaxed max-w-2xl">
-            دليلك الشامل لأفضل وجهات التسوق في بورسعيد وبورفؤاد: الأسواق التراثية كالحميدي والبازار، محلات الاستوك والملابس المستوردة، المراكز التجارية والمولات الحديثة، ومتاجر الإلكترونيات بعروض حصرية.
+            دليلك الشامل لأفضل وجهات التسوق في بورسعيد وبورفؤاد: الأسواق التراثية كالحميدي والبازار، محلات الاستوك والملابس المستوردة، المراكز التجارية والمولات الحديثة، ومتاجر الإلكترونيات.
           </p>
 
           {/* Quick Stats Strip */}
@@ -403,7 +401,6 @@ export const ShoppingView: React.FC<ShoppingViewProps> = ({
               className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="featured">المقترحة أولاً</option>
-              <option value="discount">الأعلى خصماً</option>
               <option value="name">الاسم أبجدياً</option>
             </select>
           </div>

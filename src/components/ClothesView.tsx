@@ -52,7 +52,7 @@ export const ClothesView: React.FC<ClothesViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTab, setSelectedTab] = useState('all');
   const [selectedArea, setSelectedArea] = useState('all');
-  const [sortBy, setSortBy] = useState<'default' | 'rating' | 'reviews' | 'discount'>('default');
+  const [sortBy, setSortBy] = useState<'default' | 'rating' | 'reviews'>('default');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(12);
@@ -199,9 +199,6 @@ export const ClothesView: React.FC<ClothesViewProps> = ({
         if (sortBy === 'reviews') {
           return (b.reviews_count || 0) - (a.reviews_count || 0);
         }
-        if (sortBy === 'discount') {
-          return (b.disc || 0) - (a.disc || 0);
-        }
         return 0;
       });
   }, [clothesPlaces, searchQuery, selectedTab, selectedArea, sortBy]);
@@ -330,7 +327,6 @@ export const ClothesView: React.FC<ClothesViewProps> = ({
             <option value="default">الترتيب الافتراضي</option>
             <option value="rating">الأعلى تقييماً ⭐</option>
             <option value="reviews">الأكثر تقييمات 💬</option>
-            <option value="discount">أعلى نسبة خصم 🏷️</option>
           </select>
         </div>
       </div>
@@ -372,12 +368,6 @@ export const ClothesView: React.FC<ClothesViewProps> = ({
                         <span className="inline-block px-2.5 py-0.5 rounded-lg bg-indigo-600 text-[10px] font-black text-white">
                           {place.type_ar || 'ملابس وأزياء'}
                         </span>
-                        {place.disc > 0 && (
-                          <span className="px-2.5 py-1 rounded-xl bg-coral-500 text-white text-[11px] font-black shadow flex items-center gap-1">
-                            <Tag className="w-3 h-3" />
-                            <span>خصم {place.disc}%</span>
-                          </span>
-                        )}
                       </div>
                       <button
                         type="button"

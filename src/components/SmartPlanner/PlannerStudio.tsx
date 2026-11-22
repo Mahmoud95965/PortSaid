@@ -719,7 +719,7 @@ export const PlannerStudio: React.FC<PlannerStudioProps> = ({
                 </span>
                 <ul className="space-y-1.5 text-[11px] list-disc list-inside text-ocean-700/80 dark:text-white/70">
                   <li>أماكن حقيقية معتمدة فقط دون أي تخمين أو أماكن وهمية.</li>
-                  <li>حساب دقيق للميزانية والخصومات المتاحة عبر كود Port Said Hub.</li>
+                  <li>حساب دقيق للميزانية ومتابعة مصاريف الخروجة.</li>
                   <li>مسارات قيادة ومشاة فعلية بشوارع بورسعيد بالتعاون مع OSRM.</li>
                   <li>إمكانية تعديل الخطة بالمحادثة أو حذف واستبدال أي محطة بضغطة زر.</li>
                 </ul>

@@ -738,17 +738,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-xs font-bold mb-1">خصم العميل %</label>
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={bizDiscount}
-                            onChange={(e) => setBizDiscount(parseInt(e.target.value) || 0)}
-                            className="ps-input"
-                          />
-                        </div>
-                        <div>
                           <label className="block text-xs font-bold mb-1">عمولة Alpha (جنيه)</label>
                           <input
                             type="number"

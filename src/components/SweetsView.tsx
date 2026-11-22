@@ -49,7 +49,7 @@ export const SweetsView: React.FC<SweetsViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedArea, setSelectedArea] = useState('all');
-  const [sortBy, setSortBy] = useState<'featured' | 'discount' | 'name'>('featured');
+  const [sortBy, setSortBy] = useState<'featured' | 'name'>('featured');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -204,9 +204,7 @@ export const SweetsView: React.FC<SweetsViewProps> = ({
     }
 
     // 4. الترتيب
-    if (sortBy === 'discount') {
-      result.sort((a, b) => (b.disc || 0) - (a.disc || 0));
-    } else if (sortBy === 'name') {
+    if (sortBy === 'name') {
       result.sort((a, b) => a.n.localeCompare(b.n, 'ar'));
     }
 
@@ -266,7 +264,7 @@ export const SweetsView: React.FC<SweetsViewProps> = ({
           </h1>
 
           <p className="text-sm sm:text-base text-slate-200 font-medium leading-relaxed max-w-2xl">
-            دليلك لأشهى محلات الحلويات في بورسعيد وبورفؤاد: كاساتا سامي سالم الشهيرة، الحلويات الشرقية الفاخرة، التورت والكب كيك الفرنسي، والمخبوزات الطازجة بعروض وخصومات حصرية.
+            دليلك لأشهى محلات الحلويات في بورسعيد وبورفؤاد: كاساتا سامي سالم الشهيرة، الحلويات الشرقية الفاخرة، التورت والكب كيك الفرنسي، والمخبوزات الطازجة.
           </p>
 
           {/* Quick Stats Strip */}
@@ -276,9 +274,6 @@ export const SweetsView: React.FC<SweetsViewProps> = ({
             </span>
             <span className="px-3 py-1 rounded-xl bg-white/10 border border-white/15">
               🍨 كاساتا وآيس كريم بورسعيدي
-            </span>
-            <span className="px-3 py-1 rounded-xl bg-white/10 border border-white/15">
-              🏷️ خصومات حصرية 10% إلى 15%
             </span>
           </div>
         </div>
@@ -387,7 +382,6 @@ export const SweetsView: React.FC<SweetsViewProps> = ({
               className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="featured">المقترحة أولاً</option>
-              <option value="discount">الأعلى خصماً</option>
               <option value="name">الاسم أبجدياً</option>
             </select>
           </div>
@@ -435,12 +429,6 @@ export const SweetsView: React.FC<SweetsViewProps> = ({
                           <MapPin className="w-3 h-3 text-amber-500 dark:text-amber-300" />
                           <span>{sweet.a}</span>
                         </span>
-                        {sweet.disc > 0 && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-600/95 backdrop-blur-sm text-[11px] font-black text-white shadow-sm">
-                            <Percent className="w-3 h-3" />
-                            <span>خصم {sweet.disc}%</span>
-                          </span>
-                        )}
                       </div>
                       <button
                         onClick={(e) => toggleFavorite(e, sweet.id, sweet.n)}
@@ -604,7 +592,7 @@ export const SweetsView: React.FC<SweetsViewProps> = ({
             مساعد بورسعيد الذكي لاختيار التحلية
           </h4>
           <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
-            اطلب من المساعد الذكي ترشيح أشهى كاساتا أو وافل أو آيس كريم بالقرب منك، واكتشف العروض والأسعار فوراً.
+            اطلب من المساعد الذكي ترشيح أشهى كاساتا أو وافل أو آيس كريم بالقرب منك، واكتشف الأسعار فوراً.
           </p>
           <div className="pt-1 text-xs font-black text-amber-300 flex items-center gap-1">
             <span>اسأل المساعد الذكي الآن</span>

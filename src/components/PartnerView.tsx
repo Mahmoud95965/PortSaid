@@ -25,7 +25,7 @@ export const PartnerView: React.FC<PartnerViewProps> = ({ onBack }) => {
     phone: user?.phone || '01012345678',
     discount: 15,
     commission: 10,
-    notes: 'عرض صالح لجميع الطلبات داخل الصالة',
+    notes: 'صالح لجميع الطلبات داخل الصالة',
     status: 'approved',
     place_linked: true,
   });
@@ -204,7 +204,7 @@ export const PartnerView: React.FC<PartnerViewProps> = ({ onBack }) => {
 
             <h2 className="mt-3 text-2xl sm:text-3xl font-black">لوحة التاجر والشركاء</h2>
             <p className="mt-1 text-xs sm:text-sm text-white/85 font-medium">
-              تابع من هنا حالة مكانك وعروضك والخصومات الموجهة لزوار وطلاب بورسعيد.
+              تابع من هنا حالة مكانك وطلباتك لزوار وطلاب بورسعيد.
             </p>
           </motion.div>
 
@@ -265,17 +265,6 @@ export const PartnerView: React.FC<PartnerViewProps> = ({ onBack }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold mb-1.5">نسبة الخصم للعميل %</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={discount}
-                    onChange={(e) => setDiscount(parseInt(e.target.value, 10) || 0)}
-                    className="w-full rounded-2xl border border-sand-200 dark:border-[#22354a] bg-sand-50 dark:bg-[#142232] px-4 py-2.5 text-sm font-semibold"
-                  />
-                </div>
-                <div>
                   <label className="block text-xs font-bold mb-1.5">عمولة فريق Alpha (ج/عميل)</label>
                   <input
                     type="number"
@@ -288,7 +277,7 @@ export const PartnerView: React.FC<PartnerViewProps> = ({ onBack }) => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold mb-1.5">شروط العرض أو التفاصيل</label>
+                <label className="block text-xs font-bold mb-1.5">شروط أو تفاصيل إضافية</label>
                 <input
                   type="text"
                   value={notes}
@@ -298,7 +287,7 @@ export const PartnerView: React.FC<PartnerViewProps> = ({ onBack }) => {
               </div>
 
               <p className="text-xs text-ocean-700/60 dark:text-white/50 font-medium">
-                ملاحظة: أي تعديل في نسب الخصم أو العرض قد يعيد الطلب للمراجعة السريعة من الإدارة.
+                ملاحظة: أي تعديل قد يعيد الطلب للمراجعة السريعة من الإدارة.
               </p>
 
               {saveMsg && (
@@ -434,17 +423,6 @@ export const PartnerView: React.FC<PartnerViewProps> = ({ onBack }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold mb-1.5">نسبة الخصم المقترحة %</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={newDiscount}
-                    onChange={(e) => setNewDiscount(parseInt(e.target.value, 10) || 0)}
-                    className="w-full rounded-2xl border border-sand-200 dark:border-[#22354a] bg-sand-50 dark:bg-[#142232] px-4 py-2.5 text-sm font-semibold"
-                  />
-                </div>
-                <div>
                   <label className="block text-xs font-bold mb-1.5">العمولة لفريق Alpha (ج/عميل)</label>
                   <input
                     type="number"
@@ -457,10 +435,10 @@ export const PartnerView: React.FC<PartnerViewProps> = ({ onBack }) => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold mb-1.5">أكواد خصم أو ملاحظات إضافية (اختياري)</label>
+                <label className="block text-xs font-bold mb-1.5">ملاحظات إضافية (اختياري)</label>
                 <input
                   type="text"
-                  placeholder="مثال: خصم خاص أيام الدراسة"
+                  placeholder="مثال: ملاحظات عن المكان"
                   value={newNotes}
                   onChange={(e) => setNewNotes(e.target.value)}
                   className="w-full rounded-2xl border border-sand-200 dark:border-[#22354a] bg-sand-50 dark:bg-[#142232] px-4 py-2.5 text-sm font-semibold"

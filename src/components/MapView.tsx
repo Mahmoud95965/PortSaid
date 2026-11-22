@@ -827,11 +827,6 @@ export const MapView: React.FC<MapViewProps> = ({
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sand-100 dark:bg-[#152332] text-ocean-800 dark:text-white/70">
                       {selectedPlace.a}
                     </span>
-                    {selectedPlace.disc > 0 && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-ocean-950">
-                        خصم {selectedPlace.disc}%
-                      </span>
-                    )}
                   </div>
 
                   <h3 className="font-black text-base sm:text-lg text-ocean-900 dark:text-white mt-1 leading-snug">

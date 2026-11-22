@@ -39,7 +39,6 @@ const MOOD_FILTERS = [
   { key: 'all', label: 'جميع الكافيهات', icon: '☕' },
   { key: 'sea', label: 'إطلالة بحرية وقناة السويس', icon: '🌊' },
   { key: 'study', label: 'هدوء ومذاكرة ولابتوب', icon: '📚' },
-  { key: 'offers', label: 'عروض وخصومات حصرية', icon: '🏷️' },
 ];
 
 export const CafesView: React.FC<CafesViewProps> = ({
@@ -51,7 +50,7 @@ export const CafesView: React.FC<CafesViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMood, setSelectedMood] = useState('all');
   const [selectedArea, setSelectedArea] = useState('all');
-  const [sortBy, setSortBy] = useState<'featured' | 'discount' | 'name'>('featured');
+  const [sortBy, setSortBy] = useState<'featured' | 'name'>('featured');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -173,8 +172,6 @@ export const CafesView: React.FC<CafesViewProps> = ({
           name.includes('billy')
         );
       });
-    } else if (selectedMood === 'offers') {
-      result = result.filter((c) => c.disc > 0 || (c.cost && c.cost > 0));
     }
 
     // 3. فلتر المنطقة
@@ -183,9 +180,7 @@ export const CafesView: React.FC<CafesViewProps> = ({
     }
 
     // 4. الترتيب
-    if (sortBy === 'discount') {
-      result.sort((a, b) => (b.disc || 0) - (a.disc || 0));
-    } else if (sortBy === 'name') {
+    if (sortBy === 'name') {
       result.sort((a, b) => a.n.localeCompare(b.n, 'ar'));
     }
 
@@ -245,7 +240,7 @@ export const CafesView: React.FC<CafesViewProps> = ({
           </h1>
 
           <p className="text-sm sm:text-base text-slate-200 font-medium leading-relaxed max-w-2xl">
-            دليلك لأرقى مقاهي وكافيهات بورسعيد وبورفؤاد: إطلالات ساحرة على مجرى قناة السويس والبحر، قعدات مذاكرة ودراسة هادئة، وأجواء مميزة مع عروض وخصومات حصرية.
+            دليلك لأرقى مقاهي وكافيهات بورسعيد وبورفؤاد: إطلالات ساحرة على مجرى قناة السويس والبحر، قعدات مذاكرة ودراسة هادئة، وأجواء مميزة.
           </p>
 
           {/* Quick Stats Strip */}
@@ -255,9 +250,6 @@ export const CafesView: React.FC<CafesViewProps> = ({
             </span>
             <span className="px-3 py-1 rounded-xl bg-white/10 border border-white/15">
               🌊 إطلالات البحر وقناة السويس
-            </span>
-            <span className="px-3 py-1 rounded-xl bg-white/10 border border-white/15">
-              🏷️ خصومات حصرية
             </span>
           </div>
         </div>
@@ -366,7 +358,6 @@ export const CafesView: React.FC<CafesViewProps> = ({
               className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="featured">المقترحة أولاً</option>
-              <option value="discount">الأعلى خصماً</option>
               <option value="name">الاسم أبجدياً</option>
             </select>
           </div>
@@ -414,12 +405,6 @@ export const CafesView: React.FC<CafesViewProps> = ({
                           <MapPin className="w-3 h-3 text-cyan-600 dark:text-cyan-300" />
                           <span>{cafe.a}</span>
                         </span>
-                        {cafe.disc > 0 && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-600/95 backdrop-blur-sm text-[11px] font-black text-white shadow-sm">
-                            <Percent className="w-3 h-3" />
-                            <span>خصم {cafe.disc}%</span>
-                          </span>
-                        )}
                       </div>
                       <button
                         onClick={(e) => toggleFavorite(e, cafe.id, cafe.n)}

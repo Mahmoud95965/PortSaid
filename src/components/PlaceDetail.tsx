@@ -372,12 +372,6 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack }) => {
           </span>
 
           <div className="flex items-center gap-1.5">
-            {place.disc > 0 && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-teal2-600/90 text-white text-xs font-black shadow-sm backdrop-blur-md">
-                <Tag className="w-3.5 h-3.5" />
-                <span>خصم {place.disc}%</span>
-              </span>
-            )}
           </div>
         </div>
 

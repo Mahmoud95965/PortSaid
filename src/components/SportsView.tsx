@@ -114,7 +114,7 @@ export const SportsView: React.FC<SportsViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<SportCategory>('all');
   const [selectedArea, setSelectedArea] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'featured' | 'discount' | 'name'>('featured');
+  const [sortBy, setSortBy] = useState<'featured' | 'name'>('featured');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -236,9 +236,8 @@ export const SportsView: React.FC<SportsViewProps> = ({
         return true;
       })
       .sort((a, b) => {
-        if (sortBy === 'discount') return (b.disc || 0) - (a.disc || 0);
         if (sortBy === 'name') return a.n.localeCompare(b.n, 'ar');
-        // الافتراضي (الأكثر تميزاً: يراعي الخصم)
+        // الافتراضي (الأكثر تميزاً)
         return (b.disc || 0) - (a.disc || 0);
       });
   }, [allSports, searchQuery, selectedCategory, selectedArea, sortBy]);
@@ -317,10 +316,6 @@ export const SportsView: React.FC<SportsViewProps> = ({
             <div className="px-4 py-3 rounded-2xl bg-white dark:bg-[#132233] border border-sand-200 dark:border-[#22354a] text-center shadow-xs">
               <span className="block text-xl font-black text-emerald-600 dark:text-emerald-400">{availableAreas.length}</span>
               <span className="text-[11px] font-bold text-ocean-700/70 dark:text-white/60">أحياء ومناطق</span>
-            </div>
-            <div className="px-4 py-3 rounded-2xl bg-white dark:bg-[#132233] border border-sand-200 dark:border-[#22354a] text-center shadow-xs">
-              <span className="block text-xl font-black text-amber-600 dark:text-amber-400">15%</span>
-              <span className="text-[11px] font-bold text-ocean-700/70 dark:text-white/60">خصومات حصرية</span>
             </div>
           </div>
         </div>
@@ -432,7 +427,6 @@ export const SportsView: React.FC<SportsViewProps> = ({
                 className="bg-sand-50 dark:bg-[#142232] border border-sand-200 dark:border-[#22354a] rounded-xl px-2 py-1 text-xs font-bold text-ocean-900 dark:text-white focus:outline-none"
               >
                 <option value="featured">الأكثر تميزاً</option>
-                <option value="discount">الأعلى خصماً</option>
                 <option value="name">أبجدياً (أ-ي)</option>
               </select>
             </div>
@@ -451,7 +445,7 @@ export const SportsView: React.FC<SportsViewProps> = ({
         </div>
       </div>
 
-      {/* 4. عداد النتائج ومعلومات العروض */}
+      {/* 4. عداد النتائج */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 text-xs text-ocean-700/70 dark:text-white/60">
         <span className="font-bold">
           عرض <strong className="text-blue-600 dark:text-blue-400 font-black">{filteredSports.length}</strong> من أصل {allSports.length} مكان ونشاط رياضي معتمد
@@ -509,18 +503,13 @@ export const SportsView: React.FC<SportsViewProps> = ({
                       {place.ds || 'منشأة رياضية متكاملة بأحدث التجهيزات والمدربين المعتمدين ببورسعيد.'}
                     </p>
 
-                    {/* شريط المزايا والخصومات */}
+                    {/* شريط المزايا */}
                     <div className="pt-2 border-t border-sand-200/60 dark:border-[#1d2d3e] flex items-center justify-between text-[11px] text-ocean-700/70 dark:text-white/60">
                       <span className="flex items-center gap-1">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                         <span>منشأة مسجلة</span>
                       </span>
 
-                      {place.disc > 0 && (
-                        <span className="font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-md border border-blue-200/60 dark:border-blue-800/40">
-                          خصم {place.disc}% للأعضاء
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>

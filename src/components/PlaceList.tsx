@@ -274,14 +274,6 @@ export const PlaceList: React.FC<PlaceListProps> = ({
                 )}
               </div>
 
-              {p.disc > 0 && (
-                <div className="mt-4 pt-3 border-t border-sand-200/60 dark:border-[#1d2d3e] flex items-center justify-between text-xs font-black">
-                  <span className="inline-flex items-center gap-1 text-teal2-600 dark:text-teal2-400 bg-teal2-50 dark:bg-teal2-950/50 px-2 py-0.5 rounded-lg">
-                    <Tag className="w-3 h-3" />
-                    خصم {p.disc}%
-                  </span>
-                </div>
-              )}
             </motion.button>
           ))
         ) : (

@@ -1025,11 +1025,6 @@ export const UnifiedAiStudio: React.FC<UnifiedAiStudioProps> = ({
                                   >
                                     <MapPin className="w-2.5 h-2.5 text-rose-500" />
                                     <span>{pl.n}</span>
-                                    {pl.disc ? (
-                                      <span className="text-[9px] px-1 rounded bg-teal2-100 dark:bg-teal2-900/60 text-teal2-700 dark:text-teal2-300 font-black">
-                                        خصم {pl.disc}%
-                                      </span>
-                                    ) : null}
                                   </button>
                                 ))}
                               </div>
