@@ -29,7 +29,6 @@ export interface ShoppingViewProps {
   onSelectPlace?: (placeId: string) => void;
   onNavigate?: (view: string, arg?: string | null) => void;
   onBack?: () => void;
-  onRequestCoupon?: (place: Place) => void;
 }
 
 const FAVORITES_KEY = 'portsaid_favorite_places';
@@ -49,7 +48,6 @@ export const ShoppingView: React.FC<ShoppingViewProps> = ({
   onSelectPlace,
   onNavigate,
   onBack,
-  onRequestCoupon,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');

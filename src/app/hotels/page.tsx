@@ -6,14 +6,12 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { HotelsView } from '@/components/HotelsView';
 import { PlaceDetail } from '@/components/PlaceDetail';
-import { QRModal } from '@/components/QRModal';
 import { Place } from '@/types';
 import { INITIAL_PLACES } from '@/lib/constants';
 
 export default function HotelsPage() {
   const router = useRouter();
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
-  const [activeCouponPlace, setActiveCouponPlace] = useState<Place | null>(null);
 
   const selectedPlace = selectedPlaceId
     ? INITIAL_PLACES.find((p) => p.id === selectedPlaceId) || null
@@ -52,7 +50,6 @@ export default function HotelsPage() {
           <PlaceDetail
             place={selectedPlace}
             onBack={() => setSelectedPlaceId(null)}
-            onRequestCoupon={(place) => setActiveCouponPlace(place)}
           />
         ) : (
           <HotelsView
@@ -60,19 +57,12 @@ export default function HotelsPage() {
             onSelectPlace={(id) => setSelectedPlaceId(id)}
             onBack={() => router.push('/')}
             onNavigate={handleNavigate}
-            onRequestCoupon={(place) => setActiveCouponPlace(place)}
           />
         )}
       </main>
 
       <Footer />
 
-      {activeCouponPlace && (
-        <QRModal
-          place={activeCouponPlace}
-          onClose={() => setActiveCouponPlace(null)}
-        />
-      )}
     </div>
   );
 }

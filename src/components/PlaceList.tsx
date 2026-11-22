@@ -22,7 +22,6 @@ interface PlaceListProps {
   onSelectPlace: (placeId: string) => void;
   onBack: () => void;
   onNavigate?: (view: string, arg?: string | null) => void;
-  onRequestCoupon?: (place: Place) => void;
 }
 
 const containerVariants: Variants = {
@@ -56,7 +55,6 @@ export const PlaceList: React.FC<PlaceListProps> = ({
   onSelectPlace,
   onBack,
   onNavigate,
-  onRequestCoupon,
 }) => {
   if (categoryKey === 'fun') {
     return (
@@ -76,7 +74,6 @@ export const PlaceList: React.FC<PlaceListProps> = ({
         onSelectPlace={onSelectPlace}
         onNavigate={onNavigate}
         onBack={onBack}
-        onRequestCoupon={onRequestCoupon}
       />
     );
   }
@@ -88,7 +85,6 @@ export const PlaceList: React.FC<PlaceListProps> = ({
         onSelectPlace={onSelectPlace}
         onNavigate={onNavigate}
         onBack={onBack}
-        onRequestCoupon={onRequestCoupon}
       />
     );
   }
@@ -100,7 +96,6 @@ export const PlaceList: React.FC<PlaceListProps> = ({
         onSelectPlace={onSelectPlace}
         onNavigate={onNavigate}
         onBack={onBack}
-        onRequestCoupon={onRequestCoupon}
       />
     );
   }
@@ -112,7 +107,6 @@ export const PlaceList: React.FC<PlaceListProps> = ({
         onSelectPlace={onSelectPlace}
         onNavigate={onNavigate}
         onBack={onBack}
-        onRequestCoupon={onRequestCoupon}
       />
     );
   }
@@ -134,7 +128,6 @@ export const PlaceList: React.FC<PlaceListProps> = ({
         onSelectPlace={onSelectPlace}
         onNavigate={onNavigate}
         onBack={onBack}
-        onRequestCoupon={onRequestCoupon}
       />
     );
   }
@@ -146,7 +139,6 @@ export const PlaceList: React.FC<PlaceListProps> = ({
         onSelectPlace={onSelectPlace}
         onNavigate={onNavigate}
         onBack={onBack}
-        onRequestCoupon={onRequestCoupon}
       />
     );
   }
@@ -158,7 +150,6 @@ export const PlaceList: React.FC<PlaceListProps> = ({
         onSelectPlace={onSelectPlace}
         onNavigate={onNavigate}
         onBack={onBack}
-        onRequestCoupon={onRequestCoupon}
       />
     );
   }
@@ -170,7 +161,6 @@ export const PlaceList: React.FC<PlaceListProps> = ({
         onSelectPlace={onSelectPlace}
         onNavigate={onNavigate}
         onBack={onBack}
-        onRequestCoupon={onRequestCoupon}
       />
     );
   }
@@ -290,7 +280,6 @@ export const PlaceList: React.FC<PlaceListProps> = ({
                     <Tag className="w-3 h-3" />
                     خصم {p.disc}%
                   </span>
-                  <span className="text-sand-500 dark:text-sand-400">كوبون متاح ✨</span>
                 </div>
               )}
             </motion.button>

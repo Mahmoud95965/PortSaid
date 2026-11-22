@@ -239,7 +239,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome
         onClick={toggleTheme}
         type="button"
         aria-label="تبديل الوضع الليلي والنهاري"
-        className="absolute left-4 top-4 z-20 w-11 h-11 rounded-2xl bg-white/15 border border-white/30 text-white backdrop-blur-sm flex items-center justify-center hover:bg-white/25 transition shadow-lg"
+        className="fixed left-4 top-4 z-[60] w-11 h-11 rounded-2xl bg-white/15 border border-white/30 text-white backdrop-blur-sm flex items-center justify-center hover:bg-white/25 transition shadow-lg"
         whileHover={{ scale: 1.1, rotate: 15 }}
         whileTap={{ scale: 0.9 }}
       >

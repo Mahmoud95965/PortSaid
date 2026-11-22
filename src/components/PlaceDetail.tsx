@@ -14,7 +14,6 @@ import {
   Star,
   CheckCircle,
   ExternalLink,
-  QrCode,
   Sparkles,
   Send,
   Clock,
@@ -33,7 +32,6 @@ import confetti from 'canvas-confetti';
 interface PlaceDetailProps {
   place: Place;
   onBack: () => void;
-  onRequestCoupon: (place: Place) => void;
 }
 
 const FAVORITES_KEY = 'portsaid_favorite_places';
@@ -89,7 +87,7 @@ function getPlaceHeroPhoto(place: Place): string {
   return '/assets/port-said/hero-01.webp';
 }
 
-export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onRequestCoupon }) => {
+export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack }) => {
   const { user } = useAuth();
 
   const [fromStop, setFromStop] = useState(HOME_STOP);
@@ -575,31 +573,6 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack, onReque
         </div>
       </div>
 
-      {/* 4. Special Offer / Discount Coupon Card */}
-      {place.cat !== 'housing' && place.disc > 0 && (
-        <div className="p-4 sm:p-5 rounded-3xl border border-teal2-400/40 bg-gradient-to-br from-teal2-50/80 via-white to-blue-50/40 dark:from-teal2-950/30 dark:via-[#0c1622] dark:to-blue-950/20 text-right shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <span className="inline-block rounded-full bg-teal2-600 text-white text-[10px] font-black px-2.5 py-0.5 mb-0.5">
-              عرض خاص وحصري
-            </span>
-            <h3 className="font-black text-base text-teal2-950 dark:text-teal2-200">
-              خصم {place.disc}% متاح لرواد Port Said Hub
-            </h3>
-            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
-              احصل على كود خصم QR صالح للاستخدام فوراً عند الكاشير.
-            </p>
-          </div>
-
-          <button
-            onClick={() => onRequestCoupon(place)}
-            type="button"
-            className="px-5 py-2.5 rounded-2xl bg-teal2-600 hover:bg-teal2-500 text-white font-black text-xs sm:text-sm shadow-md shadow-teal2-600/25 transition flex items-center gap-2 shrink-0 self-stretch sm:self-auto justify-center"
-          >
-            <QrCode className="w-4 h-4" />
-            <span>اطلب الكوبون الآن</span>
-          </button>
-        </div>
-      )}
 
       {/* 6. Transit & Route Guide (أروح إزاي بالمواصلات؟) */}
       <div

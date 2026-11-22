@@ -30,7 +30,6 @@ export interface ClothesViewProps {
   onSelectPlace?: (placeId: string) => void;
   onNavigate?: (view: string, arg?: string | null) => void;
   onBack?: () => void;
-  onRequestCoupon?: (place: Place) => void;
 }
 
 const FAVORITES_KEY = 'portsaid_favorite_places';
@@ -49,7 +48,6 @@ export const ClothesView: React.FC<ClothesViewProps> = ({
   onSelectPlace,
   onNavigate,
   onBack,
-  onRequestCoupon,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTab, setSelectedTab] = useState('all');
@@ -455,18 +453,6 @@ export const ClothesView: React.FC<ClothesViewProps> = ({
                     )}
 
                     <div className="flex items-center gap-2">
-                      {onRequestCoupon && place.disc > 0 && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onRequestCoupon(place);
-                          }}
-                          className="px-3 py-1.5 rounded-xl bg-coral-500 hover:bg-coral-600 text-white font-bold text-xs shadow-sm transition flex items-center gap-1"
-                        >
-                          <Tag className="w-3 h-3" />
-                          <span>كوبون</span>
-                        </button>
-                      )}
 
                       <span className="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-bold text-xs group-hover:bg-indigo-600 group-hover:text-white transition">
                         تفاصيل

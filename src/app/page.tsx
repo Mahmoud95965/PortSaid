@@ -23,7 +23,6 @@ import { MapView } from '@/components/MapView';
 import { FeedbackView } from '@/components/FeedbackView';
 import { PartnerView } from '@/components/PartnerView';
 import { AccountView } from '@/components/AccountView';
-import { QRModal } from '@/components/QRModal';
 import { AssistantChat } from '@/components/AssistantChat';
 import { SiteGuideModal } from '@/components/SiteGuideModal';
 import { FeatureExplainerCards } from '@/components/FeatureExplainerCards';
@@ -59,7 +58,6 @@ export default function HomePage() {
   const [targetChatInitialPrompt, setTargetChatInitialPrompt] = useState<string | null>(null);
 
   const [places, setPlaces] = useState<Place[]>(INITIAL_PLACES);
-  const [activeCouponPlace, setActiveCouponPlace] = useState<Place | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showGuideModal, setShowGuideModal] = useState<boolean>(false);
   const [hasSeenGuide, setHasSeenGuide] = useState<boolean>(true);
@@ -221,10 +219,6 @@ export default function HomePage() {
 
     const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     window.open(waUrl, '_blank');
-  };
-
-  const handleRequestCoupon = (place: Place) => {
-    setActiveCouponPlace(place);
   };
 
   if (loading) {
@@ -453,7 +447,6 @@ export default function HomePage() {
                 onSelectPlace={(id) => handleNavigate('place', id)}
                 onBack={() => handleNavigate('home')}
                 onNavigate={handleNavigate}
-                onRequestCoupon={handleRequestCoupon}
               />
             </motion.div>
           )}
@@ -463,7 +456,6 @@ export default function HomePage() {
               <PlaceDetail
                 place={selectedPlace}
                 onBack={() => handleNavigate('list', selectedPlace.cat)}
-                onRequestCoupon={handleRequestCoupon}
               />
             </motion.div>
           )}
@@ -485,7 +477,6 @@ export default function HomePage() {
                 onSelectPlace={(id) => handleNavigate('place', id)}
                 onNavigate={handleNavigate}
                 onBack={() => handleNavigate('home')}
-                onRequestCoupon={handleRequestCoupon}
               />
             </motion.div>
           )}
@@ -497,7 +488,6 @@ export default function HomePage() {
                 onSelectPlace={(id: string) => handleNavigate('place', id)}
                 onNavigate={handleNavigate}
                 onBack={() => handleNavigate('home')}
-                onRequestCoupon={handleRequestCoupon}
               />
             </motion.div>
           )}
@@ -509,7 +499,6 @@ export default function HomePage() {
                 onSelectPlace={(id) => handleNavigate('place', id)}
                 onNavigate={handleNavigate}
                 onBack={() => handleNavigate('home')}
-                onRequestCoupon={handleRequestCoupon}
               />
             </motion.div>
           )}
@@ -521,7 +510,6 @@ export default function HomePage() {
                 onSelectPlace={(id) => handleNavigate('place', id)}
                 onNavigate={handleNavigate}
                 onBack={() => handleNavigate('home')}
-                onRequestCoupon={handleRequestCoupon}
               />
             </motion.div>
           )}
@@ -568,11 +556,6 @@ export default function HomePage() {
           )}
         </AnimatePresence>
       </main>
-
-      {/* Dynamic QR Code Modal */}
-      {activeCouponPlace && (
-        <QRModal place={activeCouponPlace} onClose={() => setActiveCouponPlace(null)} />
-      )}
 
       {/* Interactive Site Guide & Roadmap Modal */}
       <SiteGuideModal

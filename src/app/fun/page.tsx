@@ -7,7 +7,6 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { SightsView } from '@/components/SightsView';
 import { PlaceDetail } from '@/components/PlaceDetail';
-import { QRModal } from '@/components/QRModal';
 import { AssistantChat } from '@/components/AssistantChat';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Place } from '@/types';
@@ -21,7 +20,6 @@ function SightsPageContent() {
 
   const [places, setPlaces] = useState<Place[]>(INITIAL_PLACES);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
-  const [activeCouponPlace, setActiveCouponPlace] = useState<Place | null>(null);
 
   useEffect(() => {
     const initialPlace = searchParams.get('place');
@@ -116,7 +114,6 @@ function SightsPageContent() {
               <PlaceDetail
                 place={selectedPlace}
                 onBack={() => setSelectedPlaceId(null)}
-                onRequestCoupon={(p) => setActiveCouponPlace(p)}
               />
             </motion.div>
           ) : (
@@ -140,13 +137,6 @@ function SightsPageContent() {
       {/* Footer */}
       <Footer />
 
-      {/* Coupon Modal */}
-      {activeCouponPlace && (
-        <QRModal
-          place={activeCouponPlace}
-          onClose={() => setActiveCouponPlace(null)}
-        />
-      )}
 
       {/* Floating Assistant Chat */}
       <AssistantChat

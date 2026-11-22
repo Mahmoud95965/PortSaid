@@ -25,7 +25,7 @@ export const PartnerView: React.FC<PartnerViewProps> = ({ onBack }) => {
     phone: user?.phone || '01012345678',
     discount: 15,
     commission: 10,
-    notes: 'كوبون صالح لجميع الطلبات داخل الصالة',
+    notes: 'عرض صالح لجميع الطلبات داخل الصالة',
     status: 'approved',
     place_linked: true,
   });
@@ -288,7 +288,7 @@ export const PartnerView: React.FC<PartnerViewProps> = ({ onBack }) => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold mb-1.5">شروط العرض أو تفاصيل الكوبون</label>
+                <label className="block text-xs font-bold mb-1.5">شروط العرض أو التفاصيل</label>
                 <input
                   type="text"
                   value={notes}
@@ -327,7 +327,7 @@ export const PartnerView: React.FC<PartnerViewProps> = ({ onBack }) => {
               <span>سجّل متجرك وانضم لشركاء بورسعيد</span>
             </h2>
             <p className="mt-1 text-xs sm:text-sm text-ocean-700/80 dark:text-ocean-100/70 font-semibold">
-              وصّل مطعمك أو كافيهك لآلاف الزوار والطلاب، واحصل على حساب تاجر مخصص لمتابعة كوبونات العملاء.
+              وصّل مطعمك أو كافيهك لآلاف الزوار والطلاب، واحصل على حساب تاجر مخصص لمتابعة طلبات العملاء.
             </p>
           </div>
 
