@@ -33,7 +33,6 @@ interface SportsViewProps {
   onSelectPlace: (placeId: string) => void;
   onBack: () => void;
   onNavigate?: (view: string, arg?: string | null) => void;
-  onRequestCoupon?: (place: Place) => void;
 }
 
 // تعيين الصور الواقعية المحلية للأماكن والأنشطة الرياضية في بورسعيد
@@ -110,7 +109,6 @@ export const SportsView: React.FC<SportsViewProps> = ({
   onSelectPlace,
   onBack,
   onNavigate,
-  onRequestCoupon,
 }) => {
   // حالات البحث والتصفية
   const [searchQuery, setSearchQuery] = useState('');

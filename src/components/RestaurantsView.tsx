@@ -19,7 +19,6 @@ import {
   ChevronDown,
   Tag,
   DollarSign,
-  QrCode,
   SlidersHorizontal,
   Compass,
 } from 'lucide-react';
@@ -30,7 +29,6 @@ export interface RestaurantsViewProps {
   onSelectPlace?: (placeId: string) => void;
   onNavigate?: (view: string, arg?: string | null) => void;
   onBack?: () => void;
-  onRequestCoupon?: (place: Place) => void;
 }
 
 const FAVORITES_KEY = 'portsaid_favorite_places';
@@ -40,7 +38,7 @@ const FOOD_CATEGORIES = [
   { key: 'all', label: 'جميع المطاعم', icon: '🍽️' },
   { key: 'seafood', label: 'أسماك وسي فود طازج', icon: '🐟' },
   { key: 'casual', label: 'مأكولات شعبية وبلدي', icon: '🦐' },
-  { key: 'offers', label: 'عروض وكوبونات خصم', icon: '🏷️' },
+  { key: 'offers', label: 'عروض وخصومات', icon: '🏷️' },
 ];
 
 export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
@@ -48,7 +46,6 @@ export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
   onSelectPlace,
   onNavigate,
   onBack,
-  onRequestCoupon,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -263,7 +260,7 @@ export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
           </h1>
 
           <p className="text-xs sm:text-sm text-white/85 font-medium max-w-xl line-clamp-2 mt-1 leading-relaxed">
-            استكشف أشهر مطاعم المأكولات البحرية والأسماك الطازجة في بورسعيد، مع عروض وكوبونات خصم حصرية.
+            استكشف أشهر مطاعم المأكولات البحرية والأسماك الطازجة في بورسعيد، مع عروض وخصومات حصرية.
           </p>
         </div>
       </div>
@@ -476,20 +473,6 @@ export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
                       </button>
 
                       <div className="flex items-center gap-1">
-                        {place.disc > 0 && onRequestCoupon && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onRequestCoupon(place);
-                            }}
-                            className="p-1.5 px-2 rounded-xl bg-teal2-50 dark:bg-teal2-950/40 text-teal2-700 dark:text-teal2-300 hover:bg-teal2-100 text-[11px] font-bold transition flex items-center gap-1 border border-teal2-200/60 dark:border-teal2-800/40"
-                            title="طلب كود خصم للمطعم"
-                          >
-                            <QrCode className="w-3 h-3" />
-                            <span className="hidden min-[380px]:inline">كوبون</span>
-                          </button>
-                        )}
 
                         <button
                           type="button"

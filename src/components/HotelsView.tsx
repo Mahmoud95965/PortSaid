@@ -33,7 +33,6 @@ interface HotelsViewProps {
   onSelectPlace: (placeId: string) => void;
   onBack: () => void;
   onNavigate?: (view: string, arg?: string | null) => void;
-  onRequestCoupon?: (place: Place) => void;
 }
 
 // تعيين الصور الواقعية المحلية للفنادق والأوتيلات ببورسعيد

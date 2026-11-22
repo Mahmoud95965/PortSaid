@@ -7,7 +7,6 @@ import { Bed, ArrowRight } from 'lucide-react';
 export interface HousingViewProps {
   places?: Place[];
   onSelectPlace?: (placeId: string) => void;
-  onRequestCoupon?: (place: Place) => void;
   onBack: () => void;
   onNavigate?: (view: string, arg?: string | null) => void;
 }

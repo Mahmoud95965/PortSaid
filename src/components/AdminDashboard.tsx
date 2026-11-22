@@ -14,7 +14,6 @@ import {
   Image as ImageIcon,
   MessageSquare,
   BarChart3,
-  Ticket,
   Video,
   CheckCircle,
   AlertTriangle,
@@ -133,8 +132,6 @@ export const AdminDashboard: React.FC = () => {
     fetchAdminData();
   }, []);
 
-  const [redeemCode, setRedeemCode] = useState('');
-  const [redeemResult, setRedeemResult] = useState<string | null>(null);
   const [logVerifyResult, setLogVerifyResult] = useState<string | null>(null);
 
   // ---------------------------------------------------------
@@ -283,13 +280,6 @@ export const AdminDashboard: React.FC = () => {
     setTimeout(() => {
       setLogVerifyResult('سلسلة سجل الموقع سليمة بنسبة 100% (تم فحص 342 حدثًا تشفيريًا بنجاح).');
     }, 800);
-  };
-
-  const handleRedeemCoupon = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!redeemCode.trim()) return;
-    setRedeemResult('تمت تسوية الكوبون بنجاح! خصم 15% - تم تسجيل العمولة لفريق Alpha.');
-    setRedeemCode('');
   };
 
   // 1. Loading Guard
@@ -487,17 +477,6 @@ export const AdminDashboard: React.FC = () => {
             <span>ذكريات المجتمع</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('redeem')}
-            className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
-              activeTab === 'redeem'
-                ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
-                : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
-            }`}
-          >
-            <Ticket className="w-4 h-4" />
-            <span>تسوية كوبون</span>
-          </button>
 
           {isOwner && (
             <button
@@ -518,7 +497,7 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === 'home' && (
           <div className="space-y-6 pop-in">
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
                 <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">المستخدمين المسجلين</p>
                 <p className="text-2xl sm:text-3xl font-black mt-2 text-ocean-900 dark:text-white">1,248</p>
@@ -527,11 +506,6 @@ export const AdminDashboard: React.FC = () => {
               <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
                 <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">الأماكن النشطة</p>
                 <p className="text-2xl sm:text-3xl font-black mt-2 text-teal2-600 dark:text-teal2-400">42</p>
-              </div>
-
-              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
-                <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">الكوبونات المستبدلة</p>
-                <p className="text-2xl sm:text-3xl font-black mt-2 text-sand-500">319</p>
               </div>
 
               <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
@@ -662,40 +636,6 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Tab Content: Redeem Coupon */}
-        {activeTab === 'redeem' && (
-          <div className="max-w-md mx-auto space-y-4 pop-in">
-            <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-6 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
-              <h3 className="text-lg font-black mb-1">تسوية كود كوبون الخصم</h3>
-              <p className="text-xs text-ocean-700/70 dark:text-white/60 mb-4">
-                أدخل الكود المقروء من كاميرا QR للمحل لتسجيل الخصم والعمولة.
-              </p>
-
-              <form onSubmit={handleRedeemCoupon} className="space-y-3">
-                <input
-                  type="text"
-                  placeholder="مثال: PSC.20000000-0000......."
-                  value={redeemCode}
-                  onChange={(e) => setRedeemCode(e.target.value)}
-                  className="w-full rounded-xl border border-sand-200 dark:border-[#1d2d3e] bg-sand-50 dark:bg-[#1a242d] px-3.5 py-2.5 text-xs font-mono"
-                  required
-                />
-                <button
-                  type="submit"
-                  className="w-full py-3 rounded-2xl bg-teal2-600 hover:bg-teal2-500 text-white font-extrabold text-sm shadow transition"
-                >
-                  تسوية الكوبون الآن
-                </button>
-              </form>
-
-              {redeemResult && (
-                <p className="text-xs font-bold text-teal2-600 mt-3 p-3 rounded-xl bg-teal2-50 dark:bg-teal2-950/40">
-                  {redeemResult}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Tab Content: Historical Stories Management */}
         {activeTab === 'history' && (

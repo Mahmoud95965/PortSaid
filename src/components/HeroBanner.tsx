@@ -98,14 +98,14 @@ export const HeroBanner: React.FC = () => {
           </h2>
 
           <p className="mt-1.5 sm:mt-2 text-xs min-[400px]:text-sm sm:text-base text-white/90 leading-relaxed max-w-xl font-medium">
-            اكتشف أفضل مطاعم الأسماك، الكافيهات على القناة، ومعالم بورسعيد وبورفؤاد.. واستمتع بكوبونات وخصومات حقيقية!
+            اكتشف أفضل مطاعم الأسماك، الكافيهات على القناة، ومعالم بورسعيد وبورفؤاد.. واستمتع بخصومات حقيقية!
           </p>
 
           {/* Quick Info Tags */}
           <div className="flex flex-wrap items-center gap-2 mt-3 sm:mt-4">
             <span className="inline-flex items-center gap-1 bg-white/15 border border-white/20 rounded-xl px-2.5 py-1 text-[11px] font-bold">
               <Sparkles className="w-3 h-3 text-sand-400" />
-              <span>كوبونات خصم 10% - 20%</span>
+              <span>خصومات 10% - 20%</span>
             </span>
 
             <span className="inline-flex items-center gap-1 bg-white/15 border border-white/20 rounded-xl px-2.5 py-1 text-[11px] font-bold">

@@ -7,7 +7,6 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { MapView } from '@/components/MapView';
 import { PlaceDetail } from '@/components/PlaceDetail';
-import { QRModal } from '@/components/QRModal';
 import { AssistantChat } from '@/components/AssistantChat';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Place } from '@/types';
@@ -21,7 +20,6 @@ export default function MapPage() {
   const [places, setPlaces] = useState<Place[]>(INITIAL_PLACES);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [targetMapPlaceId, setTargetMapPlaceId] = useState<string | null>(null);
-  const [activeCouponPlace, setActiveCouponPlace] = useState<Place | null>(null);
   const [showGuideModal, setShowGuideModal] = useState<boolean>(false);
 
   // تحميل الأماكن الحقيقية من Supabase
@@ -99,7 +97,6 @@ export default function MapPage() {
               <PlaceDetail
                 place={selectedPlace}
                 onBack={() => setSelectedPlaceId(null)}
-                onRequestCoupon={(place) => setActiveCouponPlace(place)}
               />
             </motion.div>
           ) : (
@@ -120,10 +117,6 @@ export default function MapPage() {
         </AnimatePresence>
       </main>
 
-      {/* Dynamic QR Code Modal */}
-      {activeCouponPlace && (
-        <QRModal place={activeCouponPlace} onClose={() => setActiveCouponPlace(null)} />
-      )}
 
       {/* Assistant AI Chatbot */}
       <AssistantChat

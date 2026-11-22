@@ -30,7 +30,6 @@ export interface CafesViewProps {
   onSelectPlace?: (placeId: string) => void;
   onNavigate?: (view: string, arg?: string | null) => void;
   onBack?: () => void;
-  onRequestCoupon?: (place: Place) => void;
 }
 
 const FAVORITES_KEY = 'portsaid_favorite_places';
@@ -48,7 +47,6 @@ export const CafesView: React.FC<CafesViewProps> = ({
   onSelectPlace,
   onNavigate,
   onBack,
-  onRequestCoupon,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMood, setSelectedMood] = useState('all');
@@ -259,7 +257,7 @@ export const CafesView: React.FC<CafesViewProps> = ({
               🌊 إطلالات البحر وقناة السويس
             </span>
             <span className="px-3 py-1 rounded-xl bg-white/10 border border-white/15">
-              🏷️ خصومات حصرية وكوبونات
+              🏷️ خصومات حصرية
             </span>
           </div>
         </div>

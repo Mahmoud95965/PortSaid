@@ -177,7 +177,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart }) => {
         <div className="relative z-10 w-full max-w-lg mx-auto px-5 flex flex-col items-center text-center">
           {/* Logo */}
           <motion.div
-            className="w-60 sm:w-72 aspect-square rounded-[2rem] bg-[#f2ede7] border-4 border-white/50 shadow-[0_0_0_8px_rgba(255,255,255,0.12),0_0_56px_rgba(255,185,56,0.45)] flex items-center justify-center mb-5 pulse-glow relative overflow-hidden"
+            className="w-40 sm:w-56 md:w-72 aspect-square rounded-[2rem] bg-[#f2ede7] border-4 border-white/50 shadow-[0_0_0_8px_rgba(255,255,255,0.12),0_0_56px_rgba(255,185,56,0.45)] flex items-center justify-center mb-4 sm:mb-5 pulse-glow relative overflow-hidden"
             initial={{ opacity: 0, scale: 0.3, y: 40 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{
