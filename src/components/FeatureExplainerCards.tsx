@@ -85,7 +85,7 @@ const STEPS_DATA: StepCard[] = [
     actionLabel: 'استكشف الأماكن الآن',
     targetView: 'list',
     arrowNextText: 'اخترت مكانك؟ ➔ انتقل للخطوة التالية: المواصلات والسكن',
-    proTip: 'اضغط على بطاقة أي مكان لرؤية موقعه الجغرافي وتفاصيل الخصم المتاح له.',
+    proTip: 'اضغط على بطاقة أي مكان لرؤية موقعه الجغرافي وتفاصيله.',
     details: {
       title: 'ما الذي ستجده داخل قسم الاستكشاف؟',
       points: [
@@ -187,10 +187,6 @@ const STEPS_DATA: StepCard[] = [
           label: 'إرشادات المواصلات:',
           desc: 'حدد كليتك أو وجهتك وسيشرح لك المساعد أسرع خط مينى باص ورقم الأجرة.',
         },
-        {
-          label: 'الخصومات:',
-          desc: 'يوجهك فوراً لأعلى الأماكن خصماً في بورسعيد.',
-        },
       ],
     },
   },
@@ -285,8 +281,7 @@ export const FeatureExplainerCards: React.FC<FeatureExplainerCardsProps> = ({
         </h2>
 
         <p className="text-xs sm:text-sm md:text-base text-ocean-700/80 dark:text-white/75 font-medium leading-relaxed">
-          دليلك التفاعلي خطوة بخطوة: استكشف أفضل الأماكن، واستفد من خصومات 10% إلى 20%
-          فورية، بالإضافة لشبكة المواصلات والمساعد الذكي.
+          دليلك التفاعلي خطوة بخطوة: استكشف أفضل الأماكن، بالإضافة لشبكة المواصلات والمساعد الذكي.
         </p>
 
         {/* View Switcher & Modal Launcher */}
@@ -587,8 +582,7 @@ export const FeatureExplainerCards: React.FC<FeatureExplainerCardsProps> = ({
             <span>نظام موثوق 100% بدون إعلانات مزعجة</span>
           </h4>
           <p className="text-xs text-white/80 max-w-xl">
-            الخصومات تقدم من شركائنا المعتمدين في بورسعيد، وتمكنك من التوفير
-            فوراً عند زيارتهم.
+            المعلومات والأماكن من شركائنا المعتمدين في بورسعيد، ونتأكد من دقتها باستمرار.
           </p>
         </div>
       </motion.div>

@@ -826,11 +826,6 @@ export const PlannerMap: React.FC<PlannerMapProps> = ({
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-[#152332] text-ocean-800 dark:text-white/70">
                   {popupSuggested.a}
                 </span>
-                {popupSuggested.disc && popupSuggested.disc > 0 ? (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500/15 text-rose-700 dark:text-rose-300">
-                    خصم {popupSuggested.disc}%
-                  </span>
-                ) : null}
               </div>
               <h3 className="font-black text-sm text-ocean-950 dark:text-white mt-1">
                 {popupSuggested.n}

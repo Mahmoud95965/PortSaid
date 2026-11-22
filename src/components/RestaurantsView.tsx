@@ -38,7 +38,6 @@ const FOOD_CATEGORIES = [
   { key: 'all', label: 'جميع المطاعم', icon: '🍽️' },
   { key: 'seafood', label: 'أسماك وسي فود طازج', icon: '🐟' },
   { key: 'casual', label: 'مأكولات شعبية وبلدي', icon: '🦐' },
-  { key: 'offers', label: 'عروض وخصومات', icon: '🏷️' },
 ];
 
 export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
@@ -50,7 +49,7 @@ export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedArea, setSelectedArea] = useState('all');
-  const [sortBy, setSortBy] = useState<'default' | 'discount' | 'cost_asc'>('default');
+  const [sortBy, setSortBy] = useState<'default' | 'cost_asc'>('default');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(9);
@@ -154,8 +153,6 @@ export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
         } else if (selectedCategory === 'casual') {
           const isCasual = name.includes('جندي') || desc.includes('بلدي') || desc.includes('شعب') || desc.includes('طلبة');
           if (!isCasual) return false;
-        } else if (selectedCategory === 'offers') {
-          if (!place.disc || place.disc <= 0) return false;
         }
       }
 
@@ -171,9 +168,6 @@ export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
 
     // 4. الترتيب
     return result.sort((a, b) => {
-      if (sortBy === 'discount') {
-        return (b.disc || 0) - (a.disc || 0);
-      }
       if (sortBy === 'cost_asc') {
         const metaA = PLACES_METADATA[a.id]?.estimatedCostPerPerson || a.cost || 999;
         const metaB = PLACES_METADATA[b.id]?.estimatedCostPerPerson || b.cost || 999;
@@ -260,7 +254,7 @@ export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
           </h1>
 
           <p className="text-xs sm:text-sm text-white/85 font-medium max-w-xl line-clamp-2 mt-1 leading-relaxed">
-            استكشف أشهر مطاعم المأكولات البحرية والأسماك الطازجة في بورسعيد، مع عروض وخصومات حصرية.
+            استكشف أشهر مطاعم المأكولات البحرية والأسماك الطازجة في بورسعيد.
           </p>
         </div>
       </div>
@@ -347,7 +341,6 @@ export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
                 className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] text-ocean-950 dark:text-white text-xs font-bold outline-none cursor-pointer focus:border-blue-600"
               >
                 <option value="default">الافتراضي</option>
-                <option value="discount">الأعلى خصماً 🏷️</option>
                   <option value="cost_asc">الأقل تكلفة 💰</option>
               </select>
             </div>
@@ -403,11 +396,6 @@ export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
                           <Utensils className="w-3 h-3 text-coral-500" />
                           <span>مطعم أسماك</span>
                         </span>
-                        {place.disc > 0 && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-teal2-600 text-white shadow-xs">
-                            خصم {place.disc}%
-                          </span>
-                        )}
                       </div>
                       <button
                         type="button"

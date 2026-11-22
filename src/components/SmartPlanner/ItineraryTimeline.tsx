@@ -237,12 +237,6 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sand-100 dark:bg-[#152332] text-ocean-800 dark:text-white/70">
                             {stop.area}
                           </span>
-                          {stop.hasDiscount && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-ocean-950 flex items-center gap-1">
-                              <Tag className="w-2.5 h-2.5" />
-                              <span>خصم {stop.discountPercent}%</span>
-                            </span>
-                          )}
                         </div>
 
                         <h3 className="font-black text-sm sm:text-base text-ocean-950 dark:text-white mt-1">

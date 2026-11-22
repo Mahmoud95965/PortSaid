@@ -479,7 +479,7 @@ export function buildDeterministicPortSaidPlan(params: {
       tips = 'استمتع بالتصوير الخارجي ومشاهدة التفاصيل المعمارية الفريدة.';
     } else if (place.cat === 'food' || place.cat === 'shop') {
       reason = `تناول وجبة أسماك طازجة ولذيذة تتناسب تماماً مع ميزانية الخروجة (${intent.budgetEgp} ج.م).`;
-      tips = place.disc > 0 ? `يوجد خصم ${place.disc}% في هذا المكان!` : '';
+      tips = 'جرّب الأطباق المميزة واسأل عن قائمة اليوم.';
     } else if (place.cat === 'sweets') {
       reason = 'تحلية بورسعيدية كلاسيكية بكاساتا سيلفر الشهيرة لإكمال يومك بنكهة لا تُنسى.';
       tips = 'جرب طبق الكاساتا بالمكسرات أو الآيس كريم المشكل.';
@@ -566,7 +566,7 @@ export function createStopFromPlace(
     totalCost,
     costRange: meta.costRange,
     reason,
-    tips: place.disc > 0 ? `خصم ${place.disc}% في هذا المكان` : '',
+    tips: '',
     hasDiscount: place.disc > 0,
     discountPercent: place.disc,
   };

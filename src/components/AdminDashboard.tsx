@@ -627,7 +627,6 @@ export const AdminDashboard: React.FC = () => {
                     المالك: {app.owner_name} · الهاتف: {app.phone} · المنطقة: {app.area}
                   </p>
                   <div className="flex gap-4 text-xs font-bold pt-2 border-t border-sand-200/60 dark:border-[#1d2d3e]">
-                    <span>خصم العميل: {app.discount}%</span>
                     <span>عمولة Alpha: {app.commission} ج</span>
                   </div>
                 </div>
