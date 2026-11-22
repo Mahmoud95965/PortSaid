@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 
 const SITE_URL = 'https://www.port-said-hub.site';
-const LAST_MODIFIED = new Date('2026-11-21');
+const LAST_MODIFIED = new Date('2026-11-22');
 
 const ROUTES: { path: string; changeFrequency: 'weekly' | 'monthly'; priority: number }[] = [
   { path: '/', changeFrequency: 'weekly', priority: 1 },
@@ -18,6 +18,8 @@ const ROUTES: { path: string; changeFrequency: 'weekly' | 'monthly'; priority: n
   { path: '/sport', changeFrequency: 'monthly', priority: 0.7 },
   { path: '/sweets', changeFrequency: 'monthly', priority: 0.7 },
   { path: '/memories', changeFrequency: 'monthly', priority: 0.6 },
+  { path: '/privacy', changeFrequency: 'monthly', priority: 0.5 },
+  { path: '/terms', changeFrequency: 'monthly', priority: 0.5 },
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
