@@ -8,6 +8,9 @@ import {
   Camera,
   CheckCircle,
   User as UserIcon,
+  Lock,
+  Eye,
+  EyeOff,
   Sliders,
   Sun,
   Moon,
@@ -62,9 +65,18 @@ const INTEREST_OPTIONS = [
 ];
 
 export const AccountView: React.FC<AccountViewProps> = ({ onBack }) => {
-  const { user, updateAvatar, theme, setThemeExplicitly, toggleTheme } = useAuth();
+  const { user, updateAvatar, changePassword, theme, setThemeExplicitly, toggleTheme } = useAuth();
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
+  // حالة كلمة المرور
+  const [currentPass, setCurrentPass] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const [passMsg, setPassMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [avatarMsg, setAvatarMsg] = useState('');
 
   // حالة التفضيلات
@@ -128,6 +140,18 @@ export const AccountView: React.FC<AccountViewProps> = ({ onBack }) => {
     }
   };
 
+  const calcStrength = (p: string) => {
+    let s = 0;
+    if (p.length >= 8) s++;
+    if (p.length >= 12) s++;
+    if (/[a-z]/.test(p) && /[A-Z]/.test(p)) s++;
+    if (/\d/.test(p)) s++;
+    if (/[^A-Za-z0-9]/.test(p)) s++;
+    return s;
+  };
+
+  const strength = calcStrength(newPass);
+
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -135,6 +159,33 @@ export const AccountView: React.FC<AccountViewProps> = ({ onBack }) => {
     updateAvatar(url);
     setAvatarMsg('تم تحديث صورتك الشخصية بنجاح ✓');
     setTimeout(() => setAvatarMsg(''), 3000);
+  };
+
+  const handleChangePassSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPassMsg(null);
+    if (!currentPass) {
+      setPassMsg({ text: 'اكتب كلمة المرور الحالية.', ok: false });
+      return;
+    }
+    if (newPass.length < 8) {
+      setPassMsg({ text: 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل.', ok: false });
+      return;
+    }
+    if (newPass !== confirmPass) {
+      setPassMsg({ text: 'كلمتا المرور الجديدتان غير متطابقتين.', ok: false });
+      return;
+    }
+
+    const res = await changePassword(currentPass, newPass);
+    if (res.ok) {
+      setPassMsg({ text: 'تم تغيير كلمة المرور وحفظها بنجاح.', ok: true });
+      setCurrentPass('');
+      setNewPass('');
+      setConfirmPass('');
+    } else {
+      setPassMsg({ text: res.message || 'حدث خطأ.', ok: false });
+    }
   };
 
   const userRoleTitle =
@@ -532,6 +583,124 @@ export const AccountView: React.FC<AccountViewProps> = ({ onBack }) => {
 
         </motion.section>
 
+        {/* Security & Password */}
+        <motion.section
+          className="bg-white dark:bg-[#0c1622] rounded-3xl shadow-xl p-5 sm:p-7 border border-slate-200 dark:border-[#1d2d3e] space-y-4"
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <h3 className="text-base sm:text-lg font-black text-ocean-950 dark:text-white flex items-center gap-2">
+            <Lock className="w-5 h-5 text-blue-600" />
+            <span>الأمان وتغيير كلمة المرور</span>
+          </h3>
+
+          <form onSubmit={handleChangePassSubmit} className="space-y-3.5">
+            <div>
+              <label className="block text-xs font-bold mb-1 text-ocean-950 dark:text-white">
+                كلمة المرور الحالية
+              </label>
+              <div className="relative">
+                <input
+                  type={showCurrent ? 'text' : 'password'}
+                  dir="ltr"
+                  value={currentPass}
+                  onChange={(e) => setCurrentPass(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 dark:border-[#203042] bg-slate-50 dark:bg-[#121f2f] text-ocean-950 dark:text-white px-3.5 py-2.5 text-xs sm:text-sm pl-10 outline-none focus:border-blue-600 font-medium"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrent(!showCurrent)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold mb-1 text-ocean-950 dark:text-white">
+                كلمة المرور الجديدة
+              </label>
+              <div className="relative">
+                <input
+                  type={showNew ? 'text' : 'password'}
+                  dir="ltr"
+                  value={newPass}
+                  onChange={(e) => setNewPass(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 dark:border-[#203042] bg-slate-50 dark:bg-[#121f2f] text-ocean-950 dark:text-white px-3.5 py-2.5 text-xs sm:text-sm pl-10 outline-none focus:border-blue-600 font-medium"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNew(!showNew)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              {/* Strength Meter */}
+              {newPass && (
+                <div className="mt-2 space-y-1">
+                  <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-[#203246] overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-300 ${
+                        strength <= 1
+                          ? 'bg-red-500 w-1/4'
+                          : strength <= 3
+                          ? 'bg-amber-500 w-2/3'
+                          : 'bg-emerald-500 w-full'
+                      }`}
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">
+                    {strength <= 1 ? 'ضعيفة' : strength <= 3 ? 'متوسطة' : 'قوية جداً ✓'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold mb-1 text-ocean-950 dark:text-white">
+                تأكيد كلمة المرور الجديدة
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirm ? 'text' : 'password'}
+                  dir="ltr"
+                  value={confirmPass}
+                  onChange={(e) => setConfirmPass(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 dark:border-[#203042] bg-slate-50 dark:bg-[#121f2f] text-ocean-950 dark:text-white px-3.5 py-2.5 text-xs sm:text-sm pl-10 outline-none focus:border-blue-600 font-medium"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(!showConfirm)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {passMsg && (
+              <p className={`text-xs font-bold ${passMsg.ok ? 'text-emerald-600' : 'text-red-600'}`}>
+                {passMsg.text}
+              </p>
+            )}
+
+            <motion.button
+              type="submit"
+              className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs sm:text-sm shadow-md transition"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              حفظ كلمة المرور
+            </motion.button>
+          </form>
+        </motion.section>
       </div>
     </motion.div>
   );

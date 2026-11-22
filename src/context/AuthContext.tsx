@@ -14,7 +14,7 @@ interface AuthContextType {
   hasSeenWelcome: boolean;
   setHasSeenWelcome: (seen: boolean) => void;
   login: (identifier: string, pass: string) => Promise<{ ok: boolean; message?: string }>;
-  // Google sign-in (Supabase Auth): no password anywhere in the UI.
+  // Google sign-in (Supabase Auth) — the fast option; email/password login is the normal option.
   googleUser: { id: string; email: string; name: string } | null;
   signInWithGoogle: () => Promise<{ ok: boolean; message?: string }>;
   registerUser: (data: {
@@ -225,9 +225,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     governorate?: string;
     institution?: string;
   }): Promise<{ ok: boolean; message?: string }> => {
-    // Password-less registration: email + identity come from Google sign-in.
-    // NOTE: the server /api/auth/register endpoint must accept a registration
-    // without a password (Google-verified email) for this to work end-to-end.
+    // Two registration paths share this call: email signup sends a password
+    // (validated in AuthModal), Google signup sends no password — its email
+    // is Google-verified. NOTE: the server /api/auth/register endpoint must
+    // accept a registration without a password for the Google path.
     if (!data.name || !data.email || !data.phone) {
       return { ok: false, message: 'جميع الحقول الأساسية مطلوبة.' };
     }
