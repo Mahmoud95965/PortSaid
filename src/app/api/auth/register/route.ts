@@ -1,7 +1,9 @@
+import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseServer } from '@/lib/supabase/server';
 import { hashPasswordModern } from '@/lib/auth/password';
+import { verifyGoogleAccessToken } from '@/lib/auth/google';
 import { sealSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from '@/lib/auth/session';
 import { checkRateLimit, getClientIp } from '@/lib/auth/rateLimit';
 import { normalizePhone } from '@/lib/auth/validation';
@@ -34,6 +36,9 @@ export async function POST(req: Request) {
       email,
       phone,
       password,
+      // Password-less Google registration: a verified Google access token
+      // proving ownership of the email below (see the validation below).
+      googleAccessToken,
       gender,
       user_type,
       governorate,
@@ -51,22 +56,47 @@ export async function POST(req: Request) {
     const trimmedEmail = (email || '').toLowerCase().trim();
     const normalizedPhone = normalizePhone((phone || '').trim());
 
-    if (!trimmedName || !trimmedEmail || !normalizedPhone || !password) {
+    if (!trimmedName || !trimmedEmail || !normalizedPhone) {
       return NextResponse.json(
-        { ok: false, message: 'جميع الحقول الأساسية (الاسم، البريد، الهاتف، كلمة المرور) مطلوبة.' },
+        { ok: false, message: 'جميع الحقول الأساسية (الاسم، البريد، الهاتف) مطلوبة.' },
         { status: 400 }
       );
     }
 
-    if (password.length < 8) {
+    // Password-less registration is ONLY allowed for a Google-verified email:
+    // the caller must attach a valid Google (Supabase Auth) access token and
+    // its email must match the registration email. Anything else still needs
+    // a password of 8+ characters, exactly as before.
+    let isGoogleRegistration = false;
+    if (!password) {
+      if (!googleAccessToken || typeof googleAccessToken !== 'string') {
+        return NextResponse.json(
+          { ok: false, message: 'التسجيل بدون كلمة مرور متاح فقط عبر حساب Google موثّق.' },
+          { status: 400 }
+        );
+      }
+      const google = await verifyGoogleAccessToken(googleAccessToken);
+      if (!google || google.email !== trimmedEmail) {
+        return NextResponse.json(
+          { ok: false, message: 'تعذّر التحقق من حساب Google. برجاء المحاولة مرة أخرى.' },
+          { status: 401 }
+        );
+      }
+      isGoogleRegistration = true;
+    } else if (password.length < 8) {
       return NextResponse.json(
         { ok: false, message: 'كلمة المرور يجب أن تكون 8 أحرف على الأقل.' },
         { status: 400 }
       );
     }
 
-    // 3. Hash password with modern Salted Scrypt
-    const hashedPassword = hashPasswordModern(password);
+    // 3. Hash password with modern Salted Scrypt. A Google-only account has
+    // no usable password: store a scrypt hash of a random secret nobody
+    // knows, so password login can never succeed for it (it signs in only
+    // via Google, and /api/auth/login still rejects any password for it).
+    const hashedPassword = password
+      ? hashPasswordModern(password)
+      : hashPasswordModern(crypto.randomUUID() + crypto.randomBytes(32).toString('hex'));
     const initialPoints = role === 'merchant' ? 0 : 20;
 
     const supabase = getSupabaseServer();
@@ -186,6 +216,8 @@ export async function POST(req: Request) {
         institution_id: institutionId,
         points_balance: initialPoints,
         status: 'active',
+        // A Google-verified email is verified by definition.
+        ...(isGoogleRegistration ? { email_verified_at: new Date().toISOString() } : {}),
       })
       .select('id, name, email, phone, gender, points_balance, created_at')
       .single();
@@ -258,7 +290,7 @@ export async function POST(req: Request) {
         institution,
         gender: newUser.gender,
         points: initialPoints,
-        email_verified: false,
+        email_verified: isGoogleRegistration,
         staff: false,
       },
     });
