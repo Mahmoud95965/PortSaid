@@ -18,6 +18,11 @@ export const supabase = isSupabaseConfigured()
       auth: {
         persistSession: true,
         autoRefreshToken: true,
+        // PKCE code exchange (never disabled). The code is exchanged
+        // explicitly by /auth/callback, so the client must NOT auto-detect
+        // and exchange it on its own — that would race the callback page.
+        flowType: 'pkce',
+        detectSessionInUrl: false,
       },
     })
   : null;

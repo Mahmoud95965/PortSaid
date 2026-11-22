@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, RoleType, UserTypeCategory, GenderType } from '@/types';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import { getOAuthCallbackUrl, getSafeNextPath } from '@/lib/site';
 import { logSupabaseActivity } from '@/lib/supabase/auth';
 
 interface AuthContextType {
@@ -16,7 +17,7 @@ interface AuthContextType {
   login: (identifier: string, pass: string) => Promise<{ ok: boolean; message?: string }>;
   // Google sign-in (Supabase Auth) — the fast option; email/password login is the normal option.
   googleUser: { id: string; email: string; name: string } | null;
-  signInWithGoogle: () => Promise<{ ok: boolean; message?: string }>;
+  signInWithGoogle: (next?: string) => Promise<{ ok: boolean; message?: string }>;
   registerUser: (data: {
     name: string;
     email: string;
@@ -136,14 +137,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   /**
    * تسجيل الدخول بحساب Google عبر Supabase Auth (OAuth redirect).
    * Requires the Google provider to be enabled in the Supabase dashboard and
-   * the site URL / redirect URL to allow the app origin.
+   * https://port-said-hub.site/auth/callback to be allow-listed under
+   * Authentication → URL Configuration → Redirect URLs.
+   *
+   * The OAuth callback is always the production domain in production
+   * (localhost only in development), so users come back to our own website —
+   * never to a Supabase URL and never to a localhost/preview origin.
+   * After Google, /auth/callback exchanges the PKCE code and bridges the
+   * verified Google identity to the app's server session.
    */
-  const signInWithGoogle = async (): Promise<{ ok: boolean; message?: string }> => {
+  const signInWithGoogle = async (next?: string): Promise<{ ok: boolean; message?: string }> => {
     if (!supabase || !isSupabaseConfigured()) {
       return { ok: false, message: 'تسجيل الدخول بحساب Google غير مفعّل بعد. فعّل مزوّد Google في Supabase أولاً.' };
     }
     try {
-      const redirectTo = typeof window !== 'undefined' ? window.location.origin : undefined;
+      const callbackUrl = getOAuthCallbackUrl();
+      const safeNext = getSafeNextPath(next);
+      const redirectTo = safeNext === '/' ? callbackUrl : `${callbackUrl}?next=${encodeURIComponent(safeNext)}`;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo },
@@ -213,6 +223,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   /**
+   * The Supabase access token for the currently linked Google account, if any.
+   * It proves ownership of the Google email and is sent to our own server
+   * ONLY for a password-less Google registration — never in a URL, never logged.
+   */
+  const getGoogleAccessToken = async (): Promise<string | null> => {
+    if (!supabase) return null;
+    try {
+      const { data } = await supabase.auth.getSession();
+      return data.session?.access_token ?? null;
+    } catch {
+      return null;
+    }
+  };
+
+  /**
    * إنشاء وتسجيل حساب مستخدم جديد بأمان عبر مسار الخادم Next.js API (/api/auth/register)
    */
   const registerUser = async (data: {
@@ -226,18 +251,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     institution?: string;
   }): Promise<{ ok: boolean; message?: string }> => {
     // Two registration paths share this call: email signup sends a password
-    // (validated in AuthModal), Google signup sends no password — its email
-    // is Google-verified. NOTE: the server /api/auth/register endpoint must
-    // accept a registration without a password for the Google path.
+    // (validated in AuthModal); Google signup sends no password — its email
+    // is Google-verified, so the Google access token is attached instead and
+    // the server verifies it before accepting a password-less registration.
     if (!data.name || !data.email || !data.phone) {
       return { ok: false, message: 'جميع الحقول الأساسية مطلوبة.' };
     }
+
+    const googleAccessToken = !data.password ? await getGoogleAccessToken() : null;
 
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, role: 'user' }),
+        body: JSON.stringify({
+          ...data,
+          role: 'user',
+          ...(googleAccessToken ? { googleAccessToken } : {}),
+        }),
       });
       const json = await res.json();
       if (json.ok && json.user) {
@@ -266,11 +297,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     commission: number;
     notes?: string;
   }): Promise<{ ok: boolean; message?: string }> => {
+    // Google merchant signup is password-less too — attach the verified
+    // Google access token the same way as the user signup path above.
+    const googleAccessToken = !data.password ? await getGoogleAccessToken() : null;
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, role: 'merchant' }),
+        body: JSON.stringify({
+          ...data,
+          role: 'merchant',
+          ...(googleAccessToken ? { googleAccessToken } : {}),
+        }),
       });
       const json = await res.json();
       if (json.ok && json.user) {
