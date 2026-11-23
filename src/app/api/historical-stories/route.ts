@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { unsealSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { getAdminSession } from '@/lib/auth/requireAdmin';
 import { dbGetHistoricalStories, dbSaveHistoricalStory, dbDeleteHistoricalStory } from '@/lib/db/localDb';
 
 export const runtime = 'nodejs';
@@ -10,10 +9,8 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const includeUnpublished = searchParams.get('all') === 'true';
 
-    const cookieStore = cookies();
-    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-    const session = token ? unsealSessionToken(token) : null;
-    const isStaff = session && (session.role === 'admin' || session.role === 'owner');
+    // Unpublished stories are visible only to the single admin account.
+    const isStaff = !!getAdminSession();
 
     const stories = dbGetHistoricalStories(includeUnpublished && isStaff ? true : false);
     return NextResponse.json({ ok: true, stories });
@@ -25,15 +22,11 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const cookieStore = cookies();
-    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-    if (!token) {
-      return NextResponse.json({ ok: false, message: 'غير مصرح.' }, { status: 401 });
-    }
-
-    const session = unsealSessionToken(token);
-    if (!session || (session.role !== 'admin' && session.role !== 'owner')) {
-      return NextResponse.json({ ok: false, message: 'هذه العملية تتطلب صلاحيات المشرف أو المالك.' }, { status: 403 });
+    // Creating/editing stories is an admin-only action, restricted to the
+    // single admin account (portsaidhub@gmail.com).
+    const adminSession = getAdminSession();
+    if (!adminSession) {
+      return NextResponse.json({ ok: false, message: 'هذه العملية تتطلب صلاحيات المسؤول.' }, { status: 403 });
     }
 
     const body = await req.json();
@@ -68,15 +61,11 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const cookieStore = cookies();
-    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-    if (!token) {
-      return NextResponse.json({ ok: false, message: 'غير مصرح.' }, { status: 401 });
-    }
-
-    const session = unsealSessionToken(token);
-    if (!session || (session.role !== 'admin' && session.role !== 'owner')) {
-      return NextResponse.json({ ok: false, message: 'هذه العملية تتطلب صلاحيات المشرف أو المالك.' }, { status: 403 });
+    // Deleting stories is an admin-only action, restricted to the single
+    // admin account (portsaidhub@gmail.com).
+    const adminSession = getAdminSession();
+    if (!adminSession) {
+      return NextResponse.json({ ok: false, message: 'هذه العملية تتطلب صلاحيات المسؤول.' }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);

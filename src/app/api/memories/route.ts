@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { unsealSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { isAdminSession } from '@/lib/auth/admin';
 import { dbGetMemories, dbCreateMemory, dbDeleteMemory, dbGetAllMemoriesForAdmin } from '@/lib/db/localDb';
 
 export const runtime = 'nodejs';
@@ -14,7 +15,8 @@ export async function GET(req: Request) {
     const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
     const session = token ? unsealSessionToken(token) : null;
 
-    if (forAdmin && session && (session.role === 'admin' || session.role === 'owner')) {
+    // Admin listing: ONLY the single admin account (portsaidhub@gmail.com).
+    if (forAdmin && isAdminSession(session)) {
       const allMemories = dbGetAllMemoriesForAdmin();
       return NextResponse.json({ ok: true, memories: allMemories });
     }
@@ -99,7 +101,9 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ ok: false, message: 'معرف المنشور مطلوب.' }, { status: 400 });
     }
 
-    const isStaff = session.role === 'admin' || session.role === 'owner';
+    // Deleting someone else's memory is an admin-only action, restricted
+    // to the single admin account. Users can still delete their own.
+    const isStaff = isAdminSession(session);
     const deleted = dbDeleteMemory(memoryId, session.userId, isStaff);
 
     if (!deleted) {

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseServer } from '@/lib/supabase/server';
 import { hashPasswordModern, verifyAndUpgradePassword } from '@/lib/auth/password';
+import { validateStrongPassword } from '@/lib/auth/admin';
+import { checkRateLimit } from '@/lib/auth/rateLimit';
 import {
   unsealSessionToken,
   sealSessionToken,
@@ -27,6 +29,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: 'جلسة الدخول غير صالحة أو منتهية.' }, { status: 401 });
     }
 
+    // Brute-force protection: max 5 password-change attempts per 15 minutes.
+    const changeRate = checkRateLimit(`change_password:${session.userId}`, 5, 15 * 60);
+    if (!changeRate.allowed) {
+      return NextResponse.json(
+        { ok: false, message: 'محاولات كثيرة جداً. برجاء المحاولة بعد 15 دقيقة.' },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const { oldPassword, newPassword } = body;
 
@@ -37,11 +48,10 @@ export async function POST(req: Request) {
       );
     }
 
-    if (newPassword.length < 8) {
-      return NextResponse.json(
-        { ok: false, message: 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل.' },
-        { status: 400 }
-      );
+    // Strong-password policy: 12+ chars with upper + lower + digit + symbol.
+    const weakReason = validateStrongPassword(newPassword);
+    if (weakReason) {
+      return NextResponse.json({ ok: false, message: weakReason }, { status: 400 });
     }
 
     if (oldPassword === newPassword) {
