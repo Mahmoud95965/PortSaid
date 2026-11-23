@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import { ADMIN_EMAIL, isAdminEmail } from '@/lib/auth/admin';
 import {
   Gauge,
   Users,
@@ -39,98 +39,33 @@ export const AdminDashboard: React.FC = () => {
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('home');
 
-  // Sample admin states
+  // Admin states — loaded only for the admin account from the server
+  // (/api/admin/overview). Never hardcode real accounts or sample
+  // businesses here: this component ships to every visitor's browser.
   const [userSearch, setUserSearch] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('all');
-  const [staffList, setStaffList] = useState([
-    {
-      id: 'a9ed234a-7b67-4f19-b2f9-c6296d4c7c46',
-      name: 'محمود محمد موسى',
-      email: 'mahmoud.m.moussa5310@gmail.com',
-      phone: '01026795965',
-      role: 'owner',
-      status: 'active',
-      perms: ['all'],
-    },
-  ]);
+  const [staffList, setStaffList] = useState<any[]>([]);
 
-  const [partnerApps, setPartnerApps] = useState([
-    {
-      id: 'pa-1',
-      business_name: 'مطعم كاستن للأسماك',
-      owner_name: 'كاستن',
-      phone: '01099887766',
-      area: 'حي الشرق',
-      discount: 15,
-      commission: 10,
-      status: 'pending',
-      created_at: '2026-10-16',
-    },
-    {
-      id: 'pa-2',
-      business_name: 'كافيه لوتس بورسعيد',
-      owner_name: 'محمد خالد',
-      phone: '01122334455',
-      area: 'حي العرب',
-      discount: 10,
-      commission: 5,
-      status: 'approved',
-      created_at: '2026-10-14',
-    },
-  ]);
+  const [partnerApps, setPartnerApps] = useState<any[]>([]);
 
-  // جلب طلبات التجار والمشرفين الحقيقيين من Supabase
+  // جلب طلبات التجار والمشرفين من الخادم (مسار إداري محمي).
+  // لا يقرأ المتصفح جداول Supabase مباشرة أبداً.
   useEffect(() => {
     async function fetchAdminData() {
-      if (isSupabaseConfigured() && supabase) {
-        try {
-          const { data: apps } = await supabase
-            .from('partner_applications')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-          if (apps && apps.length > 0) {
-            setPartnerApps(
-              apps.map((a: any) => ({
-                id: a.id,
-                business_name: a.business_name,
-                owner_name: a.phone || 'تاجر مسجل',
-                phone: a.phone || '',
-                area: a.area_ar || 'بورسعيد',
-                discount: a.proposed_discount_percent || 10,
-                commission: a.proposed_commission_amount || 5,
-                status: a.status || 'pending',
-                created_at: a.created_at ? a.created_at.slice(0, 10) : '',
-              }))
-            );
-          }
-
-          const { data: staffData } = await supabase
-            .from('users')
-            .select('id, name, email, phone, status, role_id, roles(code)')
-            .in('role_id', [1, 2])
-            .is('deleted_at', null);
-
-          if (staffData && staffData.length > 0) {
-            setStaffList(
-              staffData.map((u: any) => ({
-                id: u.id,
-                name: u.name,
-                email: u.email,
-                phone: u.phone,
-                role: u.roles?.code || 'admin',
-                status: u.status || 'active',
-                perms: u.role_id === 1 ? ['all'] : ['users.view', 'places.view', 'places.edit', 'stats.view'],
-              }))
-            );
-          }
-        } catch (e) {
-          console.error('Error fetching admin data from Supabase:', e);
+      if (!user || !isAdminEmail(user.email)) return;
+      try {
+        const res = await fetch('/api/admin/overview');
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          if (Array.isArray(data.partnerApps)) setPartnerApps(data.partnerApps);
+          if (Array.isArray(data.staffList)) setStaffList(data.staffList);
         }
+      } catch (e) {
+        console.error('Error fetching admin data:', e);
       }
     }
     fetchAdminData();
-  }, []);
+  }, [user]);
 
   const [logVerifyResult, setLogVerifyResult] = useState<string | null>(null);
 
@@ -299,8 +234,10 @@ export const AdminDashboard: React.FC = () => {
     );
   }
 
-  // 2. Strict Security Access Guard (Exclusively mahmoud.m.moussa5310@gmail.com)
-  if (!user || user.email !== 'mahmoud.m.moussa5310@gmail.com') {
+  // 2. Strict Security Access Guard (exclusively the admin account).
+  // Cosmetic defense-in-depth only: the real enforcement is the
+  // server-side gate in src/app/admin/page.tsx + the admin API routes.
+  if (!user || !isAdminEmail(user.email)) {
     return (
       <div className="min-h-screen bg-sand-50 dark:bg-[#071322] flex items-center justify-center p-4" dir="rtl">
         <div className="max-w-md w-full bg-white dark:bg-[#0c1622] rounded-3xl p-6 sm:p-8 border border-red-200 dark:border-red-950/60 shadow-2xl text-center space-y-5">
@@ -317,7 +254,7 @@ export const AdminDashboard: React.FC = () => {
               غير مصرح بالدخول
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-              هذه الصفحة مخصصة حصرياً للمسؤول المعتمد لمنصة <strong className="text-slate-900 dark:text-white">Port Said Hub</strong> (<span dir="ltr" className="font-mono text-teal2-600 dark:text-teal2-400">mahmoud.m.moussa5310@gmail.com</span>). حسابك الحالي لا يمتلك الصلاحيات الإدارية المطلوبة.
+              هذه الصفحة مخصصة حصرياً للمسؤول المعتمد لمنصة <strong className="text-slate-900 dark:text-white">Port Said Hub</strong> (<span dir="ltr" className="font-mono text-teal2-600 dark:text-teal2-400">{ADMIN_EMAIL}</span>). حسابك الحالي لا يمتلك الصلاحيات الإدارية المطلوبة.
             </p>
           </div>
 
@@ -570,31 +507,9 @@ export const AdminDashboard: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-sand-200/60 dark:divide-[#2a2a2a] text-ocean-900 dark:text-white">
                     <tr>
-                      <td className="p-4 font-bold">محمود محمد موسى</td>
-                      <td className="p-4 text-xs font-mono">01026795965 · mahmoud.m.moussa5310@gmail.com</td>
-                      <td className="p-4">
-                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-ocean-900 text-sand-400">مالك المنصة</span>
+                      <td colSpan={5} className="p-6 text-center text-sm text-slate-500 dark:text-slate-400 font-medium">
+                        لا يوجد مستخدمون معروضون — قائمة المستخدمين غير موصولة بمصدر بيانات خادم بعد.
                       </td>
-                      <td className="p-4 font-bold text-sand-500">500</td>
-                      <td className="p-4 text-teal2-600 font-bold">نشط</td>
-                    </tr>
-                    <tr>
-                      <td className="p-4 font-bold">كريم محمود</td>
-                      <td className="p-4 text-xs font-mono">01011223344 · karim@portsaidhub.com</td>
-                      <td className="p-4">
-                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-sand-200 dark:bg-[#2a2a2a] text-ocean-800 dark:text-slate-300">مستخدم</span>
-                      </td>
-                      <td className="p-4 font-bold text-sand-500">220</td>
-                      <td className="p-4 text-teal2-600 font-bold">نشط</td>
-                    </tr>
-                    <tr>
-                      <td className="p-4 font-bold">أحمد السيد</td>
-                      <td className="p-4 text-xs font-mono">01234567890 · ahmed@student.psu.edu.eg</td>
-                      <td className="p-4">
-                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-sand-200 dark:bg-[#2a2a2a] text-ocean-800 dark:text-slate-300">مستخدم</span>
-                      </td>
-                      <td className="p-4 font-bold text-sand-500">60</td>
-                      <td className="p-4 text-teal2-600 font-bold">نشط</td>
                     </tr>
                   </tbody>
                 </table>

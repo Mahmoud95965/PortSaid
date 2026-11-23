@@ -6,6 +6,7 @@ import { hashPasswordModern } from '@/lib/auth/password';
 import { verifyGoogleAccessToken } from '@/lib/auth/google';
 import { sealSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from '@/lib/auth/session';
 import { checkRateLimit, getClientIp } from '@/lib/auth/rateLimit';
+import { validateStrongPassword } from '@/lib/auth/admin';
 import { normalizePhone } from '@/lib/auth/validation';
 import { dbCreateUser, dbInsertPartnerApplication } from '@/lib/db/localDb';
 
@@ -66,7 +67,7 @@ export async function POST(req: Request) {
     // Password-less registration is ONLY allowed for a Google-verified email:
     // the caller must attach a valid Google (Supabase Auth) access token and
     // its email must match the registration email. Anything else still needs
-    // a password of 8+ characters, exactly as before.
+    // a strong password (12+ chars with upper + lower + digit + symbol).
     let isGoogleRegistration = false;
     if (!password) {
       if (!googleAccessToken || typeof googleAccessToken !== 'string') {
@@ -83,11 +84,11 @@ export async function POST(req: Request) {
         );
       }
       isGoogleRegistration = true;
-    } else if (password.length < 8) {
-      return NextResponse.json(
-        { ok: false, message: 'كلمة المرور يجب أن تكون 8 أحرف على الأقل.' },
-        { status: 400 }
-      );
+    } else {
+      const weakReason = validateStrongPassword(password);
+      if (weakReason) {
+        return NextResponse.json({ ok: false, message: weakReason }, { status: 400 });
+      }
     }
 
     // 3. Hash password with modern Salted Scrypt. A Google-only account has

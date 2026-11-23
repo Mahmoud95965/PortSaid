@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { isAdminEmail } from '@/lib/auth/admin';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import {
   Moon,
@@ -497,8 +498,8 @@ export const Header: React.FC<HeaderProps> = ({
                       </span>
                     </button>
 
-                    {/* لوحة التحكم للمالك والمشرف */}
-                    {(user?.role === 'admin' || user?.role === 'owner') && (
+                    {/* لوحة التحكم للمسؤول فقط */}
+                    {isAdminEmail(user?.email) && (
                       <Link
                         href="/admin"
                         onClick={() => setUserMenuOpen(false)}
