@@ -224,6 +224,67 @@ export async function POST(req: Request) {
 
     if (insertErr) {
       if (insertErr.code === '23505' || insertErr.message.includes('unique')) {
+        // A returning Google user reaching the signup form: the verified
+        // Google access token already proves ownership of this email (the
+        // same proof /api/auth/google accepts), so log them into their
+        // existing account instead of dead-ending with 409.
+        if (isGoogleRegistration) {
+          const { data: existingUser } = await supabase
+            .from('users')
+            .select('*, roles(code), user_types(code), governorates(name_ar), institutions(name_ar)')
+            .eq('email', trimmedEmail)
+            .eq('status', 'active')
+            .is('deleted_at', null)
+            .maybeSingle();
+
+          if (existingUser) {
+            if (existingUser.locked_until && new Date(existingUser.locked_until) > new Date()) {
+              return NextResponse.json(
+                { ok: false, message: 'هذا الحساب موقوف إدارياً. برجاء التواصل مع إدارة المنصة.' },
+                { status: 403 }
+              );
+            }
+
+            const existingRole = (existingUser.roles?.code || 'user') as 'owner' | 'admin' | 'merchant' | 'user';
+            const existingSessionToken = sealSessionToken({
+              userId: existingUser.id,
+              name: existingUser.name,
+              email: existingUser.email,
+              phone: existingUser.phone,
+              role: existingRole,
+            });
+
+            cookies().set(SESSION_COOKIE_NAME, existingSessionToken, {
+              httpOnly: true,
+              secure: process.env.NODE_ENV === 'production',
+              sameSite: 'lax',
+              path: '/',
+              maxAge: SESSION_MAX_AGE_SECONDS,
+            });
+
+            return NextResponse.json({
+              ok: true,
+              user: {
+                id: existingUser.id,
+                name: existingUser.name,
+                email: existingUser.email,
+                phone: existingUser.phone,
+                role: existingRole,
+                type: existingUser.user_types?.code,
+                gov: existingUser.governorates?.name_ar,
+                institution: existingUser.institutions?.name_ar,
+                gender: existingUser.gender,
+                points: existingUser.points_balance || 0,
+                avatar: existingUser.avatar,
+                email_verified: !!existingUser.email_verified_at,
+                staff: existingRole === 'owner' || existingRole === 'admin',
+                must_change_password: existingUser.must_change_password,
+              },
+            });
+          }
+          // No account with this email — the conflict was on the phone
+          // number only, so the 409 stands.
+        }
         return NextResponse.json(
           { ok: false, message: 'البريد الإلكتروني أو رقم الهاتف مسجل بالفعل مسبقاً.' },
           { status: 409 }

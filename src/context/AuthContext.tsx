@@ -327,8 +327,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const logout = async () => {
     setUser(null);
+    setGoogleUser(null);
     try {
       sessionStorage.removeItem('ps_user');
+      if (supabase) await supabase.auth.signOut();
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch (e) {}
   };
