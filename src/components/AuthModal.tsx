@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -124,10 +124,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onSuccess, onBackToWelcome
   const [showIntro, setShowIntro] = useState(false);
 
   // Pre-fill the name from the Google account (user_metadata full_name) for
-  // review/confirmation — the field stays editable.
+  // review/confirmation — the field stays editable. Pre-fill happens ONCE per
+  // Google identity: clearing the field must never bring the old name back.
+  const prefilledGoogleEmailRef = useRef<string | null>(null);
   useEffect(() => {
-    if (googleUser?.name && !name) {
-      setName(googleUser.name);
+    const email = googleUser?.email;
+    if (googleUser?.name && email && prefilledGoogleEmailRef.current !== email) {
+      prefilledGoogleEmailRef.current = email;
+      if (!name) setName(googleUser.name);
     }
   }, [googleUser, name]);
 
