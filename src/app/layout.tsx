@@ -147,7 +147,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl" className={cairo.variable} suppressHydrationWarning>
-      <body className={`${cairo.className} bg-sand-50 dark:bg-[#07162b] text-ocean-900 dark:text-[#eaf4ff] min-h-screen transition-colors antialiased`}>
+      <body className={`${cairo.className} bg-paper text-ink min-h-screen transition-colors antialiased`}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

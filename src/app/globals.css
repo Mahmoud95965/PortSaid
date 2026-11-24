@@ -5,10 +5,27 @@
 :root {
   --font-cairo: 'Cairo', Tahoma, sans-serif;
   color-scheme: light;
+  /* ---- Theme tokens (RGB triplets) ----
+     One palette for the whole app. Tailwind tokens (paper / surface /
+     surface-2 / ink / muted / line) read these variables, and the
+     dark-mode shim at the end of this file remaps the older ad-hoc
+     dark hex values onto the same three surfaces. */
+  --paper: 246 241 230;     /* warm cream page background */
+  --surface: 255 255 255;   /* cards */
+  --surface-2: 255 250 240; /* raised / hover (light) */
+  --line: 227 213 179;      /* warm sand borders */
+  --ink: 11 42 91;          /* navy text */
+  --muted: 91 107 127;      /* readable muted text */
 }
 
 :root.dark {
   color-scheme: dark;
+  --paper: 8 17 32;         /* deep navy page background */
+  --surface: 14 28 48;      /* cards — clearly lifted off the page */
+  --surface-2: 22 40 63;    /* raised / hover / table heads */
+  --line: 34 56 80;         /* visible navy borders */
+  --ink: 234 242 251;       /* near-white text */
+  --muted: 157 177 199;     /* cool blue-gray muted text */
 }
 
 html {
@@ -258,11 +275,11 @@ body {
 
 /* ===================== FORM INPUTS ===================== */
 .ps-input {
-  @apply w-full rounded-2xl border border-sand-200 dark:border-[#2a3a4a] bg-white dark:bg-[#1a2535] text-ocean-900 dark:text-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal2-500 dark:focus:ring-teal2-400 transition placeholder:text-slate-400 dark:placeholder:text-slate-500;
+  @apply w-full rounded-2xl border border-line bg-surface text-ink px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal2-500 dark:focus:ring-teal2-400 transition placeholder:text-slate-400 dark:placeholder:text-slate-500;
 }
 
 .ps-select {
-  @apply w-full rounded-2xl border border-sand-200 dark:border-[#2a3a4a] bg-white dark:bg-[#1a2535] text-ocean-900 dark:text-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal2-500 dark:focus:ring-teal2-400 transition;
+  @apply w-full rounded-2xl border border-line bg-surface text-ink px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal2-500 dark:focus:ring-teal2-400 transition;
 }
 
 .ps-btn-primary {
@@ -364,5 +381,121 @@ html:not(.dark) .text-ocean-700\/70,
 html:not(.dark) .text-ocean-900\/60,
 html:not(.dark) .text-ocean-900\/70 {
   color: #1e3a5f; /* deep readable navy */
+}
+
+/* ===================== DARK-MODE PALETTE SHIM ===================== */
+/* Compatibility: older components use ad-hoc dark hex values
+   (dark:bg-[#0c1622], dark:bg-[#121c29], dark:border-[#1d2d3e], …
+   — about 15 near-identical navies), which made dark mode look
+   patchy: every card, modal and table had a slightly different
+   background. These rules remap them onto the three token surfaces
+   (paper / surface / surface-2) and the token border, so the whole
+   app shares one dark palette. New code should use the
+   bg-paper / bg-surface / bg-surface-2 / border-line tokens directly.
+   The selectors are prefixed with `html.dark` so they outrank
+   Tailwind's generated rules on specificity (0,2,1 vs 0,2,0) — order
+   alone would not be enough, because Tailwind emits its utilities
+   after this file's custom CSS. Gradient stops (from-/via-/to-) are
+   intentionally left alone — they are decorative blends, not surfaces. */
+html.dark .dark\:bg-\[\#071322\],
+html.dark .dark\:bg-\[\#071322\]\/80,
+html.dark .dark\:bg-\[\#07162b\],
+html.dark .dark\:bg-\[\#0f1722\],
+html.dark .dark\:bg-\[\#0e1621\],
+html.dark .dark\:bg-\[\#0c1828\],
+html.dark .dark\:bg-\[\#0f1d2e\] {
+  background-color: rgb(var(--paper));
+}
+
+html.dark .dark\:bg-\[\#0c1622\],
+html.dark .dark\:bg-\[\#0c1622\]\/95,
+html.dark .dark\:bg-\[\#121c29\],
+html.dark .dark\:bg-\[\#121f2f\],
+html.dark .dark\:bg-\[\#142232\],
+html.dark .dark\:bg-\[\#0f1a28\],
+html.dark .dark\:bg-\[\#132233\],
+html.dark .dark\:bg-\[\#1a2535\],
+html.dark .dark\:bg-\[\#1a242d\],
+html.dark .dark\:bg-\[\#162433\],
+html.dark .dark\:bg-\[\#121c28\],
+html.dark .dark\:bg-\[\#111e2d\],
+html.dark .dark\:bg-\[\#101b2a\],
+html.dark .dark\:bg-\[\#132030\],
+html.dark .dark\:bg-\[\#1a2739\],
+html.dark .dark\:bg-\[\#1a2938\],
+html.dark .dark\:bg-\[\#162536\],
+html.dark .dark\:bg-\[\#152436\],
+html.dark .dark\:bg-\[\#142334\] {
+  background-color: rgb(var(--surface));
+}
+
+html.dark .dark\:bg-\[\#152332\],
+html.dark .dark\:bg-\[\#162738\],
+html.dark .dark\:bg-\[\#1a2d42\],
+html.dark .dark\:bg-\[\#212d37\],
+html.dark .dark\:bg-\[\#2a3a4a\],
+html.dark .dark\:bg-\[\#1e2f42\] {
+  background-color: rgb(var(--surface-2));
+}
+
+html.dark .dark\:border-\[\#1d2d3e\],
+html.dark .dark\:border-\[\#22354a\],
+html.dark .dark\:border-\[\#223246\],
+html.dark .dark\:border-\[\#1e2f42\],
+html.dark .dark\:border-\[\#24374c\],
+html.dark .dark\:border-\[\#213347\],
+html.dark .dark\:border-\[\#203042\],
+html.dark .dark\:border-\[\#1f2d3f\],
+html.dark .dark\:border-\[\#1a2739\],
+html.dark .dark\:border-\[\#2a3a4f\],
+html.dark .dark\:border-\[\#2a3a4a\],
+html.dark .dark\:border-\[\#152332\],
+html.dark .dark\:border-\[\#22364c\],
+html.dark .dark\:border-\[\#22354c\],
+html.dark .dark\:border-\[\#162232\],
+html.dark .dark\:border-\[\#31445d\],
+html.dark .dark\:border-\[\#2a2a2a\] {
+  border-color: rgb(var(--line));
+}
+
+html.dark .dark\:divide-\[\#2a2a2a\] > :not([hidden]) ~ :not([hidden]),
+html.dark .dark\:divide-\[\#1d2d3e\] > :not([hidden]) ~ :not([hidden]),
+html.dark .dark\:divide-\[\#172536\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgb(var(--line));
+}
+
+html.dark .dark\:hover\:bg-\[\#1d2d3e\]:hover,
+html.dark .dark\:hover\:bg-\[\#162738\]:hover,
+html.dark .dark\:hover\:bg-\[\#233b56\]:hover,
+html.dark .dark\:hover\:bg-\[\#1d1d1d\]:hover,
+html.dark .dark\:hover\:bg-\[\#121f2f\]:hover,
+html.dark .dark\:hover\:bg-\[\#162536\]:hover,
+html.dark .dark\:hover\:bg-\[\#142334\]:hover,
+html.dark .dark\:hover\:bg-\[\#283950\]:hover,
+html.dark .dark\:hover\:bg-\[\#243347\]:hover,
+html.dark .dark\:hover\:bg-\[\#22334a\]:hover,
+html.dark .dark\:hover\:bg-\[\#1f344a\]:hover,
+html.dark .dark\:hover\:bg-\[\#1c3046\]:hover,
+html.dark .dark\:hover\:bg-\[\#1a2c3f\]:hover,
+html.dark .dark\:hover\:bg-\[\#1a2739\]:hover,
+html.dark .dark\:hover\:bg-\[\#182535\]:hover,
+html.dark .dark\:hover\:bg-\[\#121c29\]:hover {
+  background-color: rgb(var(--surface-2));
+}
+
+/* ===================== LIGHT-MODE BORDER VISIBILITY ===================== */
+/* Pale sand-200 borders on white cards over a cream page were nearly
+   invisible, so cards looked borderless and the page looked flat.
+   Deepen them to the token border in light mode only. */
+html:not(.dark) .border-sand-200 {
+  border-color: rgb(var(--line));
+}
+
+html:not(.dark) .border-sand-200\/60 {
+  border-color: rgb(var(--line) / 0.6);
+}
+
+html:not(.dark) .divide-sand-200\/60 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgb(var(--line) / 0.6);
 }
 
