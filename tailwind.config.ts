@@ -13,6 +13,15 @@ const config: Config = {
         sans: ["Cairo", "Tahoma", "sans-serif"],
       },
       colors: {
+        /* Semantic theme tokens — backed by the CSS variables in
+           globals.css (:root / :root.dark). Use these for surfaces
+           instead of ad-hoc hex values. */
+        paper: 'rgb(var(--paper) / <alpha-value>)',
+        surface: 'rgb(var(--surface) / <alpha-value>)',
+        'surface-2': 'rgb(var(--surface-2) / <alpha-value>)',
+        ink: 'rgb(var(--ink) / <alpha-value>)',
+        muted: 'rgb(var(--muted) / <alpha-value>)',
+        line: 'rgb(var(--line) / <alpha-value>)',
         ocean: {
           50: "#eef6ff",
           100: "#d9ebff",

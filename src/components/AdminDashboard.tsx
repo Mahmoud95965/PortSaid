@@ -569,7 +569,11 @@ export const AdminDashboard: React.FC = () => {
                     ) : (
                       filteredUsers.map((u) => (
                         <tr key={u.id} className="hover:bg-sand-50 dark:hover:bg-[#1d1d1d] transition">
-                          <td className="p-4 font-bold">{u.name || '—'}</td>
+                          <td className="p-4 font-bold">
+                            <Link href={`/admin/users/${u.id}`} className="hover:text-teal2-600 hover:underline">
+                              {u.name || '—'}
+                            </Link>
+                          </td>
                           <td className="p-4">
                             <div className="font-medium" dir="ltr">{u.phone || '—'}</div>
                             <div className="text-xs text-ocean-700/60 dark:text-white/50" dir="ltr">{u.email || ''}</div>
@@ -625,7 +629,11 @@ export const AdminDashboard: React.FC = () => {
                     ) : (
                       staffList.map((s) => (
                         <tr key={s.id} className="hover:bg-sand-50 dark:hover:bg-[#1d1d1d] transition">
-                          <td className="p-4 font-bold">{s.name || '—'}</td>
+                          <td className="p-4 font-bold">
+                            <Link href={`/admin/users/${s.id}`} className="hover:text-teal2-600 hover:underline">
+                              {s.name || '—'}
+                            </Link>
+                          </td>
                           <td className="p-4">
                             <div className="font-medium" dir="ltr">{s.phone || '—'}</div>
                             <div className="text-xs text-ocean-700/60 dark:text-white/50" dir="ltr">{s.email || ''}</div>
