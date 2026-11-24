@@ -343,7 +343,7 @@ export const PartnerView: React.FC<PartnerViewProps> = ({ onBack }) => {
                   <select
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
-                    className="w-full rounded-2xl border border-sand-200 dark:border-[#22354a] bg-sand-50 dark:bg-[#142232] px-4 py-2.5 text-sm font-semibold"
+                    className="w-full rounded-2xl border border-line bg-surface text-ink px-4 py-2.5 text-sm font-semibold"
                   >
                     <option value="food">مطاعم</option>
                     <option value="cafe">كافيهات</option>
@@ -361,7 +361,7 @@ export const PartnerView: React.FC<PartnerViewProps> = ({ onBack }) => {
                   <select
                     value={newArea}
                     onChange={(e) => setNewArea(e.target.value)}
-                    className="w-full rounded-2xl border border-sand-200 dark:border-[#22354a] bg-sand-50 dark:bg-[#142232] px-4 py-2.5 text-sm font-semibold"
+                    className="w-full rounded-2xl border border-line bg-surface text-ink px-4 py-2.5 text-sm font-semibold"
                   >
                     {AREAS.map((a) => (
                       <option key={a} value={a}>

@@ -312,7 +312,7 @@ export const SightsView: React.FC<SightsViewProps> = ({
               <select
                 value={selectedArea}
                 onChange={(e) => setSelectedArea(e.target.value)}
-                className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] text-ocean-950 dark:text-white text-xs font-bold outline-none cursor-pointer focus:border-blue-600"
+                className="px-2.5 py-1.5 rounded-xl bg-surface border border-line text-ink text-xs font-bold outline-none cursor-pointer focus:border-blue-600"
               >
                 <option value="all">كل المناطق</option>
                 {availableAreas.map((area) => (

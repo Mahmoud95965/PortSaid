@@ -424,7 +424,7 @@ export const SportsView: React.FC<SportsViewProps> = ({
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-sand-50 dark:bg-[#142232] border border-sand-200 dark:border-[#22354a] rounded-xl px-2 py-1 text-xs font-bold text-ocean-900 dark:text-white focus:outline-none"
+                className="bg-surface border border-line rounded-xl px-2 py-1 text-xs font-bold text-ink focus:outline-none"
               >
                 <option value="featured">الأكثر تميزاً</option>
                 <option value="name">أبجدياً (أ-ي)</option>
