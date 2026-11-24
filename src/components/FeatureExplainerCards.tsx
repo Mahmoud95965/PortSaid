@@ -69,7 +69,7 @@ const STEPS_DATA: StepCard[] = [
       'جمعنا لك أهم الأماكن التي تميز محافظة بورسعيد: مطاعم الأسماك الشهيرة (كاستن، الجندي، البورصة)، كافيهات شارع طرح البحر والممشى السياحي، جبال الملح الساحرة في الملاحات، وحديقة فريال التاريخية وفنار بورسعيد القديم. كل مكان مدعوم بالصور الحقيقية، أوقات العمل، وخريطة للوصول.',
     icon: Compass,
     colorScheme: {
-      bg: 'from-teal2-900/40 via-teal2-950/20 to-[#071320]',
+      bg: 'from-teal2-950/40 via-teal2-950/20 to-[#071320]',
       border: 'border-teal2-500/40 hover:border-teal2-400',
       iconBg: 'bg-teal2-500/20 text-teal2-400 border border-teal2-400/30',
       iconColor: 'text-teal2-400',
@@ -114,7 +114,7 @@ const STEPS_DATA: StepCard[] = [
       'قسم مخصص لخدمة طلبة جامعة بورسعيد والمغتربين! يوضح خطوط المينى باص بين أحياء بورسعيد المختلفة (الأمين، الزهور، الـ 5000، الضواحي، العرب، الشرق، وبورفؤاد)، مع المحطة الدقيقة لكل كلية (الهندسة، الطب، الصيدلة، التكنولوجيا، والتربية)، بالإضافة لقسم كامل للسكن الطلابي المعتمد.',
     icon: Bus,
     colorScheme: {
-      bg: 'from-ocean-800/40 via-ocean-950/30 to-[#071322]',
+      bg: 'from-ocean-900/40 via-ocean-950/30 to-[#071322]',
       border: 'border-ocean-400/40 hover:border-ocean-300',
       iconBg: 'bg-ocean-500/20 text-ocean-300 border border-ocean-400/30',
       iconColor: 'text-ocean-300',
@@ -231,7 +231,7 @@ export const FeatureExplainerCards: React.FC<FeatureExplainerCardsProps> = ({
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-3xl p-4 sm:p-5 bg-gradient-to-r from-teal2-900/30 via-ocean-900/40 to-teal2-900/30 border border-teal2-500/30 text-ocean-900 dark:text-white flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg backdrop-blur-sm"
+          className="rounded-3xl p-4 sm:p-5 bg-gradient-to-r from-teal2-950/30 via-ocean-900/40 to-teal2-950/30 border border-teal2-500/30 text-ocean-900 dark:text-white flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg backdrop-blur-sm"
         >
           <div className="flex items-center gap-3.5 text-right w-full md:w-auto">
             <div className="w-11 h-11 rounded-2xl bg-teal2-500/20 text-teal2-400 grid place-items-center shrink-0 border border-teal2-400/30 shadow-inner">
@@ -482,7 +482,7 @@ export const FeatureExplainerCards: React.FC<FeatureExplainerCardsProps> = ({
                     <div className="w-0.5 h-4 sm:h-6 bg-gradient-to-b from-sand-300/80 via-amber-400 to-teal2-400/80 dark:from-sand-400/30 dark:to-teal2-500/30" />
 
                     {/* Arrow Badge */}
-                    <div className="px-4 py-1.5 rounded-full bg-gradient-to-r from-ocean-900 via-ocean-800 to-teal2-800 text-sand-300 border border-amber-400/40 shadow-sm flex items-center gap-2 text-[11px] sm:text-xs font-black z-10 select-none">
+                    <div className="px-4 py-1.5 rounded-full bg-gradient-to-r from-ocean-900 via-ocean-900 to-teal2-600 text-sand-300 border border-amber-400/40 shadow-sm flex items-center gap-2 text-[11px] sm:text-xs font-black z-10 select-none">
                       <ArrowLeft className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                       <span>{step.arrowNextText}</span>
                       <ArrowLeft className="w-3.5 h-3.5 text-amber-400 shrink-0" />
@@ -574,7 +574,7 @@ export const FeatureExplainerCards: React.FC<FeatureExplainerCardsProps> = ({
         initial={{ opacity: 0, y: 15 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="rounded-3xl p-5 sm:p-6 bg-gradient-to-r from-ocean-900 via-teal2-800 to-ocean-900 text-white shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-right border border-white/20"
+        className="rounded-3xl p-5 sm:p-6 bg-gradient-to-r from-ocean-900 via-teal2-600 to-ocean-900 text-white shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-right border border-white/20"
       >
         <div className="space-y-1">
           <h4 className="text-base sm:text-lg font-black flex items-center justify-center sm:justify-start gap-2">

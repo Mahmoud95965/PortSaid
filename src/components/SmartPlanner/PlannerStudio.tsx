@@ -279,7 +279,7 @@ export const PlannerStudio: React.FC<PlannerStudioProps> = ({
       {/* 1. Header with Controls */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#0c1622] border border-sand-300 dark:border-[#1d2d3e] shadow-lg">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal2-500 via-ocean-800 to-indigo-700 text-white grid place-items-center shrink-0 shadow-md">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal2-500 via-ocean-900 to-indigo-700 text-white grid place-items-center shrink-0 shadow-md">
             <Compass className="w-6 h-6 text-sand-300 animate-spin" style={{ animationDuration: '20s' }} />
           </div>
 
@@ -350,7 +350,7 @@ export const PlannerStudio: React.FC<PlannerStudioProps> = ({
               onClick={() => handleGeneratePlan()}
               disabled={loading}
               type="button"
-              className="absolute left-2 px-4 py-2 rounded-xl bg-gradient-to-r from-ocean-900 via-ocean-800 to-teal2-700 text-white font-black text-xs shadow-md hover:opacity-95 transition disabled:opacity-50 flex items-center gap-1.5"
+              className="absolute left-2 px-4 py-2 rounded-xl bg-gradient-to-r from-ocean-900 via-ocean-900 to-teal2-600 text-white font-black text-xs shadow-md hover:opacity-95 transition disabled:opacity-50 flex items-center gap-1.5"
             >
               {loading ? (
                 <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />

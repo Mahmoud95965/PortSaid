@@ -801,7 +801,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onNavigate }) => {
               <button
                 type="submit"
                 disabled={!input.trim() || loading}
-                className="p-2.5 rounded-2xl bg-gradient-to-r from-ocean-900 via-indigo-900 to-teal2-700 text-white disabled:opacity-40 hover:opacity-90 transition shrink-0 shadow-sm"
+                className="p-2.5 rounded-2xl bg-gradient-to-r from-ocean-900 via-indigo-900 to-teal2-600 text-white disabled:opacity-40 hover:opacity-90 transition shrink-0 shadow-sm"
               >
                 <Send className="w-4 h-4" />
               </button>

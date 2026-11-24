@@ -591,7 +591,7 @@ export const MapView: React.FC<MapViewProps> = ({
             </button>
           )}
 
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-teal2-500 to-ocean-800 text-white grid place-items-center shrink-0 shadow-md">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-teal2-500 to-ocean-900 text-white grid place-items-center shrink-0 shadow-md">
             <Compass className="w-6 h-6 text-sand-300" />
           </div>
 
@@ -660,7 +660,7 @@ export const MapView: React.FC<MapViewProps> = ({
             onClick={handleLocateUser}
             disabled={locatingUser}
             type="button"
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-ocean-900 via-ocean-800 to-teal2-700 text-white font-bold text-xs shadow-md hover:opacity-95 transition disabled:opacity-50"
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-ocean-900 via-ocean-900 to-teal2-600 text-white font-bold text-xs shadow-md hover:opacity-95 transition disabled:opacity-50"
           >
             <Navigation className={`w-4 h-4 text-sand-400 ${locatingUser ? 'animate-spin' : ''}`} />
             <span>{locatingUser ? 'جارٍ تحديد موقعك...' : 'موقعي الحالي'}</span>

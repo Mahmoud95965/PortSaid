@@ -116,7 +116,7 @@ export const PwaInstallPrompt: React.FC = () => {
           {/* Header */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-ocean-700 to-teal2-700 p-2 text-white shadow-md grid place-items-center shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-ocean-700 to-teal2-600 p-2 text-white shadow-md grid place-items-center shrink-0">
                 <img
                   src="/assets/logo/icon-192.png"
                   alt="Port Said Hub"
@@ -175,7 +175,7 @@ export const PwaInstallPrompt: React.FC = () => {
               <button
                 onClick={handleInstallClick}
                 type="button"
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-ocean-800 to-teal2-600 text-white font-black text-xs sm:text-sm shadow-md hover:brightness-110 active:scale-95 transition"
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-ocean-900 to-teal2-600 text-white font-black text-xs sm:text-sm shadow-md hover:brightness-110 active:scale-95 transition"
               >
                 <Download className="w-4 h-4 text-sand-300" />
                 <span>تثبيت التطبيق الآن</span>

@@ -59,7 +59,7 @@ export const PointsDetailsView: React.FC<PointsDetailsViewProps> = ({
     if (pts >= 500) return { name: 'سفير بورسعيد المتميز', icon: '👑', color: 'from-amber-400 to-yellow-500', next: 1000, target: 1000 };
     if (pts >= 250) return { name: 'خبير بورسعيد', icon: '🥇', color: 'from-amber-300 to-amber-500', next: 500, target: 500 };
     if (pts >= 100) return { name: 'مستكشف نشط', icon: '🥈', color: 'from-teal2-400 to-teal2-600', next: 250, target: 250 };
-    return { name: 'مستكشف جديد', icon: '🥉', color: 'from-ocean-400 to-ocean-600', next: 100, target: 100 };
+    return { name: 'مستكشف جديد', icon: '🥉', color: 'from-ocean-500 to-ocean-700', next: 100, target: 100 };
   };
 
   const tier = getTier(points);
@@ -206,7 +206,7 @@ export const PointsDetailsView: React.FC<PointsDetailsViewProps> = ({
       {activeTab === 'how_to_use' && (
         <div className="space-y-6 pop-in">
           {/* Explanation Banner */}
-          <div className="rounded-3xl bg-gradient-to-br from-teal2-50 to-sand-50 dark:from-[#0d1e2e] dark:to-[#121c28] p-5 sm:p-6 border border-teal2-200/60 dark:border-teal2-900/40">
+          <div className="rounded-3xl bg-gradient-to-br from-teal2-100 to-sand-50 dark:from-[#0d1e2e] dark:to-[#121c28] p-5 sm:p-6 border border-teal2-200/60 dark:border-teal2-900/40">
             <h3 className="font-black text-base sm:text-lg text-ocean-900 dark:text-white flex items-center gap-2">
               <Ticket className="w-5 h-5 text-teal2-600" />
               <span>استبدل نقاطك بكوبونات خصم فورية بنظام QR Code</span>
@@ -290,7 +290,7 @@ export const PointsDetailsView: React.FC<PointsDetailsViewProps> = ({
                         type="button"
                         className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 transition shadow-sm ${
                           canAfford
-                            ? 'bg-gradient-to-r from-teal2-600 to-ocean-800 text-white hover:opacity-95'
+                            ? 'bg-gradient-to-r from-teal2-600 to-ocean-900 text-white hover:opacity-95'
                             : 'bg-sand-200 dark:bg-[#1a2938] text-ocean-900/40 dark:text-white/30 cursor-not-allowed'
                         }`}
                       >

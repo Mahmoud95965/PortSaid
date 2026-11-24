@@ -562,7 +562,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <button
                         onClick={() => navigateAndClose('ai')}
                         type="button"
-                        className="px-2.5 py-1 rounded-full bg-gradient-to-r from-teal2-600 to-ocean-800 text-white text-[11px] font-black flex items-center gap-1 shadow"
+                        className="px-2.5 py-1 rounded-full bg-gradient-to-r from-teal2-600 to-ocean-900 text-white text-[11px] font-black flex items-center gap-1 shadow"
                       >
                         <Sparkles className="w-3 h-3 text-sand-300" />
                         <span>AI Suite ✦</span>

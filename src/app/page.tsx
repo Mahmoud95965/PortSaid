@@ -272,7 +272,7 @@ export default function HomePage() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-            className="fixed bottom-6 inset-x-0 mx-auto w-fit max-w-[90%] z-50 rounded-2xl bg-gradient-to-r from-ocean-900 via-ocean-800 to-teal2-700 text-white px-6 py-3.5 font-bold shadow-2xl text-center text-xs sm:text-sm border border-white/20 backdrop-blur-md"
+            className="fixed bottom-6 inset-x-0 mx-auto w-fit max-w-[90%] z-50 rounded-2xl bg-gradient-to-r from-ocean-900 via-ocean-900 to-teal2-600 text-white px-6 py-3.5 font-bold shadow-2xl text-center text-xs sm:text-sm border border-white/20 backdrop-blur-md"
           >
             {toastMessage}
           </motion.div>
@@ -304,7 +304,7 @@ export default function HomePage() {
                 <button
                   onClick={() => handleNavigate('ai')}
                   type="button"
-                  className="shrink-0 px-3.5 sm:px-4 py-2 rounded-2xl bg-gradient-to-r from-ocean-900 to-teal2-700 text-white text-xs sm:text-sm font-black shadow-md border border-teal2-400/30 flex items-center gap-2 transition-transform active:scale-95"
+                  className="shrink-0 px-3.5 sm:px-4 py-2 rounded-2xl bg-gradient-to-r from-ocean-900 to-teal2-600 text-white text-xs sm:text-sm font-black shadow-md border border-teal2-400/30 flex items-center gap-2 transition-transform active:scale-95"
                 >
                   <Sparkles className="w-4 h-4 text-sand-300" />
                   <span>خطط خروجتك بالذكاء الاصطناعي ✦</span>

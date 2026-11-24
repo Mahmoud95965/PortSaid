@@ -83,7 +83,7 @@ export const ItineraryTimeline: React.FC<ItineraryTimelineProps> = ({
   return (
     <div className="space-y-4">
       {/* 1. Trip Header Summary Card */}
-      <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-ocean-950 via-ocean-900 to-teal2-800 text-white shadow-xl border border-white/10 relative overflow-hidden">
+      <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-ocean-950 via-ocean-900 to-teal2-600 text-white shadow-xl border border-white/10 relative overflow-hidden">
         {/* Glow */}
         <div className="absolute top-0 right-0 w-48 h-48 bg-teal2-400/10 rounded-full blur-2xl pointer-events-none" />
 

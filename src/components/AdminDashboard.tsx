@@ -307,7 +307,7 @@ export const AdminDashboard: React.FC = () => {
             onClick={() => setActiveTab('home')}
             className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
               activeTab === 'home'
-                ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
+                ? 'bg-gradient-to-r from-ocean-900 to-teal2-600 text-white border-transparent shadow-md'
                 : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
             }`}
           >
@@ -319,7 +319,7 @@ export const AdminDashboard: React.FC = () => {
             onClick={() => setActiveTab('users')}
             className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
               activeTab === 'users'
-                ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
+                ? 'bg-gradient-to-r from-ocean-900 to-teal2-600 text-white border-transparent shadow-md'
                 : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
             }`}
           >
@@ -332,7 +332,7 @@ export const AdminDashboard: React.FC = () => {
               onClick={() => setActiveTab('staff')}
               className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
                 activeTab === 'staff'
-                  ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
+                  ? 'bg-gradient-to-r from-ocean-900 to-teal2-600 text-white border-transparent shadow-md'
                   : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
               }`}
             >
@@ -345,7 +345,7 @@ export const AdminDashboard: React.FC = () => {
             onClick={() => setActiveTab('places')}
             className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
               activeTab === 'places'
-                ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
+                ? 'bg-gradient-to-r from-ocean-900 to-teal2-600 text-white border-transparent shadow-md'
                 : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
             }`}
           >
@@ -357,7 +357,7 @@ export const AdminDashboard: React.FC = () => {
             onClick={() => setActiveTab('stats')}
             className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
               activeTab === 'stats'
-                ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
+                ? 'bg-gradient-to-r from-ocean-900 to-teal2-600 text-white border-transparent shadow-md'
                 : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
             }`}
           >
@@ -369,7 +369,7 @@ export const AdminDashboard: React.FC = () => {
             onClick={() => setActiveTab('history')}
             className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
               activeTab === 'history'
-                ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
+                ? 'bg-gradient-to-r from-ocean-900 to-teal2-600 text-white border-transparent shadow-md'
                 : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
             }`}
           >
@@ -382,7 +382,7 @@ export const AdminDashboard: React.FC = () => {
               onClick={() => setActiveTab('logs')}
               className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
                 activeTab === 'logs'
-                  ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
+                  ? 'bg-gradient-to-r from-ocean-900 to-teal2-600 text-white border-transparent shadow-md'
                   : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
               }`}
             >

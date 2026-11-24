@@ -62,7 +62,7 @@ const GUIDE_STEPS: GuideStep[] = [
     tip: 'نصيحة: اضغط على أي مكان لفتح تفاصيله الكاملة والتقييمات.',
     icon: Compass,
     accentColor: 'text-teal2-500',
-    bgGradient: 'from-teal2-600 via-teal2-700 to-ocean-900',
+    bgGradient: 'from-teal2-600 via-teal2-600 to-ocean-900',
     targetView: 'list',
     visualPreview: {
       title: 'أقسام الاستكشاف الرئيسية',
@@ -116,7 +116,7 @@ const GUIDE_STEPS: GuideStep[] = [
     tip: 'نصيحة: المعدية بين بورسعيد وبورفؤاد مجانية للمشاة والركاب وتعمل 24 ساعة.',
     icon: Bus,
     accentColor: 'text-ocean-400',
-    bgGradient: 'from-ocean-700 via-ocean-800 to-teal2-950',
+    bgGradient: 'from-ocean-700 via-ocean-900 to-teal2-950',
     targetView: 'bus',
     visualPreview: {
       title: 'أشهر خطوط المواصلات',
@@ -143,7 +143,7 @@ const GUIDE_STEPS: GuideStep[] = [
     tip: 'نصيحة: جرب تضغط على أحد الأسئلة المقترحة السريعة داخل الشات بوت.',
     icon: Bot,
     accentColor: 'text-teal2-400',
-    bgGradient: 'from-teal2-600 via-ocean-800 to-[#061426]',
+    bgGradient: 'from-teal2-600 via-ocean-900 to-[#061426]',
     visualPreview: {
       title: 'أمثلة لأسئلة المساعد',
       items: [
@@ -379,7 +379,7 @@ export const SiteGuideModal: React.FC<SiteGuideModalProps> = ({
             <button
               onClick={handleNext}
               type="button"
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal2-600 to-ocean-800 text-white font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-teal2-600/30 hover:opacity-95 transition"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal2-600 to-ocean-900 text-white font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-teal2-600/30 hover:opacity-95 transition"
             >
               <span>{isLast ? 'ابدأ الاستكشاف 🚀' : 'الخطوة التالية'}</span>
               {!isLast && <ArrowLeft className="w-4 h-4" />}
