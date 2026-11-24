@@ -15,10 +15,7 @@ import {
   MessageSquare,
   BarChart3,
   Video,
-  CheckCircle,
-  AlertTriangle,
   Lock,
-  Search,
   Plus,
   Trash2,
   Edit,
@@ -45,11 +42,26 @@ export const AdminDashboard: React.FC = () => {
   const [userSearch, setUserSearch] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('all');
   const [staffList, setStaffList] = useState<any[]>([]);
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [placesList, setPlacesList] = useState<any[]>([]);
+  const [activityLog, setActivityLog] = useState<any[]>([]);
+  const [counts, setCounts] = useState({
+    users: 0,
+    placesActive: 0,
+    placesTotal: 0,
+    visits: 0,
+    memories: 0,
+    stories: 0,
+    storiesPublished: 0,
+    partnersPending: 0,
+    partnersApproved: 0,
+  });
 
   const [partnerApps, setPartnerApps] = useState<any[]>([]);
 
-  // جلب طلبات التجار والمشرفين من الخادم (مسار إداري محمي).
-  // لا يقرأ المتصفح جداول Supabase مباشرة أبداً.
+  // جلب كل بيانات لوحة التحكم من الخادم (مسار إداري محمي).
+  // لا يقرأ المتصفح جداول Supabase مباشرة أبداً، ولا توجد أرقام
+  // مكتوبة يدوياً هنا — كل قيمة معروضة تأتي من /api/admin/overview.
   useEffect(() => {
     async function fetchAdminData() {
       if (!user || !isAdminEmail(user.email)) return;
@@ -57,8 +69,12 @@ export const AdminDashboard: React.FC = () => {
         const res = await fetch('/api/admin/overview');
         const data = await res.json();
         if (res.ok && data.ok) {
+          if (data.counts) setCounts(data.counts);
           if (Array.isArray(data.partnerApps)) setPartnerApps(data.partnerApps);
           if (Array.isArray(data.staffList)) setStaffList(data.staffList);
+          if (Array.isArray(data.users)) setUsersList(data.users);
+          if (Array.isArray(data.places)) setPlacesList(data.places);
+          if (Array.isArray(data.activityLog)) setActivityLog(data.activityLog);
         }
       } catch (e) {
         console.error('Error fetching admin data:', e);
@@ -66,8 +82,6 @@ export const AdminDashboard: React.FC = () => {
     }
     fetchAdminData();
   }, [user]);
-
-  const [logVerifyResult, setLogVerifyResult] = useState<string | null>(null);
 
   // ---------------------------------------------------------
   // Historical Stories State & Handlers
@@ -210,12 +224,44 @@ export const AdminDashboard: React.FC = () => {
 
   const pendingPartnersCount = partnerApps.filter((x) => x.status === 'pending').length;
 
-  const handleVerifyChain = () => {
-    setLogVerifyResult('جارٍ التحقق من التشفير المتسلسل...');
-    setTimeout(() => {
-      setLogVerifyResult('سلسلة سجل الموقع سليمة بنسبة 100% (تم فحص 342 حدثًا تشفيريًا بنجاح).');
-    }, 800);
+  const ROLE_LABELS: Record<string, string> = {
+    owner: 'المالك',
+    admin: 'مشرف',
+    merchant: 'تاجر',
+    user: 'مستخدم',
   };
+
+  const CATEGORY_LABELS: Record<string, string> = {
+    food: 'مطاعم',
+    cafe: 'مقاهي',
+    fun: 'ترفيه',
+    housing: 'سكن',
+    transport: 'مواصلات',
+    shop: 'تسوق',
+    sport: 'رياضة',
+    sweets: 'حلويات',
+  };
+
+  const filteredUsers = usersList.filter((u) => {
+    const q = userSearch.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      [u.name, u.email, u.phone].some((v) => (v || '').toLowerCase().includes(q));
+    const matchesStatus = userStatusFilter === 'all' || u.status === userStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const placesByCategory = placesList.reduce<Record<string, number>>((acc, p) => {
+    const key = p.category || 'أخرى';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  const usersByRole = usersList.reduce<Record<string, number>>((acc, u) => {
+    const key = u.role || 'user';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
 
   // 1. Loading Guard
   if (loading) {
@@ -433,52 +479,45 @@ export const AdminDashboard: React.FC = () => {
         {/* Tab Content: Home Overview */}
         {activeTab === 'home' && (
           <div className="space-y-6 pop-in">
-            {/* Stats Cards */}
+            {/* Stats Cards — real counts from /api/admin/overview, never hardcoded */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
                 <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">المستخدمين المسجلين</p>
-                <p className="text-2xl sm:text-3xl font-black mt-2 text-ocean-900 dark:text-white">1,248</p>
+                <p className="text-2xl sm:text-3xl font-black mt-2 text-ocean-900 dark:text-white">{counts.users.toLocaleString('ar-EG')}</p>
               </div>
 
               <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
                 <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">الأماكن النشطة</p>
-                <p className="text-2xl sm:text-3xl font-black mt-2 text-teal2-600 dark:text-teal2-400">42</p>
+                <p className="text-2xl sm:text-3xl font-black mt-2 text-teal2-600 dark:text-teal2-400">{counts.placesActive.toLocaleString('ar-EG')}</p>
+                <p className="text-[11px] text-ocean-700/60 dark:text-white/50 font-bold mt-1">من إجمالي {counts.placesTotal.toLocaleString('ar-EG')} مكان</p>
               </div>
 
               <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
                 <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">إجمالي الزيارات المؤكدة</p>
-                <p className="text-2xl sm:text-3xl font-black mt-2 text-ocean-700 dark:text-ocean-300">2,840</p>
+                <p className="text-2xl sm:text-3xl font-black mt-2 text-ocean-700 dark:text-ocean-300">{counts.visits.toLocaleString('ar-EG')}</p>
+              </div>
+
+              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
+                <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">ذكريات المجتمع</p>
+                <p className="text-2xl sm:text-3xl font-black mt-2 text-ocean-900 dark:text-white">{counts.memories.toLocaleString('ar-EG')}</p>
+              </div>
+
+              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
+                <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">القصص التاريخية المنشورة</p>
+                <p className="text-2xl sm:text-3xl font-black mt-2 text-teal2-600 dark:text-teal2-400">{counts.storiesPublished.toLocaleString('ar-EG')}</p>
+                <p className="text-[11px] text-ocean-700/60 dark:text-white/50 font-bold mt-1">من إجمالي {counts.stories.toLocaleString('ar-EG')} قصة</p>
+              </div>
+
+              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
+                <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">طلبات التجار قيد المراجعة</p>
+                <p className="text-2xl sm:text-3xl font-black mt-2 text-ocean-700 dark:text-ocean-300">{counts.partnersPending.toLocaleString('ar-EG')}</p>
+                <p className="text-[11px] text-ocean-700/60 dark:text-white/50 font-bold mt-1">{counts.partnersApproved.toLocaleString('ar-EG')} طلب معتمد</p>
               </div>
             </div>
-
-            {/* Security Alerts (Owner Only) */}
-            {isOwner && (
-              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-6 shadow border border-sand-200/60 dark:border-[#1d2d3e] space-y-4">
-                <h3 className="text-lg font-black flex items-center gap-2">
-                  <ShieldAlert className="w-5 h-5 text-sand-500" />
-                  <span>مراقبة الأمان والنزاهة التشفيرية</span>
-                </h3>
-                <p className="text-sm text-ocean-700/80 dark:text-white/70">
-                  السجل التشفيري يراقب كل نشاط في الموقع عبر هاش SHA-256 متسلسل، ولا يمكن تعديل أي سجل في قاعدة البيانات دون اكتشافه.
-                </p>
-                <button
-                  type="button"
-                  onClick={handleVerifyChain}
-                  className="px-5 py-2.5 rounded-xl bg-ocean-900 hover:bg-ocean-700 text-white font-bold text-xs transition"
-                >
-                  فحص سلامة سلسلة السجل الآن
-                </button>
-                {logVerifyResult && (
-                  <p className="text-xs font-bold text-teal2-600 dark:text-teal2-400 p-3 rounded-xl bg-teal2-50 dark:bg-teal2-950/40">
-                    {logVerifyResult}
-                  </p>
-                )}
-              </div>
-            )}
           </div>
         )}
 
-        {/* Tab Content: Users */}
+        {/* Tab Content: Users — real accounts from the server */}
         {activeTab === 'users' && (
           <div className="space-y-4 pop-in">
             <div className="flex gap-3 flex-wrap">
@@ -491,7 +530,20 @@ export const AdminDashboard: React.FC = () => {
                   className="w-full rounded-2xl border border-sand-200 dark:border-[#1d2d3e] bg-white dark:bg-[#0c1622] px-4 py-2.5 text-sm text-ocean-950 dark:text-white placeholder:text-slate-400 outline-none focus:border-teal2-500 font-medium"
                 />
               </div>
+              <select
+                value={userStatusFilter}
+                onChange={(e) => setUserStatusFilter(e.target.value)}
+                className="rounded-2xl border border-sand-200 dark:border-[#1d2d3e] bg-white dark:bg-[#0c1622] px-4 py-2.5 text-sm text-ocean-950 dark:text-white outline-none focus:border-teal2-500 font-bold"
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط</option>
+                <option value="suspended">موقوف</option>
+              </select>
             </div>
+
+            <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">
+              عرض {filteredUsers.length.toLocaleString('ar-EG')} من إجمالي {usersList.length.toLocaleString('ar-EG')} حساب
+            </p>
 
             <div className="rounded-3xl bg-white dark:bg-[#0c1622] shadow overflow-hidden border border-sand-200/60 dark:border-[#1d2d3e]">
               <div className="overflow-x-auto">
@@ -501,16 +553,43 @@ export const AdminDashboard: React.FC = () => {
                       <th className="p-4">الاسم</th>
                       <th className="p-4">الهاتف / البريد</th>
                       <th className="p-4">الرتبة</th>
-                      <th className="p-4">النقاط</th>
+                      <th className="p-4">تاريخ التسجيل</th>
                       <th className="p-4">الحالة</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-sand-200/60 dark:divide-[#2a2a2a] text-ocean-900 dark:text-white">
-                    <tr>
-                      <td colSpan={5} className="p-6 text-center text-sm text-slate-500 dark:text-slate-400 font-medium">
-                        لا يوجد مستخدمون معروضون — قائمة المستخدمين غير موصولة بمصدر بيانات خادم بعد.
-                      </td>
-                    </tr>
+                    {filteredUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-6 text-center text-sm text-slate-500 dark:text-slate-400 font-medium">
+                          {usersList.length === 0
+                            ? 'لا يوجد مستخدمون مسجلون بعد.'
+                            : 'لا توجد نتائج مطابقة للبحث.'}
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredUsers.map((u) => (
+                        <tr key={u.id} className="hover:bg-sand-50 dark:hover:bg-[#1d1d1d] transition">
+                          <td className="p-4 font-bold">{u.name || '—'}</td>
+                          <td className="p-4">
+                            <div className="font-medium" dir="ltr">{u.phone || '—'}</div>
+                            <div className="text-xs text-ocean-700/60 dark:text-white/50" dir="ltr">{u.email || ''}</div>
+                          </td>
+                          <td className="p-4 font-bold">{ROLE_LABELS[u.role] || u.role || '—'}</td>
+                          <td className="p-4 font-medium" dir="ltr">{u.created_at || '—'}</td>
+                          <td className="p-4">
+                            <span
+                              className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                                u.status === 'active'
+                                  ? 'bg-teal2-100 text-teal2-700'
+                                  : 'bg-red-100 text-red-700'
+                              }`}
+                            >
+                              {u.status === 'active' ? 'نشط' : 'موقوف'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -518,34 +597,212 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Tab Content: Partner Applications */}
+        {/* Tab Content: Staff — real owner/admin accounts from the server */}
+        {activeTab === 'staff' && (
+          <div className="space-y-4 pop-in">
+            <h3 className="text-xl font-black">فريق الإدارة</h3>
+            <p className="text-xs text-ocean-700/70 dark:text-white/60">
+              الحسابات التي تحمل رتبة مالك أو مشرف في قاعدة البيانات.
+            </p>
+            <div className="rounded-3xl bg-white dark:bg-[#0c1622] shadow overflow-hidden border border-sand-200/60 dark:border-[#1d2d3e]">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-right">
+                  <thead className="bg-sand-100 dark:bg-[#212d37] text-xs font-black text-ocean-900 dark:text-white">
+                    <tr>
+                      <th className="p-4">الاسم</th>
+                      <th className="p-4">الهاتف / البريد</th>
+                      <th className="p-4">الرتبة</th>
+                      <th className="p-4">الحالة</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-sand-200/60 dark:divide-[#2a2a2a] text-ocean-900 dark:text-white">
+                    {staffList.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="p-6 text-center text-sm text-slate-500 dark:text-slate-400 font-medium">
+                          لا توجد حسابات إدارية أخرى مسجلة.
+                        </td>
+                      </tr>
+                    ) : (
+                      staffList.map((s) => (
+                        <tr key={s.id} className="hover:bg-sand-50 dark:hover:bg-[#1d1d1d] transition">
+                          <td className="p-4 font-bold">{s.name || '—'}</td>
+                          <td className="p-4">
+                            <div className="font-medium" dir="ltr">{s.phone || '—'}</div>
+                            <div className="text-xs text-ocean-700/60 dark:text-white/50" dir="ltr">{s.email || ''}</div>
+                          </td>
+                          <td className="p-4 font-bold">{ROLE_LABELS[s.role] || s.role || '—'}</td>
+                          <td className="p-4">
+                            <span
+                              className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                                s.status === 'active'
+                                  ? 'bg-teal2-100 text-teal2-700'
+                                  : 'bg-red-100 text-red-700'
+                              }`}
+                            >
+                              {s.status === 'active' ? 'نشط' : 'موقوف'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab Content: Partner Applications — real rows from the server */}
         {activeTab === 'partners' && (
           <div className="space-y-4 pop-in">
             <h3 className="text-xl font-black">طلبات انضمام التجار والشركاء</h3>
+            {partnerApps.length === 0 ? (
+              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-8 shadow border border-sand-200/60 dark:border-[#1d2d3e] text-center text-sm text-slate-500 dark:text-slate-400 font-medium">
+                لا توجد طلبات انضمام مسجلة بعد.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {partnerApps.map((app) => (
+                  <div
+                    key={app.id}
+                    className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e] space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-extrabold text-lg">{app.business_name}</h4>
+                      <span
+                        className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                          app.status === 'approved' ? 'bg-teal2-100 text-teal2-700' : 'bg-sand-100 text-sand-700'
+                        }`}
+                      >
+                        {app.status === 'approved' ? 'معتمد' : 'قيد المراجعة'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-ocean-700/70 dark:text-white/60">
+                      {app.owner_name ? `المالك: ${app.owner_name} · ` : ''}الهاتف: {app.phone || '—'} · المنطقة: {app.area || '—'}
+                    </p>
+                    <div className="flex gap-4 text-xs font-bold pt-2 border-t border-sand-200/60 dark:border-[#1d2d3e]">
+                      <span>الخصم المقترح: {app.discount ?? '—'}%</span>
+                      <span>عمولة Alpha: {app.commission ?? '—'} ج</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab Content: Places — real rows from Supabase */}
+        {activeTab === 'places' && (
+          <div className="space-y-4 pop-in">
+            <h3 className="text-xl font-black">الأماكن</h3>
+            <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">
+              {counts.placesTotal.toLocaleString('ar-EG')} مكان مسجل، منها {counts.placesActive.toLocaleString('ar-EG')} نشط
+            </p>
+            <div className="rounded-3xl bg-white dark:bg-[#0c1622] shadow overflow-hidden border border-sand-200/60 dark:border-[#1d2d3e]">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-right">
+                  <thead className="bg-sand-100 dark:bg-[#212d37] text-xs font-black text-ocean-900 dark:text-white">
+                    <tr>
+                      <th className="p-4">الاسم</th>
+                      <th className="p-4">التصنيف</th>
+                      <th className="p-4">المنطقة</th>
+                      <th className="p-4">الحالة</th>
+                      <th className="p-4">تاريخ الإضافة</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-sand-200/60 dark:divide-[#2a2a2a] text-ocean-900 dark:text-white">
+                    {placesList.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-6 text-center text-sm text-slate-500 dark:text-slate-400 font-medium">
+                          لا توجد أماكن مسجلة بعد.
+                        </td>
+                      </tr>
+                    ) : (
+                      placesList.map((p) => (
+                        <tr key={p.id} className="hover:bg-sand-50 dark:hover:bg-[#1d1d1d] transition">
+                          <td className="p-4 font-bold">{p.name || '—'}</td>
+                          <td className="p-4 font-medium">{CATEGORY_LABELS[p.category] || p.category || '—'}</td>
+                          <td className="p-4 font-medium">{p.area || '—'}</td>
+                          <td className="p-4">
+                            <span
+                              className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                                p.status === 'active'
+                                  ? 'bg-teal2-100 text-teal2-700'
+                                  : 'bg-sand-100 text-sand-700'
+                              }`}
+                            >
+                              {p.status === 'active' ? 'نشط' : p.status || '—'}
+                            </span>
+                          </td>
+                          <td className="p-4 font-medium" dir="ltr">{p.created_at || '—'}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab Content: Stats — real aggregates from the server */}
+        {activeTab === 'stats' && (
+          <div className="space-y-6 pop-in">
+            <h3 className="text-xl font-black">الإحصائيات</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
+                <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">المستخدمون</p>
+                <p className="text-2xl sm:text-3xl font-black mt-2">{counts.users.toLocaleString('ar-EG')}</p>
+              </div>
+              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
+                <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">الأماكن النشطة</p>
+                <p className="text-2xl sm:text-3xl font-black mt-2 text-teal2-600 dark:text-teal2-400">{counts.placesActive.toLocaleString('ar-EG')}</p>
+              </div>
+              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
+                <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">الزيارات المؤكدة</p>
+                <p className="text-2xl sm:text-3xl font-black mt-2">{counts.visits.toLocaleString('ar-EG')}</p>
+              </div>
+              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
+                <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">ذكريات المجتمع</p>
+                <p className="text-2xl sm:text-3xl font-black mt-2">{counts.memories.toLocaleString('ar-EG')}</p>
+              </div>
+              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
+                <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">القصص التاريخية</p>
+                <p className="text-2xl sm:text-3xl font-black mt-2">{counts.stories.toLocaleString('ar-EG')}</p>
+              </div>
+              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
+                <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">طلبات التجار</p>
+                <p className="text-2xl sm:text-3xl font-black mt-2">{(counts.partnersPending + counts.partnersApproved).toLocaleString('ar-EG')}</p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {partnerApps.map((app) => (
-                <div
-                  key={app.id}
-                  className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e] space-y-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-extrabold text-lg">{app.business_name}</h4>
-                    <span
-                      className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                        app.status === 'approved' ? 'bg-teal2-100 text-teal2-700' : 'bg-sand-100 text-sand-700'
-                      }`}
-                    >
-                      {app.status === 'approved' ? 'معتمد' : 'قيد المراجعة'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-ocean-700/70 dark:text-white/60">
-                    المالك: {app.owner_name} · الهاتف: {app.phone} · المنطقة: {app.area}
-                  </p>
-                  <div className="flex gap-4 text-xs font-bold pt-2 border-t border-sand-200/60 dark:border-[#1d2d3e]">
-                    <span>عمولة Alpha: {app.commission} ج</span>
-                  </div>
-                </div>
-              ))}
+              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e] space-y-3">
+                <h4 className="font-black text-sm">الأماكن حسب التصنيف</h4>
+                {Object.keys(placesByCategory).length === 0 ? (
+                  <p className="text-xs text-slate-500 font-medium">لا توجد أماكن مسجلة بعد.</p>
+                ) : (
+                  Object.entries(placesByCategory).map(([cat, n]) => (
+                    <div key={cat} className="flex items-center justify-between text-sm">
+                      <span className="font-bold">{CATEGORY_LABELS[cat] || cat}</span>
+                      <span className="font-black">{n.toLocaleString('ar-EG')}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e] space-y-3">
+                <h4 className="font-black text-sm">المستخدمون حسب الرتبة</h4>
+                {Object.keys(usersByRole).length === 0 ? (
+                  <p className="text-xs text-slate-500 font-medium">لا يوجد مستخدمون مسجلون بعد.</p>
+                ) : (
+                  Object.entries(usersByRole).map(([role, n]) => (
+                    <div key={role} className="flex items-center justify-between text-sm">
+                      <span className="font-bold">{ROLE_LABELS[role] || role}</span>
+                      <span className="font-black">{n.toLocaleString('ar-EG')}</span>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -841,6 +1098,56 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Tab Content: Site Log — real activity rows from Supabase */}
+        {activeTab === 'logs' && (
+          <div className="space-y-4 pop-in">
+            <h3 className="text-xl font-black">سجل الموقع</h3>
+            <p className="text-xs text-ocean-700/70 dark:text-white/60">
+              أحدث أنشطة الموقع المسجلة في قاعدة البيانات (آخر 50 حدثاً).
+            </p>
+            <div className="rounded-3xl bg-white dark:bg-[#0c1622] shadow overflow-hidden border border-sand-200/60 dark:border-[#1d2d3e]">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-right">
+                  <thead className="bg-sand-100 dark:bg-[#212d37] text-xs font-black text-ocean-900 dark:text-white">
+                    <tr>
+                      <th className="p-4">الوقت</th>
+                      <th className="p-4">الفاعل</th>
+                      <th className="p-4">الرتبة</th>
+                      <th className="p-4">الحدث</th>
+                      <th className="p-4">التفاصيل</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-sand-200/60 dark:divide-[#2a2a2a] text-ocean-900 dark:text-white">
+                    {activityLog.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-6 text-center text-sm text-slate-500 dark:text-slate-400 font-medium">
+                          لا توجد أحداث مسجلة بعد.
+                        </td>
+                      </tr>
+                    ) : (
+                      activityLog.map((log) => (
+                        <tr key={log.id} className="hover:bg-sand-50 dark:hover:bg-[#1d1d1d] transition">
+                          <td className="p-4 font-medium text-xs" dir="ltr">
+                            {log.created_at ? log.created_at.slice(0, 19).replace('T', ' ') : '—'}
+                          </td>
+                          <td className="p-4 font-bold">{log.actor_name || '—'}</td>
+                          <td className="p-4 font-medium">{ROLE_LABELS[log.actor_role] || log.actor_role || '—'}</td>
+                          <td className="p-4">
+                            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-sand-100 text-sand-700">
+                              {log.tag || '—'}
+                            </span>
+                          </td>
+                          <td className="p-4 text-xs font-medium max-w-xs">{log.description || '—'}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
