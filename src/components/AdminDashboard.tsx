@@ -9,7 +9,6 @@ import {
   UserCheck,
   Shield,
   MapPin,
-  Handshake,
   Compass,
   Image as ImageIcon,
   MessageSquare,
@@ -22,7 +21,6 @@ import {
   Mail,
   ShieldAlert,
   BookOpen,
-  Camera,
   Check,
   Eye,
   EyeOff,
@@ -30,7 +28,7 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
-import { HistoricalStory, MemoryPost } from '@/types';
+import { HistoricalStory } from '@/types';
 
 export const AdminDashboard: React.FC = () => {
   const { user, loading } = useAuth();
@@ -50,14 +48,9 @@ export const AdminDashboard: React.FC = () => {
     placesActive: 0,
     placesTotal: 0,
     visits: 0,
-    memories: 0,
     stories: 0,
     storiesPublished: 0,
-    partnersPending: 0,
-    partnersApproved: 0,
   });
-
-  const [partnerApps, setPartnerApps] = useState<any[]>([]);
 
   // جلب كل بيانات لوحة التحكم من الخادم (مسار إداري محمي).
   // لا يقرأ المتصفح جداول Supabase مباشرة أبداً، ولا توجد أرقام
@@ -70,7 +63,6 @@ export const AdminDashboard: React.FC = () => {
         const data = await res.json();
         if (res.ok && data.ok) {
           if (data.counts) setCounts(data.counts);
-          if (Array.isArray(data.partnerApps)) setPartnerApps(data.partnerApps);
           if (Array.isArray(data.staffList)) setStaffList(data.staffList);
           if (Array.isArray(data.users)) setUsersList(data.users);
           if (Array.isArray(data.places)) setPlacesList(data.places);
@@ -176,53 +168,7 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  // ---------------------------------------------------------
-  // Community Memories Admin State & Handlers
-  // ---------------------------------------------------------
-  const [adminMemories, setAdminMemories] = useState<MemoryPost[]>([]);
-  const [loadingMemories, setLoadingMemories] = useState(false);
-
-  const fetchAdminMemories = async () => {
-    try {
-      setLoadingMemories(true);
-      const res = await fetch('/api/memories?admin=true');
-      const data = await res.json();
-      if (data.ok && Array.isArray(data.memories)) {
-        setAdminMemories(data.memories);
-      }
-    } catch (e) {
-      console.error('Error fetching admin memories:', e);
-    } finally {
-      setLoadingMemories(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'memories') {
-      fetchAdminMemories();
-    }
-  }, [activeTab]);
-
-  const handleDeleteAdminMemory = async (id: string) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذه الذكرى نهائياً؟')) return;
-    try {
-      const res = await fetch(`/api/memories?id=${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-      });
-      const data = await res.json();
-      if (res.ok && data.ok) {
-        setAdminMemories((prev) => prev.filter((m) => m.id !== id));
-      } else {
-        alert(data.message || 'فشل الحذف.');
-      }
-    } catch (err) {
-      alert('حدث خطأ أثناء الحذف.');
-    }
-  };
-
   const isOwner = user?.role === 'owner';
-
-  const pendingPartnersCount = partnerApps.filter((x) => x.status === 'pending').length;
 
   const ROLE_LABELS: Record<string, string> = {
     owner: 'المالك',
@@ -408,23 +354,6 @@ export const AdminDashboard: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setActiveTab('partners')}
-            className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border relative ${
-              activeTab === 'partners'
-                ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
-                : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
-            }`}
-          >
-            <Handshake className="w-4 h-4" />
-            <span>طلبات التجار</span>
-            {pendingPartnersCount > 0 && (
-              <span className="w-5 h-5 rounded-full bg-coral-500 text-white text-[10px] font-bold grid place-items-center">
-                {pendingPartnersCount}
-              </span>
-            )}
-          </button>
-
-          <button
             onClick={() => setActiveTab('stats')}
             className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
               activeTab === 'stats'
@@ -447,19 +376,6 @@ export const AdminDashboard: React.FC = () => {
             <BookOpen className="w-4 h-4" />
             <span>الدليل التاريخي (استكشف)</span>
           </button>
-
-          <button
-            onClick={() => setActiveTab('memories')}
-            className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border ${
-              activeTab === 'memories'
-                ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
-                : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
-            }`}
-          >
-            <Camera className="w-4 h-4" />
-            <span>ذكريات المجتمع</span>
-          </button>
-
 
           {isOwner && (
             <button
@@ -498,21 +414,11 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
-                <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">ذكريات المجتمع</p>
-                <p className="text-2xl sm:text-3xl font-black mt-2 text-ocean-900 dark:text-white">{counts.memories.toLocaleString('ar-EG')}</p>
-              </div>
-
-              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
                 <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">القصص التاريخية المنشورة</p>
                 <p className="text-2xl sm:text-3xl font-black mt-2 text-teal2-600 dark:text-teal2-400">{counts.storiesPublished.toLocaleString('ar-EG')}</p>
                 <p className="text-[11px] text-ocean-700/60 dark:text-white/50 font-bold mt-1">من إجمالي {counts.stories.toLocaleString('ar-EG')} قصة</p>
               </div>
 
-              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
-                <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">طلبات التجار قيد المراجعة</p>
-                <p className="text-2xl sm:text-3xl font-black mt-2 text-ocean-700 dark:text-ocean-300">{counts.partnersPending.toLocaleString('ar-EG')}</p>
-                <p className="text-[11px] text-ocean-700/60 dark:text-white/50 font-bold mt-1">{counts.partnersApproved.toLocaleString('ar-EG')} طلب معتمد</p>
-              </div>
             </div>
           </div>
         )}
@@ -533,7 +439,7 @@ export const AdminDashboard: React.FC = () => {
               <select
                 value={userStatusFilter}
                 onChange={(e) => setUserStatusFilter(e.target.value)}
-                className="rounded-2xl border border-sand-200 dark:border-[#1d2d3e] bg-white dark:bg-[#0c1622] px-4 py-2.5 text-sm text-ocean-950 dark:text-white outline-none focus:border-teal2-500 font-bold"
+                className="rounded-2xl border border-line bg-surface px-4 py-2.5 text-sm text-ink outline-none focus:border-teal2-500 font-bold"
               >
                 <option value="all">كل الحالات</option>
                 <option value="active">نشط</option>
@@ -660,45 +566,6 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Tab Content: Partner Applications — real rows from the server */}
-        {activeTab === 'partners' && (
-          <div className="space-y-4 pop-in">
-            <h3 className="text-xl font-black">طلبات انضمام التجار والشركاء</h3>
-            {partnerApps.length === 0 ? (
-              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-8 shadow border border-sand-200/60 dark:border-[#1d2d3e] text-center text-sm text-slate-500 dark:text-slate-400 font-medium">
-                لا توجد طلبات انضمام مسجلة بعد.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {partnerApps.map((app) => (
-                  <div
-                    key={app.id}
-                    className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e] space-y-3"
-                  >
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-extrabold text-lg">{app.business_name}</h4>
-                      <span
-                        className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                          app.status === 'approved' ? 'bg-teal2-100 text-teal2-700' : 'bg-sand-100 text-sand-700'
-                        }`}
-                      >
-                        {app.status === 'approved' ? 'معتمد' : 'قيد المراجعة'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-ocean-700/70 dark:text-white/60">
-                      {app.owner_name ? `المالك: ${app.owner_name} · ` : ''}الهاتف: {app.phone || '—'} · المنطقة: {app.area || '—'}
-                    </p>
-                    <div className="flex gap-4 text-xs font-bold pt-2 border-t border-sand-200/60 dark:border-[#1d2d3e]">
-                      <span>الخصم المقترح: {app.discount ?? '—'}%</span>
-                      <span>عمولة Alpha: {app.commission ?? '—'} ج</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Tab Content: Places — real rows from Supabase */}
         {activeTab === 'places' && (
           <div className="space-y-4 pop-in">
@@ -771,16 +638,8 @@ export const AdminDashboard: React.FC = () => {
                 <p className="text-2xl sm:text-3xl font-black mt-2">{counts.visits.toLocaleString('ar-EG')}</p>
               </div>
               <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
-                <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">ذكريات المجتمع</p>
-                <p className="text-2xl sm:text-3xl font-black mt-2">{counts.memories.toLocaleString('ar-EG')}</p>
-              </div>
-              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
                 <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">القصص التاريخية</p>
                 <p className="text-2xl sm:text-3xl font-black mt-2">{counts.stories.toLocaleString('ar-EG')}</p>
-              </div>
-              <div className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e]">
-                <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">طلبات التجار</p>
-                <p className="text-2xl sm:text-3xl font-black mt-2">{(counts.partnersPending + counts.partnersApproved).toLocaleString('ar-EG')}</p>
               </div>
             </div>
 
@@ -875,7 +734,7 @@ export const AdminDashboard: React.FC = () => {
                         value={editingStory.title_ar || ''}
                         onChange={(e) => setEditingStory({ ...editingStory, title_ar: e.target.value })}
                         placeholder="مثال: فنار بورسعيد التاريخي..."
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#1d2d3e] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
+                        className="ps-input"
                         required
                       />
                     </div>
@@ -886,7 +745,7 @@ export const AdminDashboard: React.FC = () => {
                         value={editingStory.era_year || ''}
                         onChange={(e) => setEditingStory({ ...editingStory, era_year: e.target.value })}
                         placeholder="مثال: 1869 م"
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#1d2d3e] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
+                        className="ps-input"
                       />
                     </div>
                   </div>
@@ -899,7 +758,7 @@ export const AdminDashboard: React.FC = () => {
                         value={editingStory.image_url || ''}
                         onChange={(e) => setEditingStory({ ...editingStory, image_url: e.target.value })}
                         placeholder="/assets/port-said/..."
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#1d2d3e] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold font-mono"
+                        className="ps-input font-mono"
                         required
                       />
                     </div>
@@ -909,7 +768,7 @@ export const AdminDashboard: React.FC = () => {
                         type="number"
                         value={editingStory.sort_order ?? 1}
                         onChange={(e) => setEditingStory({ ...editingStory, sort_order: parseInt(e.target.value, 10) || 1 })}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#1d2d3e] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
+                        className="ps-input"
                       />
                     </div>
                   </div>
@@ -920,7 +779,7 @@ export const AdminDashboard: React.FC = () => {
                       rows={2}
                       value={editingStory.summary_ar || ''}
                       onChange={(e) => setEditingStory({ ...editingStory, summary_ar: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#1d2d3e] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
+                      className="ps-input"
                       required
                     />
                   </div>
@@ -931,7 +790,7 @@ export const AdminDashboard: React.FC = () => {
                       rows={5}
                       value={editingStory.content_ar || ''}
                       onChange={(e) => setEditingStory({ ...editingStory, content_ar: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-sand-200 dark:border-[#1d2d3e] bg-sand-50 dark:bg-[#1a242d] text-xs font-bold"
+                      className="ps-input"
                       required
                     />
                   </div>
@@ -1052,64 +911,6 @@ export const AdminDashboard: React.FC = () => {
         )}
 
         {/* Tab Content: Community Memories Moderation */}
-        {activeTab === 'memories' && (
-          <div className="space-y-6 pop-in">
-            <div>
-              <h3 className="text-xl font-black">إشراف ذكريات المجتمع</h3>
-              <p className="text-xs text-ocean-700/70 dark:text-white/60">
-                مراجعة الصور والذكريات المنشورة من قبل المستخدمين وحذف أي محتوى غير لائق.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {loadingMemories ? (
-                <div className="col-span-full p-8 text-center text-xs">جاري تحميل الذكريات...</div>
-              ) : adminMemories.length === 0 ? (
-                <div className="col-span-full p-8 text-center text-xs">لا توجد منشورات حالياً.</div>
-              ) : (
-                adminMemories.map((mem) => (
-                  <div
-                    key={mem.id}
-                    className="rounded-3xl bg-white dark:bg-[#0c1622] border border-sand-200/60 dark:border-[#1d2d3e] p-4 shadow space-y-3 flex flex-col justify-between"
-                  >
-                    <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-sand-100 dark:bg-[#1e1e1e]">
-                      <img src={mem.image_url} alt="" className="w-full h-full object-cover" />
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-black text-xs">{mem.user_name}</span>
-                        <span className="text-[10px] text-ocean-700/60 dark:text-white/50">
-                          {mem.created_at?.slice(0, 10)}
-                        </span>
-                      </div>
-                      {mem.caption && (
-                        <p className="text-xs text-ocean-700/80 dark:text-white/70 line-clamp-2">
-                          {mem.caption}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-sand-200 dark:border-[#1d2d3e]">
-                      <span className="text-[11px] font-bold text-sand-500">
-                        ❤️ {mem.likes_count} إعجاب · 💬 {mem.comments_count} تعليق
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteAdminMemory(mem.id)}
-                        className="px-3 py-1.5 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 text-xs font-bold hover:bg-red-100 flex items-center gap-1.5"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>حذف</span>
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Tab Content: Site Log — real activity rows from Supabase */}
         {activeTab === 'logs' && (
           <div className="space-y-4 pop-in">

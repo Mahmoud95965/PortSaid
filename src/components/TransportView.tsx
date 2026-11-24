@@ -911,7 +911,7 @@ export const TransportView: React.FC<TransportViewProps> = ({
               <select
                 value={fromName}
                 onChange={(e) => handleSelectFrom(e.target.value)}
-                className="w-full rounded-2xl border border-sand-300 dark:border-[#22354a] bg-sand-50/70 dark:bg-[#142232] px-3.5 py-3 text-xs sm:text-sm font-bold text-ocean-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition appearance-none"
+                className="w-full rounded-2xl border border-line bg-surface px-3.5 py-3 text-xs sm:text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-blue-500 transition appearance-none"
               >
                 {searchableOptions.map((opt, i) => (
                   <option key={`${opt.label}-${i}`} value={opt.label}>
@@ -964,7 +964,7 @@ export const TransportView: React.FC<TransportViewProps> = ({
               <select
                 value={toName}
                 onChange={(e) => handleSelectTo(e.target.value)}
-                className="w-full rounded-2xl border border-sand-300 dark:border-[#22354a] bg-sand-50/70 dark:bg-[#142232] px-3.5 py-3 text-xs sm:text-sm font-bold text-ocean-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition appearance-none"
+                className="w-full rounded-2xl border border-line bg-surface px-3.5 py-3 text-xs sm:text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-blue-500 transition appearance-none"
               >
                 {searchableOptions.map((opt, i) => (
                   <option key={`${opt.label}-to-${i}`} value={opt.label}>

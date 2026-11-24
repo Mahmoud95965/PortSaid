@@ -282,6 +282,17 @@ body {
   @apply w-full rounded-2xl border border-line bg-surface text-ink px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal2-500 dark:focus:ring-teal2-400 transition;
 }
 
+/* Native <select> dropdown lists: force the same surface/ink colors on
+   <option>/<optgroup> in both modes. Unstyled options render with the
+   browser's own list colors, which on some phones/browsers means white
+   text on a white or pale-yellow list — the text disappears the moment
+   you open the menu. Explicit colors keep every option readable. */
+select option,
+select optgroup {
+  background-color: rgb(var(--surface));
+  color: rgb(var(--ink));
+}
+
 .ps-btn-primary {
   @apply w-full py-3.5 rounded-2xl font-extrabold text-white bg-gradient-to-b from-teal2-500 to-teal2-600 hover:from-teal2-400 hover:to-teal2-500 shadow-lg shadow-teal2-600/30 transition active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed;
 }

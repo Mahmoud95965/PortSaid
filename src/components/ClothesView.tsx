@@ -308,7 +308,7 @@ export const ClothesView: React.FC<ClothesViewProps> = ({
           <select
             value={selectedArea}
             onChange={(e) => setSelectedArea(e.target.value)}
-            className="w-full md:w-auto px-3.5 py-2.5 rounded-2xl bg-sand-50 dark:bg-[#121c29] border border-sand-300 dark:border-[#223246] text-xs sm:text-sm font-bold text-ocean-900 dark:text-white focus:outline-none focus:border-indigo-500"
+            className="w-full md:w-auto px-3.5 py-2.5 rounded-2xl bg-surface border border-line text-xs sm:text-sm font-bold text-ink focus:outline-none focus:border-indigo-500"
           >
             <option value="all">📍 كل المناطق</option>
             {areas.map((area) => (
@@ -322,7 +322,7 @@ export const ClothesView: React.FC<ClothesViewProps> = ({
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="w-full md:w-auto px-3.5 py-2.5 rounded-2xl bg-sand-50 dark:bg-[#121c29] border border-sand-300 dark:border-[#223246] text-xs sm:text-sm font-bold text-ocean-900 dark:text-white focus:outline-none focus:border-indigo-500"
+            className="w-full md:w-auto px-3.5 py-2.5 rounded-2xl bg-surface border border-line text-xs sm:text-sm font-bold text-ink focus:outline-none focus:border-indigo-500"
           >
             <option value="default">الترتيب الافتراضي</option>
             <option value="rating">الأعلى تقييماً ⭐</option>

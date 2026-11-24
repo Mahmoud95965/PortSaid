@@ -594,7 +594,7 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack }) => {
           <select
             value={fromStop}
             onChange={(e) => setFromStop(e.target.value)}
-            className="w-full rounded-2xl border border-slate-200 dark:border-[#203042] bg-slate-50 dark:bg-[#0f1a28] px-3.5 py-2.5 text-xs sm:text-sm font-bold text-ocean-950 dark:text-white outline-none focus:border-blue-600 cursor-pointer"
+            className="w-full rounded-2xl border border-line bg-surface px-3.5 py-2.5 text-xs sm:text-sm font-bold text-ink outline-none focus:border-blue-600 cursor-pointer"
           >
             <option value="المعدية / السكن الجامعي">المعدية / السكن الجامعي (بورفؤاد)</option>
             <option value="قصر الثقافة">قصر الثقافة (المحافظة والشرق)</option>
