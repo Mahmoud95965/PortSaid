@@ -240,18 +240,20 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack }) => {
       confetti({ particleCount: 40, spread: 50, origin: { y: 0.7 } });
     } catch (e) {}
 
-    if (isSupabaseConfigured() && supabase && user?.id && place?.id) {
+    // التقييم بيتحفظ من الخادم (POST /api/reviews) بجلسة المستخدم — الكتابة
+    // المباشرة من المتصفح بالمفتاح العام اتقفلت (سياسة ALL كانت بتسمح لأي
+    // حد يكتب أو يمسح تقييم أي مستخدم).
+    if (isSupabaseConfigured() && user?.id && place?.id) {
       try {
-        await supabase.from('place_reviews').upsert(
-          {
-            place_id: place.id,
-            user_id: user.id,
+        await fetch('/api/reviews', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            placeId: place.id,
             rating: userRating,
             comment: commentText || null,
-            status: 'visible',
-          },
-          { onConflict: 'place_id,user_id' }
-        );
+          }),
+        });
       } catch (err: any) {
         console.error('Supabase review error:', err);
       }
