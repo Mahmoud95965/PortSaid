@@ -488,7 +488,6 @@ export default function HomePage() {
           {(currentView === 'bus' || currentView === 'transport' || currentView === 'transit') && (
             <motion.div key="bus-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
               <TransportView
-                places={places}
                 routeRequest={targetRoute}
                 onNavigate={handleNavigate}
                 onBack={() => handleNavigate('home')}

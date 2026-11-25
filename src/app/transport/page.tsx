@@ -142,7 +142,6 @@ function TransportPageContent() {
               exit={{ opacity: 0, y: -15 }}
             >
               <TransportView
-                places={places}
                 onNavigate={handleNavigate}
                 onBack={() => router.push('/')}
               />
