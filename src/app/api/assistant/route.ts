@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { INITIAL_PLACES } from '@/lib/constants';
+import { AREA_STOP, HOME_STOP } from '@/lib/constants';
 import { isPointInPortSaid, calculateDistanceKm, identifyPortSaidDistrict } from '@/lib/geoUtils';
 import { unsealSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
 import { getSupabaseServer } from '@/lib/supabase/server';
@@ -9,32 +9,164 @@ import { dbFindUserById } from '@/lib/db/localDb';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// بناء قاعدة بيانات الأماكن الحقيقية للإرشاد بالخريطة
-const PLACES_KNOWLEDGE = INITIAL_PLACES.map((p) => {
-  return `- [${p.id}] ${p.n} (${p.a}) | تصنيف: ${p.cat} | إحداثيات: lat=${p.lat}, lon=${p.lon} | خصم: ${p.disc}% | نقاط زيارة: ${p.p} | تفاصيل: ${p.ds}`;
-}).join('\n');
+/**
+ * نوع مكان موحّد يستخدمه المساعد — مصدره دائماً قاعدة البيانات الحية
+ * (جدول places)، وليس بيانات احتياطية قديمة داخل الكود.
+ */
+export interface LivePlace {
+  id: string;
+  n: string;
+  a: string;
+  cat: string;
+  lat: number;
+  lon: number;
+  ds: string;
+  disc: number;
+  p: number;
+  cost: number;
+  rating: number | null;
+  reviewsCount: number | null;
+}
 
-const SYSTEM_PROMPT = `
-أنت "مساعد بورسعيد الذكي ومخطط الرحلات"، مرشد سياحي ومعرفي خبير ومحترف متخصص في محافظة بورسعيد داخل منصة Port Said Hub.
-تحدث بأسلوب دافئ وممتع ومرتب، وباللغة العربية (مع لمسة مصرية بورسعيدية راقية وودودة).
+/**
+ * جلب الأماكن الحية من Supabase (الوضع الحالي: الأماكن المستوردة من ملف محمود).
+ * يعيد null عند أي فشل — وفي هذه الحالة يرد المساعد برسالة قصيرة تفيد بعدم توفر
+ * البيانات، ولا يجيب أبداً من بيانات قديمة داخل الكود.
+ */
+async function fetchLivePlaces(): Promise<LivePlace[] | null> {
+  try {
+    const supabase = getSupabaseServer();
+    if (!supabase) return null;
+    const { data, error } = await supabase
+      .from('places')
+      .select('id, name_ar, area_ar, description_ar, latitude, longitude, visit_points, discount_percent, coupon_cost_points, rating, ratings_count, categories(code)')
+      .eq('status', 'active')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true });
+    if (error || !data || data.length === 0) return null;
+    return data.map((row: any) => ({
+      id: String(row.id),
+      n: row.name_ar || '',
+      a: row.area_ar || '',
+      cat: row.categories?.code || 'food',
+      lat: Number(row.latitude) || 0,
+      lon: Number(row.longitude) || 0,
+      ds: row.description_ar || '',
+      disc: Number(row.discount_percent) || 0,
+      p: Number(row.visit_points) || 20,
+      cost: Number(row.coupon_cost_points) || 0,
+      rating: row.rating != null ? Number(row.rating) : null,
+      reviewsCount: row.ratings_count != null ? Number(row.ratings_count) : null,
+    }));
+  } catch (e) {
+    console.warn('Assistant live places fetch failed:', e);
+    return null;
+  }
+}
 
-قواعد هيكلة الإجابة وتنظيمها:
-1. اكتب ردوداً وافية، غنية بالمعلومات والتفاصيل المفيدة، ومرتبة تنظيمياً عبر عناوين واضحة (Markdown) ونقاط منسقة. تجنب الردود القصيرة أو المقتضبة.
-2. لكل مكان أو معلم ترشحه، اذكر:
-   - اسمه الدقيق والحي الموجود به في بورسعيد أو بورفؤاد.
-   - ما يميزه وتجربة الزيارة وأفضل ما يمكن تجربته (أطباق أسماك، قعدة على القناة، تصوير، مذاكرة، تحلية).
-   - التكلفة التقديرية للفرد ومستوى الأسعار.
-   - أفضل وقت للزيارة في اليوم.
-   - نسبة الخصم ونقاط الزيارة المتاحة في Port Said Hub.
-3. اختم ردك دائماً بقسم "💡 نصائح بورسعيدية من القلب" وقسم "🚌 كيفية الوصول والمواصلات" لتقديم قيمة حقيقية للزائر.
-4. التزم حصرياً بالأماكن والمعالم الحقيقية في بورسعيد المذكورة في قاعدة البيانات بالأسفل، واذكر الاسم الدقيق لتظهر الخريطة التفاعلية فوراً للمستخدم.
-5. لا تكتب أي وسوم تفكير داخل الرد نهائياً (ممنوع وسوم <think> أو تفكير داخلي).
-6. راعِ هوية المستخدم المتحدث معك بدقة (اسمه، كليته، رصيد نقاطه، وأماكنه المفضلة أو التي زارها).
-7. منصة Port Said Hub هي فكرة وتطوير فريق Alpha Team، وتم تصميم الموقع بالشراكة مع TOLZY Team. إذا سألك المستخدم عن صاحب الموقع أو الفكرة أجب باعتزاز أنه فريق Alpha Team، وإذا سألك عن التصميم اذكر أنه صُمم بالشراكة مع TOLZY Team.
+export interface TransitKnowledge {
+  text: string;
+  stopNames: string[];
+  stopNameById: Record<string, string>;
+}
 
-قاعدة بيانات الأماكن المعتمدة في بورسعيد:
-${PLACES_KNOWLEDGE}
+/**
+ * جلب شبكة المواصلات الحية (خطوط ومحطات ورحلات جاهزة) من جداول transit_*.
+ * عند غياب الجداول، يعود لنص مختصر بأسماء الخطوط العامة فقط.
+ */
+async function fetchTransitKnowledge(): Promise<TransitKnowledge> {
+  const fallback: TransitKnowledge = {
+    text: 'خطوط المواصلات: الأمين، الزهور، الـ5000، السلام، أسوان.',
+    stopNames: [],
+    stopNameById: {},
+  };
+  try {
+    const supabase = getSupabaseServer();
+    if (!supabase) return fallback;
+    const [{ data: lines }, { data: stops }, { data: lineStops }, { data: trips }] = await Promise.all([
+      supabase.from('transit_lines').select('id, name_ar, description_ar, outbound_path_ar, return_path_ar').order('sort_order'),
+      supabase.from('transit_stops').select('id, name_ar, short_name_ar').order('sort_order'),
+      supabase.from('transit_line_stops').select('line_id, stop_id, seq').order('seq'),
+      supabase.from('transit_trips').select('id, from_stop_id, to_stop_id, title_ar, legs, is_confirmed').order('sort_order'),
+    ]);
+    if (!lines || lines.length === 0 || !stops) return fallback;
+    const stopNameById: Record<string, string> = {};
+    const stopShortById: Record<string, string> = {};
+    const stopNames: string[] = [];
+    for (const s of stops as any[]) {
+      stopNameById[s.id] = s.name_ar;
+      stopShortById[s.id] = s.short_name_ar || s.name_ar;
+      stopNames.push(s.name_ar);
+      if (s.short_name_ar && s.short_name_ar !== s.name_ar) stopNames.push(s.short_name_ar);
+    }
+    const stopsByLine: Record<string, string[]> = {};
+    for (const ls of (lineStops || []) as any[]) {
+      (stopsByLine[ls.line_id] = stopsByLine[ls.line_id] || []).push(stopNameById[ls.stop_id] || ls.stop_id);
+    }
+    const lineNameById: Record<string, string> = {};
+    for (const l of lines as any[]) lineNameById[l.id] = l.name_ar;
+    const linesText = (lines as any[])
+      .map((l) => {
+        const ss = (stopsByLine[l.id] || []).join(' ← ');
+        const paths = [l.outbound_path_ar, l.return_path_ar].filter(Boolean).join(' | ');
+        return `- خط ${l.name_ar}: ${ss}${l.description_ar ? ` (${l.description_ar})` : ''}${paths ? ` — ${paths}` : ''}`;
+      })
+      .join('\n');
+    const tripsText = ((trips || []) as any[])
+      .map((t) => {
+        const legs = Array.isArray(t.legs)
+          ? t.legs
+              .map((leg: any, i: number) => {
+                if (!leg.line_id) return leg.note ? `امشِ ${leg.note}` : '';
+                const lineName = lineNameById[leg.line_id] || leg.line_id;
+                const from = stopShortById[leg.from_stop_id] || leg.from_stop_id || '';
+                const to = stopNameById[leg.to_stop_id] || leg.to_stop_id || '';
+                const alight = leg.alight_text || to;
+                const alightPhrase =
+                  alight.startsWith('قدام') || alight.startsWith('عند') ? alight : `عند ${alight}`;
+                return i === 0
+                  ? `اركب خط ${lineName} من ${from} وانزل ${alightPhrase}`
+                  : `بعدها اركب خط ${lineName} وانزل ${alightPhrase}`;
+              })
+              .filter(Boolean)
+              .join('، ')
+          : '';
+        return `- ${t.title_ar || `${stopNameById[t.from_stop_id] || ''} ← ${stopNameById[t.to_stop_id] || ''}`}: ${legs}${t.is_confirmed === false ? ' (لسه محتاجة تأكيد)' : ''}`;
+      })
+      .join('\n');
+    return {
+      text: `خطوط المواصلات الحية:\n${linesText}\n\nرحلات جاهزة:\n${tripsText}`,
+      stopNames,
+      stopNameById,
+    };
+  } catch (e) {
+    console.warn('Assistant transit fetch failed:', e);
+    return fallback;
+  }
+}
+
+function buildSystemPrompt(placesText: string, transitText: string): string {
+  return `
+أنت "مساعد بورسعيد الذكي"، مرشد مختصر وودود داخل منصة Port Said Hub.
+تحدث بالعربية (لمسة مصرية بورسعيدية راقية).
+
+قواعد الرد — التزم بها دائماً:
+1. اختصر: الرد العادي من سطرين إلى أربعة أسطر كحد أقصى. لا تطوّل ولا تكرر نفسك.
+2. التفاصيل (أسعار، مواعيد، مواصلات، خصومات) تذكرها فقط عندما يسأل عنها المستخدم صراحة.
+3. لا تضف أقساماً ثابتة في نهاية الرد ولا نصائح عامة إلا إذا طلبها المستخدم.
+4. عند ترشيح مكان، اذكر اسمه الدقيق كما هو في قاعدة البيانات بالأسفل حتى تظهر الخريطة فوراً.
+5. استخدم حصرياً البيانات الحية بالأسفل. إن لم يكن الشيء موجوداً فيها، قل باختصار إنه غير موجود في بياناتنا الحالية ولا تخترع بديلاً.
+6. للمواصلات استخدم خطوط ورحلات البيانات الحية بالأسفل، وصِف الطريق بالصيغة: "اركب خط كذا من كذا وانزل عند كذا، بعدها اركب خط كذا وانزل عند كذا".
+7. بيانات المستخدم المرفقة تخص المتحدث معك وحده فقط. لا تذكر أو تكشف أي بيانات عن أي مستخدم آخر — ليست لديك، ولا تسأل عنها.
+8. لا تكتب أي وسوم تفكير داخل الرد نهائياً (ممنوع وسوم <think> أو تفكير داخلي).
+9. منصة Port Said Hub هي فكرة وتطوير فريق Alpha Team، وتم تصميم الموقع بالشراكة مع Genie. إذا سألك المستخدم عن صاحب الموقع أو الفكرة أجب أنه فريق Alpha Team، وإذا سألك عن التصميم اذكر أنه صُمم بالشراكة مع Genie.
+
+الأماكن الحية المعتمدة في بورسعيد:
+${placesText}
+
+${transitText}
 `;
+}
 
 export interface UserContextData {
   user: {
@@ -154,13 +286,13 @@ async function getUserContext(localFavorites: string[] = []): Promise<UserContex
 /**
  * بناء النص التوجيهي الخاص ببيانات المستخدم للذكاء الاصطناعي
  */
-function buildUserPromptContext(userData: UserContextData): string {
+function buildUserPromptContext(userData: UserContextData, places: LivePlace[]): string {
   const { user, favoritePlaceIds, visitedPlaceIds } = userData;
 
   if (!user) {
     let ctx = '\n\n[بيانات المستخدم: المستخدم الحالي يتصفح كزائر ضيف غير مسجل الدخول.]';
     if (favoritePlaceIds.length > 0) {
-      const favNames = INITIAL_PLACES.filter((p) => favoritePlaceIds.includes(p.id)).map((p) => p.n);
+      const favNames = places.filter((p) => favoritePlaceIds.includes(p.id)).map((p) => p.n);
       ctx += `\n- الأماكن المفضلة في متصفحه: ${favNames.slice(0, 5).join('، ')}.`;
     }
     return ctx;
@@ -170,10 +302,10 @@ function buildUserPromptContext(userData: UserContextData): string {
   const userTypeArabic =
     user.user_type === 'student' ? 'طالب جامعي' : user.user_type === 'visitor' ? 'سائح وزائر' : 'من أهالي بورسعيد';
 
-  const favNames = INITIAL_PLACES.filter((p) => favoritePlaceIds.includes(p.id)).map((p) => p.n);
-  const visitedNames = INITIAL_PLACES.filter((p) => visitedPlaceIds.includes(p.id)).map((p) => p.n);
+  const favNames = places.filter((p) => favoritePlaceIds.includes(p.id)).map((p) => p.n);
+  const visitedNames = places.filter((p) => visitedPlaceIds.includes(p.id)).map((p) => p.n);
 
-  let ctx = `\n\n[بيانات الحساب الشخصي الحقيقي للمستخدم المتحدث معك - استخدمها لتخصيص الإجابة تماماً له]:\n`;
+  let ctx = `\n\n[بيانات الحساب الشخصي الحقيقي للمستخدم المتحدث معك - استخدمها لتخصيص الإجابة تماماً له. هذه البيانات تخصه وحده فقط، ولا تعرف أي شيء عن أي مستخدم آخر ولا تذكره أبداً]:\n`;
   ctx += `- اسم المستخدم: ${user.name} (خاطبه باسمه: «يا ${firstName}» بأسلوب دافئ وودود).\n`;
   ctx += `- صفته: ${userTypeArabic}.\n`;
   if (user.institution) {
@@ -194,10 +326,15 @@ function buildUserPromptContext(userData: UserContextData): string {
 /**
  * محرك الفرز والتحليل الذكي الديناميكي (شامل لكافة الأماكن الـ 252 مع التخصيص الكامل للمستخدم)
  */
+/**
+ * محرك الفرز والتحليل الذكي — نسخة مختصرة تعتمد على الأماكن الحية فقط.
+ * الردود قصيرة (سطران إلى أربعة أسطر) والتفاصيل عند الطلب فقط.
+ */
 function getDynamicReasoningReply(
   message: string,
   userLocation: { lat: number; lng: number } | null | undefined,
-  userData: UserContextData
+  userData: UserContextData,
+  places: LivePlace[]
 ): { reply: string; thinkingProcess: string[]; suggestedPlaces: any[] } {
   const q = (message || '').toLowerCase().trim();
   const suggested: any[] = [];
@@ -215,13 +352,15 @@ function getDynamicReasoningReply(
     }
   }
 
-  // فرز وحساب مسافات جميع الأماكن الـ 252
-  const placesWithDist = INITIAL_PLACES.map((p) => {
+  const placesWithDist = places.map((p) => {
     const dist = hasLocation
       ? calculateDistanceKm(userLocation!.lat, userLocation!.lng, p.lat, p.lon)
       : undefined;
     return { ...p, distanceKm: dist };
   }).sort((a, b) => (a.distanceKm || 999) - (b.distanceKm || 999));
+
+  const shortCard = (p: any, extra?: string) =>
+    `• **${p.n}** (${p.a})${p.rating ? ` — ${p.rating}★` : ''}${extra ? ` — ${extra}` : ''}`;
 
   // 1. استفسارات رصيد النقاط واستبدالها
   const wantsPointsInfo =
@@ -235,33 +374,15 @@ function getDynamicReasoningReply(
     q.includes('كوبون');
 
   if (wantsPointsInfo) {
-    thinkingProcess.push(`🎯 استفسار عن رصيد النقاط والمكافآت للمستخدم ${firstName}.`);
     const balance = user ? user.points_balance : 20;
-
-    // ترشيح أماكن ذات خصومات وكوبونات ممتازة
-    const couponPlaces = INITIAL_PLACES.filter((p) => p.disc >= 10 && (p.cat === 'food' || p.cat === 'cafe')).slice(0, 3);
+    const couponPlaces = places.filter((p) => p.disc >= 10 && (p.cat === 'food' || p.cat === 'cafe')).slice(0, 3);
     couponPlaces.forEach((p) => suggested.push(p));
-
     const reply =
-      `### 🌟 أهلاً بك يا ${firstName} في نظام مكافآت Port Said Hub!\n\n` +
-      `• **رصيد نقاطك الحالي:** **${balance} نقطة** ${balance >= 40 ? '🎉 (جاهز للاستبدال فورا!)' : '✨'}\n\n` +
-      `### 🎁 كيف تستفيد من نقاطك الآن؟\n` +
-      `1. **استبدال كوبونات خصم:** من 40 إلى 60 نقطة تمنحك كود خصم حصري من **10% إلى 15%** يظهر فوراً كـ QR Code عند الكاشير.\n` +
-      `2. **زيادة رصيدك:** كل مكان تزوره في بورسعيد أو بورفؤاد وتضغط «سجّل حضورك الآن» بالـ GPS يمنحك من **+20 إلى +35 نقطة إضافية** فوراً!\n\n` +
-      `### 🍽️ أفضل أماكن يمكنك الاستفادة من خصوماتها بنقاطك حالياً:\n\n` +
-      couponPlaces
-        .map(
-          (p, idx) =>
-            `#### ${idx + 1}. **${p.n}** (${p.a})\n` +
-            `• **الخصم المتاح:** **${p.disc}% خصم** (تكلفة الكوبون: ${p.cost} نقطة)\n` +
-            `• **عن المكان:** ${p.ds}\n` +
-            `• **نقاط الحضور:** تكسب +${p.p} نقطة عند زيارته!`
-        )
-        .join('\n\n') +
-      `\n\n---\n\n` +
-      `### 💡 نصيحة بورسعيدية من القلب\n` +
-      `اجمع نقاطك من جولات المشي في الممشى السياحي والحدائق والمعالم المجانية، واستبدلها وقت وجبة الغداء أو السهرة في أفخم مطاعم وكافيهات بورسعيد! ☕🐟`;
-
+      `رصيدك الحالي: **${balance} نقطة** يا ${firstName}.\n` +
+      `من 40 لـ 60 نقطة تستبدل كود خصم 10% لـ 15% عند الكاشير، وكل زيارة بتسجّلها بالـ GPS بتزود من 20 لـ 35 نقطة.` +
+      (couponPlaces.length > 0
+        ? `\nأماكن بخصومات دلوقتي:\n${couponPlaces.map((p) => shortCard(p, `خصم ${p.disc}%`)).join('\n')}`
+        : '');
     return { reply, thinkingProcess, suggestedPlaces: suggested };
   }
 
@@ -275,29 +396,12 @@ function getDynamicReasoningReply(
     q.includes('مشوفتهاش');
 
   if (wantsUnvisited) {
-    thinkingProcess.push(`🔍 البحث عن أماكن جديدة لم يسبق للمستخدم زيارتها.`);
     const unvisited = placesWithDist.filter((p) => !visitedPlaceIds.includes(p.id));
     const topNew = unvisited.slice(0, 3);
     topNew.forEach((p) => suggested.push(p));
-
     const reply =
-      `### 🧭 وجهات جديدة تنتظرك يا ${firstName} في بورسعيد!\n\n` +
-      `اخترت لك أفضل الأماكن المميزة التي لم يسبق لك تسجيل الحضور بها بعد:\n\n` +
-      topNew
-        .map(
-          (p, idx) =>
-            `#### ${idx + 1}. **${p.n}** (${p.a})\n` +
-            `• **التفاصيل:** ${p.ds}\n` +
-            `• **المكافأة:** تكسب **+${p.p || 20} نقطة** فور وصولك وتسجيل حضورك!\n` +
-            `• **التكلفة التقديرية:** ${p.cost > 0 ? `${p.cost} ج.م` : 'مجاني تماماً'}`
-        )
-        .join('\n\n') +
-      `\n\n---\n\n` +
-      `### 💡 نصائح لتجربة بورسعيدية مثالية\n` +
-      `استمتع بالتقاط صور تذكارية عند وصولك وسجّل زيارتك في التطبيق عبر الـ GPS لتزيد رصيد نقاطك وتحصل على كوبونات مجانية.\n\n` +
-      `### 🚌 التوصيل والمواصلات\n` +
-      `الوصول لهذه الأماكن سهل جداً عبر تاكسي بورسعيد الداخلي أو مينى باص خط "الأمين" و"الزهور".`;
-
+      `أماكن جديدة عليك يا ${firstName}:\n` +
+      topNew.map((p) => shortCard(p, `+${p.p || 20} نقطة عند الزيارة`)).join('\n');
     return { reply, thinkingProcess, suggestedPlaces: suggested };
   }
 
@@ -313,8 +417,7 @@ function getDynamicReasoningReply(
     q.includes('هدوء');
 
   if (wantsStudy) {
-    thinkingProcess.push(`📚 ترشيحات مخصصة للطلاب وجلسات المذاكرة والدراسة.`);
-    const studyPlaces = INITIAL_PLACES.filter(
+    const studyPlaces = places.filter(
       (p) =>
         p.cat === 'cafe' ||
         p.cat === 'bus' ||
@@ -325,26 +428,9 @@ function getDynamicReasoningReply(
         p.a.includes('بورفؤاد')
     ).slice(0, 3);
     studyPlaces.forEach((p) => suggested.push(p));
-
-    const instMention = user?.institution ? `كليتك (**${user.institution}**)` : 'كليات جامعة بورسعيد';
-
     const reply =
-      `### 📚 مرحباً يا ${firstName}! إليك أفضل أماكن المذاكرة والقعدة الهادية:\n\n` +
-      `بما يناسب احتياجاتك وقربك من ${instMention}، رتبت لك أماكن مريحة بإنترنت وجلسات هادئة:\n\n` +
-      studyPlaces
-        .map(
-          (p, idx) =>
-            `#### ${idx + 1}. **${p.n}** (${p.a})\n` +
-            `• **المميزات للدراسة:** أجواء هادئة، جلسات مريحة، ومشروبات دافئة تساعد على التركيز.\n` +
-            `• **الأسعار:** أسعار طلابية مناسبة مع خصم متاح عبر Port Said Hub.\n` +
-            `• **الموقع:** ${p.a}`
-        )
-        .join('\n\n') +
-      `\n\n---\n\n` +
-      `### 💡 نصائح بورسعيدية للطلاب\n` +
-      `• في فترات الامتحانات، احرص على اختيار أوقات الصباح والظهيرة للهدوء التام.\n` +
-      `• خطوط مواصلات الطلبة المعتمدة: خط الأمين وخط الزهور يصلان مباشرة بين مجمعات الكليات في دقائق معدودة.`;
-
+      `أهدى أماكن للمذاكرة يا ${firstName}:\n` +
+      studyPlaces.map((p) => shortCard(p)).join('\n');
     return { reply, thinkingProcess, suggestedPlaces: suggested };
   }
 
@@ -362,52 +448,23 @@ function getDynamicReasoningReply(
       (q.includes('موقعي') && !q.includes('موقع ')));
 
   if (isUserLocationQuery) {
-    thinkingProcess.push(`📍 البحث عن الأماكن الأقرب لموقع المستخدم في ${userDistrict}.`);
     if (hasLocation) {
       const top3 = placesWithDist.slice(0, 3);
       top3.forEach((p) => suggested.push(p));
-      thinkingProcess.push(`⚖️ الأماكن الأقرب لموقعك الفعلي: ${top3.map((p) => `${p.n} (${p.distanceKm} كم)`).join('، ')}.`);
-
-      const placesDetails = top3
-        .map((p, idx) => {
-          return (
-            `#### ${idx + 1}. **${p.n}** (${p.a})\n` +
-            `• **المسافة لموقعك:** يبعد عنك **${p.distanceKm} كم** تقريباً\n` +
-            `• **التفاصيل:** ${p.ds}\n` +
-            `• **المكافآت والخصومات:** ${p.disc > 0 ? `خصم حصري **${p.disc}%**` : 'نقاط زيارة'} (+${p.p || 20} نقطة في التطبيق)\n` +
-            `• **التكلفة المتوقعة:** ${p.cost ? `حوالي ${p.cost} ج.م` : 'مجاني تماماً'}`
-          );
-        })
-        .join('\n\n');
-
-      return {
-        reply:
-          `### 📍 موقعك الحالي في **${userDistrict}** يا ${firstName}\n\n` +
-          `قمت بمسح المنطقة الجغرافية المحيطة بك ورتّبت لك أقرب الوجهات المعتمدة مرتبة حسب المسافة الفعلية:\n\n` +
-          placesDetails +
-          `\n\n---\n\n` +
-          `### 💡 نصيحة بورسعيدية من القلب\n` +
-          `إذا كنت في ${userDistrict}، أفضل خيار للتحرك السريع هو التاكسي الداخلي (أجرته موحدة ومعقولة جداً) أو السير على الأقدام إذا كان الجو لطيفاً، فالأماكن قريبة وممتعة.\n\n` +
-          `### 🗺️ الخريطة والمسار\n` +
-          `تم تجهيز الخريطة المضمنة بالأسفل لك لعرض المسار والتتبع المباشر فوراً! 🧭`,
-        thinkingProcess,
-        suggestedPlaces: suggested,
-      };
-    } else {
-      thinkingProcess.push(`⚠️ الـ GPS غير مفعل: تشجيع المستخدم على مشاركة موقعه لحساب الكيلومترات.`);
-      return {
-        reply:
-          `### 📍 تحديد الأماكن القريبة لموقعك يا ${firstName}\n\n` +
-          `عشان أقدر أحسب لك المسافات بالكيلومتر بدقة وأرتب لك أقرب الأماكن والمطاعم لك:\n\n` +
-          `1. اضغط على أيقونة **«📍 تحديد موقعي»** بجانب حقل الكتابة لتفعيل الـ GPS.\n` +
-          `2. بمجرد تفعيله، سأحدد حيك فوراً في بورسعيد (حي الشرق، حي العرب، بورفؤاد...) وأعرض لك أقرب المعالم وأسهل مسارات السير على الخريطة مباشرة!`,
-        thinkingProcess,
-        suggestedPlaces: [],
-      };
+      const reply =
+        `أقرب 3 أماكن ليك في **${userDistrict}** يا ${firstName}:\n` +
+        top3.map((p) => shortCard(p, `${p.distanceKm} كم`)).join('\n');
+      return { reply, thinkingProcess, suggestedPlaces: suggested };
     }
+    return {
+      reply:
+        `عشان أحسب لك أقرب الأماكن بالكيلومتر، فعّل الـ GPS من أيقونة «📍 تحديد موقعي» جنب حقل الكتابة.`,
+      thinkingProcess,
+      suggestedPlaces: [],
+    };
   }
 
-  // 5. البحث الدلالي في قاعدة الأماكن الـ 252 بناءً على كلمات السؤال
+  // 5. البحث الدلالي في الأماكن الحية بناءً على كلمات السؤال
   const wantsWaterfront = q.includes('بحر') || q.includes('البحر') || q.includes('شاطئ') || q.includes('قناة') || q.includes('ممشى');
   const wantsCafe = q.includes('كافيه') || q.includes('قهوة') || q.includes('كوفي') || q.includes('مشروب');
   const wantsFood = q.includes('مطعم') || q.includes('سمك') || q.includes('اكل') || q.includes('غدا') || q.includes('سي فود');
@@ -456,100 +513,46 @@ function getDynamicReasoningReply(
   });
 
   if (matchedPlaces.length > 0) {
-    const selected = matchedPlaces.slice(0, 4);
+    const selected = matchedPlaces.slice(0, 3);
     selected.forEach((p) => suggested.push(p));
-    thinkingProcess.push(`🔎 مطابقة دلالية: تم العثور على ${matchedPlaces.length} أماكن متوافقة مع طلبك.`);
-
-    const placesCards = selected
-      .map((p, i) => {
-        const bestTime =
-          p.cat === 'cafe'
-            ? 'وقت الغروب ومساءً'
-            : p.cat === 'food'
-            ? 'فترة الغداء والعشاء'
-            : 'صباحاً وعصراً';
-        return (
-          `#### ${i + 1}. **${p.n}** (${p.a})\n` +
-          `• **عن المكان:** ${p.ds}\n` +
-          `• **التصنيف والتجربة:** ${p.cat === 'food' ? 'مأكولات شهية وتجربة طعام أصيلة 🍽️' : p.cat === 'cafe' ? 'إطلالة وقعدة بحرية رايقة ☕' : 'معلم سياحي وتاريخي 🏛️'}\n` +
-          `• **أفضل وقت للزيارة:** ${bestTime}\n` +
-          `• **عروض وتخفيضات:** ${p.disc > 0 ? `خصم حصري **${p.disc}%** عبر Port Said Hub` : `كسب +${p.p || 20} نقطة حضور بالـ GPS`}`
-        );
-      })
-      .join('\n\n');
-
-    return {
-      reply:
-        `### 🌊 ترشيحات مميزة لطلبك يا ${firstName}:\n\n` +
-        `جمعت لك أفضل الخيارات المتوافقة مع رغبتك بالتفاصيل والأسعار:\n\n` +
-        placesCards +
-        `\n\n---\n\n` +
-        `### 💡 نصائح بورسعيدية حصرية\n` +
-        `• **للقعدات البحرية:** أفضل توقيت هو وقت الغروب لمشاهدة مرور السفن العملاقة في المجرى الملاحي لقناة السويس في منظر ساحر.\n` +
-        `• **التحلية:** لا تفوت تجربة كاساتا سامي سالم أو حلواني لورد الشهيرة بعد وجبة الغداء أو الكافيه.\n\n` +
-        `### 🚌 التوصيل والمواصلات\n` +
-        `جميع هذه الأماكن في نطاق حي الشرق وحي العرب وبورفؤاد، ويمكنك ركوب تاكسي داخلي أو ميكروباص خط "الأمين" و"الـ 5000" للوصول بسهولة.`,
-      thinkingProcess,
-      suggestedPlaces: suggested,
-    };
+    const reply =
+      `دي أنسب اختيارات لطلبك يا ${firstName}:\n` +
+      selected.map((p) => shortCard(p)).join('\n') +
+      `\nعايز تفاصيل أكتر عن واحد فيهم؟ قولي اسمه.`;
+    return { reply, thinkingProcess, suggestedPlaces: suggested };
   }
 
   // 6. استفسارات عامة أو استكشافية
   const topGeneral = placesWithDist.slice(0, 3);
   topGeneral.forEach((p) => suggested.push(p));
-  thinkingProcess.push(`💡 سؤال عام: تقديم خيارات استكشافية لمعالم ومطاعم بورسعيد.`);
-
-  const generalCards = topGeneral
-    .map((p, i) => {
-      return (
-        `#### ${i + 1}. **${p.n}** (${p.a})\n` +
-        `• **التفاصيل:** ${p.ds}\n` +
-        `• **المكافأة:** +${p.p || 20} نقطة عند تسجيل الحضور`
-      );
-    })
-    .join('\n\n');
-
-  return {
-    reply:
-      `### 🌟 أهلاً بك يا ${firstName} في مرشد بورسعيد الذكي!\n\n` +
-      `إليك أهم الأماكن والمعالم التي ننصح بزيارتها في بورسعيد حالياً:\n\n` +
-      generalCards +
-      `\n\n---\n\n` +
-      `### 🧭 كيف يمكنني مساعدتك أكثر؟\n` +
-      `• يمكنك أن تطلب: *"خطط لي خروجة يوم كامل بميزانية 300 جنيه"*.\n` +
-      `• أو: *"عايز كافيهات هادية قريبة من البحر للمذاكرة"*.\n` +
-      `• أو: *"ما هو رصيد نقاطي وإزاي أستفيد منه؟"*.\n` +
-      `• أو اضغط على **«📍 موقعي»** لأحدد لك أقرب الأماكن لموقعك الحالي بالكيلومتر!`,
-    thinkingProcess,
-    suggestedPlaces: suggested,
-  };
+  const reply =
+    `أهلاً يا ${firstName}! جرّب:\n` +
+    topGeneral.map((p) => shortCard(p)).join('\n') +
+    `\nممكن تطلب مني: خروجة يوم كامل، كافيهات هادية للمذاكرة، أو رصيد نقاطك.`;
+  return { reply, thinkingProcess, suggestedPlaces: suggested };
 }
 
 /**
- * استخراج الأماكن المقترحة المذكورة في نص رد الذكاء الاصطناعي
+ * استخراج الأماكن المقترحة المذكورة في نص رد الذكاء الاصطناعي — من الأماكن الحية فقط.
  */
 function extractMentionedPlaces(
   text: string,
+  places: LivePlace[],
   userLocation?: { lat: number; lng: number } | null
 ): any[] {
   const t = (text || '').toLowerCase();
   const matched: any[] = [];
   const seenIds = new Set<string>();
 
-  for (const place of INITIAL_PLACES) {
-    const nameLower = place.n.toLowerCase();
+  for (const place of places) {
+    const nameLower = place.n.toLowerCase().trim();
+    if (!nameLower) continue;
+    // الاسم الكامل، أو كلمة مميزة طويلة من الاسم (للحالات اللي يذكر فيها جزء من الاسم)
+    const distinctive = nameLower
+      .split(/[\s\-—()]+/)
+      .filter((w) => w.length >= 5);
     const isMentioned =
-      t.includes(nameLower) ||
-      (nameLower.includes('كاستن') && t.includes('كاستن')) ||
-      (nameLower.includes('الجندي') && t.includes('الجندي')) ||
-      (nameLower.includes('سوق السمك') && t.includes('سوق السمك')) ||
-      (nameLower.includes('ابن حميدو') && t.includes('ابن حميدو')) ||
-      (nameLower.includes('المنارة') && t.includes('المنارة')) ||
-      (nameLower.includes('ديليسبس') && t.includes('ديليسبس')) ||
-      (nameLower.includes('سامي سالم') && t.includes('سامي سالم')) ||
-      (nameLower.includes('لورد') && t.includes('لورد')) ||
-      (nameLower.includes('متحف النصر') && t.includes('متحف النصر')) ||
-      (nameLower.includes('مسجد السلام') && t.includes('مسجد السلام'));
+      t.includes(nameLower) || distinctive.some((w) => t.includes(w));
 
     if (isMentioned && !seenIds.has(place.id)) {
       seenIds.add(place.id);
@@ -574,13 +577,122 @@ function extractMentionedPlaces(
   return matched;
 }
 
+export type MapAction =
+  | { kind: 'focusPlace'; placeId: string }
+  | { kind: 'showPlaces'; placeIds: string[] }
+  | { kind: 'showCategory'; cat: string }
+  | { kind: 'planRoute'; from: string; to: string };
+
+const CATEGORY_WORDS: Array<[string, string[]]> = [
+  ['food', ['مطعم', 'مطاعم', 'اكل', 'سمك', 'سي فود', 'غدا', 'عشا']],
+  ['cafe', ['كافيه', 'كافيهات', 'قهوة', 'كوفي', 'مشروب']],
+  ['fun', ['معالم', 'معلم', 'سياح', 'ترفيه', 'متحف', 'شاطئ', 'ممشى']],
+  ['sweets', ['حلويات', 'حلواني', 'تحلية']],
+  ['shop', ['تسوق', 'محلات', 'سوق', 'ملابس', 'هدوم']],
+  ['housing', ['سكن', 'سكني']],
+  ['sport', ['رياضة', 'جيم', 'ملعب', 'سباحة']],
+  ['hotels', ['فندق', 'فنادق', 'اوتيل']],
+];
+
+/**
+ * تحديد إجراء الخريطة/المواصلات من سؤال المستخدم والأماكن المقترحة.
+ * يعمل على مسار الـ LLM ومسار المحرك المحلي معاً.
+ */
+function detectMapAction(
+  message: string,
+  suggestedPlaces: any[],
+  places: LivePlace[],
+  transit: TransitKnowledge
+): MapAction | null {
+  const q = (message || '').toLowerCase().trim();
+  if (!q) return null;
+
+  // --- نية مواصلات: "ازاي أروح ..." — أولوية على الخريطة
+  const wantsRoute =
+    q.includes('مواصلات') ||
+    q.includes('ازاي اروح') ||
+    q.includes('ازاي أروح') ||
+    q.includes('اركب') ||
+    q.includes('أركب') ||
+    q.includes('اوصل') ||
+    q.includes('أوصل') ||
+    q.includes('خط ') ||
+    q.includes('الطريق');
+  if (wantsRoute) {
+    // وجهة مذكورة بالاسم: مكان حي أو محطة مواصلات
+    const namedPlace = places.find((p) => p.n && q.includes(p.n.toLowerCase()));
+    const namedStop = transit.stopNames.find((n) => n && q.includes(n.toLowerCase()));
+    let toStop: string | null = null;
+    if (namedPlace) {
+      const normArea = namedPlace.a.replace(/^\s*حي\s+/, '').trim();
+      toStop = AREA_STOP[normArea] || namedPlace.a || null;
+    } else if (namedStop) {
+      toStop = namedStop;
+    }
+    if (toStop) {
+      // نقطة البداية: محطة مذكورة في السؤال، وإلا السكن الجامعي (المعدية)
+      const fromStop = transit.stopNames.find((n) => n !== toStop && q.includes(n.toLowerCase())) || HOME_STOP;
+      return { kind: 'planRoute', from: fromStop, to: toStop };
+    }
+  }
+
+  // --- نية خريطة
+  const wantsMap =
+    q.includes('خريطة') ||
+    q.includes('وريني') ||
+    q.includes('اعرض') ||
+    q.includes('فين') ||
+    q.includes('مكانها') ||
+    q.includes('موقعه');
+  if (!wantsMap) return null;
+
+  const namedPlace = places.find((p) => p.n && q.includes(p.n.toLowerCase()));
+  if (namedPlace) return { kind: 'focusPlace', placeId: namedPlace.id };
+
+  for (const [cat, words] of CATEGORY_WORDS) {
+    if (words.some((w) => q.includes(w))) return { kind: 'showCategory', cat };
+  }
+
+  if (suggestedPlaces.length === 1) {
+    return { kind: 'focusPlace', placeId: suggestedPlaces[0].id };
+  }
+  if (suggestedPlaces.length > 1) {
+    return { kind: 'showPlaces', placeIds: suggestedPlaces.map((p) => p.id) };
+  }
+  return null;
+}
+
 export async function POST(req: Request) {
   try {
     const { message, history, userLocation, localFavorites = [] } = await req.json();
 
-    // جلب سياق وبيانات المستخدم الحالي
+    // 0. البيانات الحية أولاً — الأماكن والمواصلات من قاعدة البيانات فقط.
+    // عند تعذّر جلب الأماكن الحية، لا نجيب من أي بيانات قديمة.
+    const livePlaces = await fetchLivePlaces();
+    if (!livePlaces) {
+      return NextResponse.json({
+        ok: true,
+        ai_enabled: true,
+        provider: 'portsaid_engine',
+        reply: 'البيانات الحية مش متاحة دلوقتي، جرّب تاني كمان شوية.',
+        suggestedPlaces: [],
+        mapAction: null,
+        userDistrict: null,
+      });
+    }
+    const transit = await fetchTransitKnowledge();
+
+    // جلب سياق وبيانات المستخدم الحالي — بياناته هو فقط، ولا بيانات أي مستخدم آخر.
     const userData = await getUserContext(localFavorites);
-    const userPromptContext = buildUserPromptContext(userData);
+    const userPromptContext = buildUserPromptContext(userData, livePlaces);
+
+    const placesText = livePlaces
+      .map(
+        (p) =>
+          `- [${p.id}] ${p.n} (${p.a}) | تصنيف: ${p.cat} | إحداثيات: lat=${p.lat}, lon=${p.lon} | خصم: ${p.disc}% | نقاط زيارة: ${p.p}${p.rating != null ? ` | تقييم جوجل: ${p.rating} (${p.reviewsCount || 0} تقييم)` : ''} | تفاصيل: ${p.ds}`
+      )
+      .join('\n');
+    const systemPrompt = buildSystemPrompt(placesText, transit.text);
 
     let userDistrict: string | null = null;
     let locationContext = '';
@@ -606,7 +718,7 @@ export async function POST(req: Request) {
     if (openRouterKey && openRouterKey.length > 5) {
       try {
         const messages: any[] = [
-          { role: 'system', content: SYSTEM_PROMPT + locationContext + userPromptContext },
+          { role: 'system', content: systemPrompt + locationContext + userPromptContext },
         ];
 
         if (Array.isArray(history)) {
@@ -635,7 +747,7 @@ export async function POST(req: Request) {
           body: JSON.stringify({
             model: openRouterModel,
             messages,
-            max_tokens: 1200,
+            max_tokens: 450,
             temperature: 0.7,
           }),
         });
@@ -645,13 +757,14 @@ export async function POST(req: Request) {
           const statusCode = openRouterRes.status;
           console.warn('OpenRouter API returned error, gracefully falling back to local reasoning:', statusCode, errData);
 
-          const fallbackResult = getDynamicReasoningReply(message, userLocation, userData);
+          const fallbackResult = getDynamicReasoningReply(message, userLocation, userData, livePlaces);
           return NextResponse.json({
             ok: true,
             ai_enabled: true,
             provider: 'portsaid_engine',
             reply: fallbackResult.reply,
             suggestedPlaces: fallbackResult.suggestedPlaces,
+            mapAction: detectMapAction(message, fallbackResult.suggestedPlaces, livePlaces, transit),
             userDistrict,
           });
         }
@@ -664,32 +777,34 @@ export async function POST(req: Request) {
             .replace(/<think>[\s\S]*?<\/think>/gi, '')
             .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
             .trim();
-          const suggestedPlaces = extractMentionedPlaces(cleanReply, userLocation);
+          const suggestedPlaces = extractMentionedPlaces(cleanReply, livePlaces, userLocation);
           return NextResponse.json({
             ok: true,
             ai_enabled: true,
             provider: 'ai',
             reply: cleanReply,
             suggestedPlaces,
+            mapAction: detectMapAction(message, suggestedPlaces, livePlaces, transit),
             userDistrict,
           });
         }
       } catch (openRouterErr: any) {
         console.warn('OpenRouter network request failed, falling back to local engine:', openRouterErr);
-        const fallbackResult = getDynamicReasoningReply(message, userLocation, userData);
+        const fallbackResult = getDynamicReasoningReply(message, userLocation, userData, livePlaces);
         return NextResponse.json({
           ok: true,
           ai_enabled: true,
           provider: 'portsaid_engine',
           reply: fallbackResult.reply,
           suggestedPlaces: fallbackResult.suggestedPlaces,
+          mapAction: detectMapAction(message, fallbackResult.suggestedPlaces, livePlaces, transit),
           userDistrict,
         });
       }
     }
 
     // 2. تشغيل المحرك الذكي
-    const reasoningResult = getDynamicReasoningReply(message, userLocation, userData);
+    const reasoningResult = getDynamicReasoningReply(message, userLocation, userData, livePlaces);
 
     return NextResponse.json({
       ok: true,
@@ -697,6 +812,7 @@ export async function POST(req: Request) {
       provider: 'portsaid_engine',
       reply: reasoningResult.reply,
       suggestedPlaces: reasoningResult.suggestedPlaces,
+      mapAction: detectMapAction(message, reasoningResult.suggestedPlaces, livePlaces, transit),
       userDistrict,
     });
   } catch (err: any) {

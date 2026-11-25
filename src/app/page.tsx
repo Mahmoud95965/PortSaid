@@ -55,6 +55,8 @@ export default function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('fun');
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [targetMapPlaceId, setTargetMapPlaceId] = useState<string | null>(null);
+  const [targetMapCategory, setTargetMapCategory] = useState<string | null>(null);
+  const [targetRoute, setTargetRoute] = useState<{ from: string; to: string; nonce: number } | null>(null);
   const [targetChatInitialPrompt, setTargetChatInitialPrompt] = useState<string | null>(null);
 
   const [places, setPlaces] = useState<Place[]>(INITIAL_PLACES);
@@ -157,7 +159,14 @@ export default function HomePage() {
       return;
     }
     if (view === 'map') {
-      setTargetMapPlaceId(arg || null);
+      // arg إما معرّف مكان أو "cat:<تصنيف>" من المساعد الذكي
+      if (arg && arg.startsWith('cat:')) {
+        setTargetMapCategory(arg.slice(4));
+        setTargetMapPlaceId(null);
+      } else {
+        setTargetMapPlaceId(arg || null);
+        setTargetMapCategory(null);
+      }
       setCurrentView('map');
       return;
     }
@@ -182,6 +191,11 @@ export default function HomePage() {
       return;
     }
     if (view === 'transport' || view === 'transit' || view === 'bus') {
+      // arg بصيغة "من|إلى" من المساعد الذكي (أسماء محطات)
+      if (arg && arg.includes('|')) {
+        const [from, to] = arg.split('|');
+        if (from && to) setTargetRoute({ from, to, nonce: Date.now() });
+      }
       setCurrentView('bus');
       return;
     }
@@ -464,6 +478,7 @@ export default function HomePage() {
             <motion.div key="bus-view" variants={pageVariants} initial="initial" animate="animate" exit="exit">
               <TransportView
                 places={places}
+                routeRequest={targetRoute}
                 onNavigate={handleNavigate}
                 onBack={() => handleNavigate('home')}
               />
@@ -549,6 +564,7 @@ export default function HomePage() {
               <MapView
                 places={places}
                 initialPlaceId={targetMapPlaceId}
+                initialCategory={targetMapCategory}
                 onSelectPlace={(id) => handleNavigate('place', id)}
                 onBack={() => handleNavigate('home')}
               />

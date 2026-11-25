@@ -28,6 +28,7 @@ import {
   Info,
 } from 'lucide-react';
 import { isPointInPortSaid, identifyPortSaidDistrict } from '@/lib/geoUtils';
+import type { MapAction } from './AssistantChat';
 
 interface SuggestedPlace {
   id: string;
@@ -46,6 +47,7 @@ interface ChatMessage {
   text: string;
   timestamp: string;
   suggestedPlaces?: SuggestedPlace[];
+  mapAction?: MapAction;
 }
 
 interface ChatSession {
@@ -316,6 +318,7 @@ export const GeminiChatView: React.FC<GeminiChatViewProps> = ({
 
       const botReply = data.ok && data.reply ? data.reply : 'أنا معاك يا بطل! اسألني عن أي حاجة في بورسعيد.';
       const suggestedPlaces = data.suggestedPlaces || [];
+      const mapAction: MapAction | null = data.mapAction || null;
 
       const botMessage: ChatMessage = {
         id: 'bot-' + Date.now(),
@@ -323,6 +326,7 @@ export const GeminiChatView: React.FC<GeminiChatViewProps> = ({
         text: botReply,
         timestamp: timeStr,
         suggestedPlaces,
+        mapAction: mapAction || undefined,
       };
 
       const finalSession: ChatSession = {
@@ -680,6 +684,35 @@ export const GeminiChatView: React.FC<GeminiChatViewProps> = ({
                               </motion.button>
                             ))}
                           </div>
+                        </div>
+                      )}
+
+                      {/* زر تنفيذ إجراء الخريطة/المواصلات الذي حدده المساعد */}
+                      {isBot && m.mapAction && onNavigate && (
+                        <div className="mt-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const a = m.mapAction!;
+                              if (a.kind === 'focusPlace') onNavigate('map', a.placeId);
+                              else if (a.kind === 'showPlaces') onNavigate('map', a.placeIds[0]);
+                              else if (a.kind === 'showCategory') onNavigate('map', `cat:${a.cat}`);
+                              else if (a.kind === 'planRoute') onNavigate('transport', `${a.from}|${a.to}`);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 text-white font-black text-xs shadow hover:opacity-95 transition"
+                          >
+                            {m.mapAction.kind === 'planRoute' ? (
+                              <>
+                                <Bus className="w-3.5 h-3.5 shrink-0" />
+                                <span>عرض المسار بالمواصلات 🚌</span>
+                              </>
+                            ) : (
+                              <>
+                                <Navigation className="w-3.5 h-3.5 shrink-0" />
+                                <span>عرض على الخريطة 🗺️</span>
+                              </>
+                            )}
+                          </button>
                         </div>
                       )}
 
