@@ -200,62 +200,6 @@ body {
   animation: waveMove 5s ease-in-out infinite;
 }
 
-/* ===================== SEA WAVES (الصفحة الرئيسية) ===================== */
-/* انسياب أفقي لا نهائي لموج SVG عرضه 200% — إزاحة -50% تعادل فترتين
-   كاملتين من النمط فيبدو مستمراً بلا قفزة. تحريك transform فقط (GPU). */
-@keyframes seaWaveDrift {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-
-@keyframes seaWaveBob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-
-.sea-wave-drift {
-  animation: seaWaveDrift 13s linear infinite;
-  will-change: transform;
-}
-
-.sea-wave-drift-slow {
-  animation: seaWaveDrift 19s linear infinite;
-  will-change: transform;
-}
-
-.sea-wave-drift-fast {
-  animation: seaWaveDrift 9s linear infinite;
-  will-change: transform;
-}
-
-.sea-wave-bob {
-  animation: seaWaveBob 6s ease-in-out infinite;
-  will-change: transform;
-}
-
-@keyframes seaBubbleRise {
-  0% { transform: translateY(0); opacity: 0; }
-  12% { opacity: 0.7; }
-  85% { opacity: 0.45; }
-  100% { transform: translateY(-88vh); opacity: 0; }
-}
-
-.sea-bubble-rise {
-  animation: seaBubbleRise 12s linear infinite;
-  will-change: transform, opacity;
-}
-
-/* احترام تفضيل تقليل الحركة: إيقاف أمواج الرئيسية تماماً */
-@media (prefers-reduced-motion: reduce) {
-  .sea-wave-drift,
-  .sea-wave-drift-slow,
-  .sea-wave-drift-fast,
-  .sea-wave-bob,
-  .sea-bubble-rise {
-    animation: none !important;
-  }
-}
-
 /* ===================== PARTICLE EFFECTS ===================== */
 .particles-container {
   pointer-events: none;
