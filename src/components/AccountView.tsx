@@ -43,6 +43,7 @@ interface UserPreferences {
   notificationsEnabled: boolean;
   soundEffectsEnabled: boolean;
   seaSoundEnabled: boolean;
+  newPlaceSoundEnabled: boolean;
 }
 
 const PREFS_STORAGE_KEY = 'ps_user_preferences';
@@ -55,6 +56,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   notificationsEnabled: true,
   soundEffectsEnabled: true,
   seaSoundEnabled: false, // صوت البحر متوقف افتراضياً — المستخدم يفعّله بنفسه
+  newPlaceSoundEnabled: true, // صوت إشعار الأماكن الجديدة شغال افتراضياً — محمود طلبه بصوت
 };
 
 const INTEREST_OPTIONS = [
@@ -153,6 +155,19 @@ export const AccountView: React.FC<AccountViewProps> = ({ onBack }) => {
       localStorage.setItem(
         PREFS_STORAGE_KEY,
         JSON.stringify({ ...stored, seaSoundEnabled: nextValue })
+      );
+    } catch {}
+  };
+
+  // صوت إشعار الأماكن الجديدة: يُحفظ فوراً عند التبديل زي صوت البحر.
+  const toggleNewPlaceSound = () => {
+    const nextValue = !prefs.newPlaceSoundEnabled;
+    setPrefs((p) => ({ ...p, newPlaceSoundEnabled: nextValue }));
+    try {
+      const stored = JSON.parse(localStorage.getItem(PREFS_STORAGE_KEY) || '{}');
+      localStorage.setItem(
+        PREFS_STORAGE_KEY,
+        JSON.stringify({ ...stored, newPlaceSoundEnabled: nextValue })
       );
     } catch {}
   };
@@ -538,6 +553,31 @@ export const AccountView: React.FC<AccountViewProps> = ({ onBack }) => {
               <div className="flex-1 min-w-0">
                 <p className="text-xs sm:text-sm font-black text-ocean-950 dark:text-white">صوت البحر</p>
                 <p className="text-[10px] text-slate-500">أمواج هادئة في الصفحة الرئيسية — تتوقف لوحدها خارجها</p>
+              </div>
+            </div>
+          </div>
+
+          {/* صوت إشعار الأماكن الجديدة — يُحفظ فوراً عند التبديل */}
+          <div
+            onClick={toggleNewPlaceSound}
+            className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#121f2f] border border-slate-200 dark:border-[#1e2f42] flex items-center gap-3 cursor-pointer select-none"
+          >
+            <div
+              className={`w-11 h-6 shrink-0 rounded-full transition-colors relative flex items-center px-1 ${
+                prefs.newPlaceSoundEnabled ? 'bg-cyan-600' : 'bg-slate-300 dark:bg-slate-700'
+              }`}
+            >
+              <div
+                className={`w-4 h-4 shrink-0 rounded-full bg-white transition-transform ${
+                  prefs.newPlaceSoundEnabled ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </div>
+            <div className="flex-1 min-w-0 flex items-center gap-2">
+              <Bell className="w-4 h-4 text-cyan-600 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-black text-ocean-950 dark:text-white">صوت إشعارات الأماكن الجديدة</p>
+                <p className="text-[10px] text-slate-500">نغمة قصيرة لما يتضاف مكان جديد وأنت فاتح الموقع</p>
               </div>
             </div>
           </div>
