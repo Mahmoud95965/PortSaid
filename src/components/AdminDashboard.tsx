@@ -25,6 +25,7 @@ import {
   Eye,
   EyeOff,
   Save,
+  Upload,
   X,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -82,6 +83,7 @@ export const AdminDashboard: React.FC = () => {
   const [loadingStories, setLoadingStories] = useState(false);
   const [editingStory, setEditingStory] = useState<Partial<HistoricalStory> | null>(null);
   const [storyFormOpen, setStoryFormOpen] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const fetchStories = async () => {
     try {
@@ -127,6 +129,32 @@ export const AdminDashboard: React.FC = () => {
       }
     } catch (err) {
       alert('حدث خطأ أثناء حفظ القصة.');
+    }
+  };
+
+  // رفع صورة الدليل من جهاز المسؤول إلى Supabase Storage — الرابط العام
+  // الناتج بيتحط في حقل الصورة وبيتحفظ مع القصة. حقل المسار النصي يفضل
+  // موجود للي يحب يلصق رابط جاهز.
+  const handleUploadStoryImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !editingStory) return;
+    setUploadingImage(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('folder', 'guides');
+      const res = await fetch('/api/admin/upload-image', { method: 'POST', body: form });
+      const data = await res.json();
+      if (res.ok && data.ok && data.url) {
+        setEditingStory({ ...editingStory, image_url: data.url });
+      } else {
+        alert(data.message || 'فشل رفع الصورة.');
+      }
+    } catch {
+      alert('حدث خطأ أثناء رفع الصورة.');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -757,10 +785,37 @@ export const AdminDashboard: React.FC = () => {
                         type="text"
                         value={editingStory.image_url || ''}
                         onChange={(e) => setEditingStory({ ...editingStory, image_url: e.target.value })}
-                        placeholder="/assets/port-said/..."
+                        placeholder="/assets/port-said/... أو رابط"
                         className="ps-input font-mono"
                         required
                       />
+                      <div className="flex items-center gap-2 mt-2">
+                        <label
+                          className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black cursor-pointer ${
+                            uploadingImage
+                              ? 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                              : 'bg-teal2-600 hover:bg-teal2-500 text-white'
+                          }`}
+                        >
+                          <Upload className="w-4 h-4" />
+                          {uploadingImage ? 'جاري الرفع...' : 'رفع صورة من الجهاز'}
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            className="hidden"
+                            disabled={uploadingImage}
+                            onChange={handleUploadStoryImage}
+                          />
+                        </label>
+                        <span className="text-[10px] text-slate-500">JPG / PNG / WebP / GIF — حتى 5 ميجا، بتتحفظ في Supabase</span>
+                      </div>
+                      {editingStory.image_url ? (
+                        <img
+                          src={editingStory.image_url}
+                          alt="معاينة صورة الدليل"
+                          className="mt-2 w-32 h-20 object-cover rounded-xl border"
+                        />
+                      ) : null}
                     </div>
                     <div>
                       <label className="block text-xs font-bold mb-1">ترتيب الظهور (رقم)</label>
