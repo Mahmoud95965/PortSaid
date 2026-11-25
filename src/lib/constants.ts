@@ -1,3 +1,5 @@
+import type { TransitTripData } from './transit';
+
 export const CATS: Record<string, { t: string; i: string; c: string; border: string; bgSoft: string }> = {
   explore: { t: 'استكشف بورسعيد', i: 'fa-compass', c: 'bg-sand-200 text-ocean-900', border: '#0f6fb8', bgSoft: '#0f6fb81a' },
   fun: { t: 'معالم وترفيه', i: 'fa-star', c: 'bg-sand-400 text-ocean-900', border: '#c77d00', bgSoft: '#c77d001a' },
@@ -62,7 +64,8 @@ export const INSTITUTIONS = [
 export const HOME_STOP = 'المعدية / السكن الجامعي';
 
 export const TRANSPORT_NET: Record<string, string[]> = {
-  'الأمين': ['المعدية / السكن الجامعي', 'قصر الثقافة', 'معهد الحاسب الآلي', 'كلية التكنولوجيا والحقوق', 'بنك الإسكان', 'السلام', 'قسم الضواحي', 'الحريتين', 'شارع التلاتيني', 'المنشية'],
+  // معهد الحاسب الآلي merged into كلية التكنولوجيا والحقوق (same place — Mahmoud, 25 Nov 2026).
+  'الأمين': ['المعدية / السكن الجامعي', 'قصر الثقافة', 'كلية التكنولوجيا والحقوق', 'بنك الإسكان', 'السلام', 'قسم الضواحي', 'الحريتين', 'شارع التلاتيني', 'المنشية'],
   'الزهور': ['قصر الثقافة', 'كلية الطب والعلاج الطبيعي', 'كلية الصيدلة', 'شارع النصر', 'الزهور', 'عمر بن عبد العزيز'],
   'الـ 5000': ['المعدية / السكن الجامعي', 'كلية التربية النوعية', 'الإفرنج', 'حي العرب', 'حي المناخ', 'التعاونيات', 'منطقة الـ 5000'],
   'التلاتيني': ['منطقة الـ 5000', 'شارع الجمهورية'],
@@ -73,8 +76,9 @@ export const TRANSPORT_NET: Record<string, string[]> = {
 export const TRANSPORT_NOTE: Record<string, string> = {
   'الزهور|كلية الطب والعلاج الطبيعي': 'انزل عند عجوة جنب الكلية على طول',
   'الـ 5000|كلية التربية النوعية': 'انزل قدام الكلية بالظبط',
-  'الأمين|كلية التكنولوجيا والحقوق': 'انزل قدام الكلية',
-  'الأمين|معهد الحاسب الآلي': 'للصيدلة: انزل هنا وامشي لحد الكلية',
+  // Merged note (معهد الحاسب الآلي is the same place as كلية التكنولوجيا): the
+  // old 'للصيدلة: انزل هنا وامشي لحد الكلية' note now lives on this stop too.
+  'الأمين|كلية التكنولوجيا والحقوق': 'انزل قدام الكلية — ولو رايح صيدلة: انزل هنا وامشي لحد الكلية',
 };
 
 export const TRANSPORT_BAN: Record<string, number> = {
@@ -130,6 +134,99 @@ export function planRoute(from: string, to: string) {
   }
   return null;
 }
+
+// Curated trips (رحلات جاهزة) — the same 7 trips seeded by
+// migrations/10_transit_network_2026-11-25.sql, kept here as the fallback
+// when /api/transit is unreachable. Trips are DATA: add a new trip with an
+// INSERT into transit_trips (or edit this list as a stop-gap) — no code change.
+// صيدلة has two routes and both are unconfirmed (needs confirmation from
+// someone in pharmacy) — they show with a "لسه محتاجة تأكيد" badge.
+export const CURATED_TRIPS: TransitTripData[] = [
+  {
+    id: 'housing-to-medicine',
+    from: 'المعدية / السكن الجامعي',
+    to: 'كلية الطب والعلاج الطبيعي',
+    title: 'السكن الجامعي ← كلية الطب والعلاج الطبيعي (ومستشفى الجامعة)',
+    legs: [
+      { line: 'الأمين', from: 'المعدية / السكن الجامعي', to: 'قصر الثقافة' },
+      { line: 'الزهور', from: 'قصر الثقافة', to: 'كلية الطب والعلاج الطبيعي', alight_text: 'عجوة جنب الكلية' },
+    ],
+    is_confirmed: true,
+  },
+  {
+    id: 'medicine-to-housing',
+    from: 'كلية الطب والعلاج الطبيعي',
+    to: 'المعدية / السكن الجامعي',
+    title: 'كلية الطب والعلاج الطبيعي ← السكن الجامعي',
+    legs: [
+      { line: 'أسوان', from: 'كلية الطب والعلاج الطبيعي', to: 'قصر الثقافة' },
+      { line: 'الأمين', from: 'قصر الثقافة', to: 'المعدية / السكن الجامعي' },
+    ],
+    is_confirmed: true,
+  },
+  {
+    id: 'housing-to-tech',
+    from: 'المعدية / السكن الجامعي',
+    to: 'كلية التكنولوجيا والحقوق',
+    title: 'السكن الجامعي ← كلية التكنولوجيا والحقوق',
+    legs: [
+      { line: 'الأمين', from: 'المعدية / السكن الجامعي', to: 'كلية التكنولوجيا والحقوق', alight_text: 'قدام الكلية' },
+    ],
+    is_confirmed: true,
+  },
+  {
+    id: 'tech-to-housing',
+    from: 'كلية التكنولوجيا والحقوق',
+    to: 'المعدية / السكن الجامعي',
+    title: 'كلية التكنولوجيا والحقوق ← السكن الجامعي',
+    legs: [
+      { line: 'الأمين', from: 'كلية التكنولوجيا والحقوق', to: 'المعدية / السكن الجامعي', alight_text: 'المعدية' },
+    ],
+    is_confirmed: true,
+  },
+  {
+    id: 'housing-to-specific',
+    from: 'المعدية / السكن الجامعي',
+    to: 'كلية التربية النوعية',
+    title: 'السكن الجامعي ← كلية التربية النوعية',
+    legs: [
+      { line: 'الـ 5000', from: 'المعدية / السكن الجامعي', to: 'كلية التربية النوعية', alight_text: 'قدام الكلية بالظبط' },
+    ],
+    is_confirmed: true,
+  },
+  {
+    id: 'housing-to-pharmacy-a',
+    from: 'المعدية / السكن الجامعي',
+    to: 'كلية الصيدلة',
+    title: 'السكن الجامعي ← كلية الصيدلة (الطريق الأول)',
+    legs: [
+      { line: 'الأمين', from: 'المعدية / السكن الجامعي', to: 'قصر الثقافة' },
+      { line: 'الزهور', from: 'قصر الثقافة', to: 'كلية الصيدلة' },
+    ],
+    is_confirmed: false,
+  },
+  {
+    id: 'housing-to-pharmacy-b',
+    from: 'المعدية / السكن الجامعي',
+    to: 'كلية الصيدلة',
+    title: 'السكن الجامعي ← كلية الصيدلة (الطريق الثاني — مشي)',
+    legs: [
+      { line: 'الأمين', from: 'المعدية / السكن الجامعي', to: 'كلية التكنولوجيا والحقوق', alight_text: 'قدام كلية التكنولوجيا' },
+      { line: null, from: 'كلية التكنولوجيا والحقوق', to: 'كلية الصيدلة', note: 'تتمشى من كلية التكنولوجيا لصيدلة' },
+    ],
+    is_confirmed: false,
+  },
+];
+
+// Line details shown under a computed route when that line is used — the
+// same data seeded in transit_lines, kept here for the offline fallback.
+export const FALLBACK_LINE_DETAILS: Record<string, { notes?: string; outbound_path?: string; return_path?: string }> = {
+  'الزهور': { notes: 'نقطة تجمع الخط: شارع النصر عند مطعم سرحان.' },
+  'الـ 5000': {
+    outbound_path: 'منطقة الـ 5000 ← شارع النصر ← شارع عبد الهادي الحديدي ← شارع الثلاثيني بطوله ← ميدان المنشية',
+    return_path: 'ميدان المنشية ← شارع رمسيس ← أوجينا ← شارع ممفيس ← شارع 23 يوليو بطوله ← شارع عبد الهادي الحديدي ← منطقة الـ 5000',
+  },
+};
 
 export const BOT_FAQ = [
   {
