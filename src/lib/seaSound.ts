@@ -67,7 +67,7 @@ export function startSeaSound(): void {
     const noise = createNoiseBuffer(ctx);
     const master = ctx.createGain();
     master.gain.setValueAtTime(0, ctx.currentTime);
-    master.gain.linearRampToValueAtTime(0.14, ctx.currentTime + 2.5); // دخول تدريجي هادئ
+    master.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 2.5); // دخول تدريجي — أعلى وأوضح
     master.connect(ctx.destination);
 
     // الطبقة 1: الأمواج — ضجيج يمر بمرشّح منخفض يتأرجح ببطء (المد والجزر)
@@ -76,14 +76,14 @@ export function startSeaSound(): void {
     surfSrc.loop = true;
     const surfFilter = ctx.createBiquadFilter();
     surfFilter.type = 'lowpass';
-    surfFilter.frequency.value = 420;
+    surfFilter.frequency.value = 520; // مرشّح أفتح — صوت أوضح وأقل كتمة
     surfFilter.Q.value = 0.6;
     const surfGain = ctx.createGain();
-    surfGain.gain.value = 0.6;
+    surfGain.gain.value = 0.7;
     const swellLfo = ctx.createOscillator();
     swellLfo.frequency.value = 0.08; // موجة كل ~12 ثانية
     const swellDepth = ctx.createGain();
-    swellDepth.gain.value = 260;
+    swellDepth.gain.value = 380; // تموّج أعمق — المد والجزر أوضح
     swellLfo.connect(swellDepth);
     swellDepth.connect(surfFilter.frequency);
     const swellGainLfo = ctx.createOscillator();
@@ -103,14 +103,14 @@ export function startSeaSound(): void {
     foamSrc.playbackRate.value = 1.7;
     const foamFilter = ctx.createBiquadFilter();
     foamFilter.type = 'bandpass';
-    foamFilter.frequency.value = 2400;
+    foamFilter.frequency.value = 1900;
     foamFilter.Q.value = 0.8;
     const foamGain = ctx.createGain();
-    foamGain.gain.value = 0.05;
+    foamGain.gain.value = 0.1; // رغوة أعلى وأوضح
     const foamLfo = ctx.createOscillator();
     foamLfo.frequency.value = 0.11;
     const foamDepth = ctx.createGain();
-    foamDepth.gain.value = 0.03;
+    foamDepth.gain.value = 0.05;
     foamLfo.connect(foamDepth);
     foamDepth.connect(foamGain.gain);
     foamSrc.connect(foamFilter);
