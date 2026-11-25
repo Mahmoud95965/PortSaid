@@ -22,7 +22,6 @@ import {
   Share2,
   Check,
   Tag,
-  DollarSign,
   Map as MapIcon,
   Phone,
   AlertTriangle,
@@ -397,48 +396,6 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack }) => {
         </div>
       </div>
 
-      {/* 2. Key Highlights Strip (Duration, Best Time, Cost, Points) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-        {/* Cost Range */}
-        <div className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] text-right space-y-1">
-          <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1">
-            <DollarSign className="w-3.5 h-3.5 text-teal2-600" />
-            <span>التكلفة التقديرية</span>
-          </span>
-          <p className="font-black text-xs sm:text-sm text-ocean-950 dark:text-white truncate">
-            {meta?.costRange || (place.cost ? `${place.cost} ج.م` : 'مجاني')}
-          </p>
-        </div>
-
-        {/* Visit Duration */}
-        <div className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] text-right space-y-1">
-          <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5 text-blue-600" />
-            <span>المدة المقترحة</span>
-          </span>
-          <p className="font-black text-xs sm:text-sm text-ocean-950 dark:text-white truncate">
-            {meta?.recommendedDurationMinutes ? `${meta.recommendedDurationMinutes} دقيقة` : '45 دقيقة'}
-          </p>
-        </div>
-
-        {/* Best Time of Day */}
-        <div className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] text-right space-y-1">
-          <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1">
-            <Compass className="w-3.5 h-3.5 text-amber-500" />
-            <span>أفضل توقيت</span>
-          </span>
-          <p className="font-black text-xs sm:text-sm text-ocean-950 dark:text-white truncate">
-            {meta?.bestTimeOfDay === 'morning'
-              ? 'صباحاً'
-              : meta?.bestTimeOfDay === 'evening'
-              ? 'وقت الغروب'
-              : meta?.bestTimeOfDay === 'midday'
-              ? 'فترة الظهيرة'
-              : 'أي وقت'}
-          </p>
-        </div>
-
-      </div>
 
       {/* Status Alert Banner if place is temp closed or reported closed */}
       {place.status_note && (
