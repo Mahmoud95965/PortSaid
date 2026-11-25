@@ -1151,152 +1151,7 @@ export const TransportView: React.FC<TransportViewProps> = ({
         </div>
       </div>
 
-      {/* 4. قسم الخريطة التفاعلية مع المسار ونقاط التوجيه */}
-      <div className="bg-white dark:bg-[#0f1a28] rounded-3xl border border-sand-200/80 dark:border-[#1d2d3e] shadow-md overflow-hidden">
-        <div className="p-4 sm:p-5 border-b border-sand-200/60 dark:border-[#1d2d3e] flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <span className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 grid place-items-center">
-              <MapIcon className="w-4 h-4" />
-            </span>
-            <div>
-              <h3 className="text-sm font-black text-ocean-900 dark:text-white">خريطة التحرك والمسار المعتمد</h3>
-              <p className="text-[11px] text-ocean-700/70 dark:text-white/60 font-medium">
-                {pickingTarget
-                  ? `انقر على أي موقع على الخريطة لتحديده كـ ${pickingTarget === 'from' ? 'نقطة انطلاق' : 'وجهة'}`
-                  : 'استعرض محطات النقل والمعديات ومسار الشوارع الفعلي'}
-              </p>
-            </div>
-          </div>
-
-          {/* محدد نمط الخريطة */}
-          <div className="flex items-center gap-1.5 bg-sand-50 dark:bg-[#142232] p-1 rounded-xl border border-sand-200 dark:border-[#22354a]">
-            {MAP_STYLES.map((st) => (
-              <button
-                key={st.key}
-                onClick={() => setSelectedMapStyle(st.key)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
-                  selectedMapStyle === st.key
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-ocean-700 dark:text-white/70 hover:bg-sand-200 dark:hover:bg-[#1c3046]'
-                }`}
-              >
-                <span>{st.icon}</span>
-                <span className="hidden sm:inline">{st.label.split(' ')[0]}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* حاوية MapLibre */}
-        <div className="relative w-full h-[360px] sm:h-[440px] bg-sand-100 dark:bg-[#071322]">
-          <div ref={mapContainerRef} className="w-full h-full" />
-
-          {/* شريط الإشعار عند تفعيل النقر على الخريطة */}
-          {pickingTarget && (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-2xl bg-ocean-900/90 text-white text-xs font-black shadow-lg backdrop-blur-md flex items-center gap-2 border border-white/20 max-w-[calc(100%-1.5rem)]">
-              <Crosshair className="w-4 h-4 text-emerald-400 animate-pulse" />
-              <span className="truncate">
-                انقر على الخريطة لتحديد {pickingTarget === 'from' ? 'نقطة الانطلاق 🏁' : 'الوجهة 🎯'}
-              </span>
-              <button
-                onClick={() => setPickingTarget(null)}
-                className="mr-2 text-white/70 hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-
-          {/* وسيلة إيضاح الخريطة */}
-          <div className="absolute bottom-3 right-3 z-10 p-2.5 rounded-2xl bg-white/90 dark:bg-[#0f1a28]/90 backdrop-blur-md border border-sand-200 dark:border-[#1d2d3e] text-[10px] font-bold text-ocean-900 dark:text-white shadow-sm flex flex-col gap-1.5">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-              <span>نقطة البداية</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-              <span>الوجهة</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
-              <span>محطات النقل والمعديات</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-sky-500 border border-white" />
-              <span>محطة سرفيس (انقر عليها للتحديد)</span>
-            </span>
-          </div>
-        </div>
-
-        {/* نتائج المسار الفعلي أو التنبيه الواضح عند عدم توفر خدمة الطرق */}
-        <div className="p-4 sm:p-5 bg-sand-50/70 dark:bg-[#0c1622] border-t border-sand-200/60 dark:border-[#1d2d3e]">
-          {streetRouteResult && streetRouteResult.isReal ? (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 grid place-items-center shrink-0">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/40">
-                      مسار شوارع فعلي موثّق
-                    </span>
-                  </div>
-                  <p className="text-xs text-ocean-700/80 dark:text-white/70 font-semibold mt-1">
-                    المسافة الفعلية بالسيارة:{' '}
-                    <strong className="text-ocean-900 dark:text-white font-black">
-                      {(streetRouteResult.distanceMeters / 1000).toFixed(1)} كم
-                    </strong>
-                    {' — '}
-                    المدة التقديرية للقيادة:{' '}
-                    <strong className="text-ocean-900 dark:text-white font-black">
-                      {Math.max(1, Math.round(streetRouteResult.durationSeconds / 60))} دقيقة
-                    </strong>
-                  </p>
-                </div>
-              </div>
-
-              {googleMapsDirectionsUrl && (
-                <a
-                  href={googleMapsDirectionsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition self-start sm:self-auto shrink-0"
-                >
-                  <span>بدء الملاحة الحية</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              )}
-            </div>
-          ) : routingError ? (
-            <div className="flex items-start gap-3 text-xs text-ocean-800 dark:text-white/80 font-semibold leading-relaxed">
-              <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-              <div className="flex-1 space-y-1">
-                <p className="font-bold text-ocean-900 dark:text-white">{routingError}</p>
-                <p className="text-ocean-700/70 dark:text-white/60">
-                  وفق معايير الدقة، لا نعرض خطوطاً مستقيمة وهمية كبديل للطريق الحقيقي. يمكنك استخدام زر الملاحة أدناه لفتح المسار التفصيلي فوراً.
-                </p>
-              </div>
-              {googleMapsDirectionsUrl && (
-                <a
-                  href={googleMapsDirectionsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3.5 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs transition shrink-0"
-                >
-                  فتح المسار في خرائط جوجل
-                </a>
-              )}
-            </div>
-          ) : (
-            <p className="text-xs text-ocean-700/70 dark:text-white/60 font-semibold text-center py-1">
-              اختر نقطتي التحرك والوجهة لمعاينة المسار ومحطات النقل المشتركة 🗺️
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* رحلات جاهزة من السكن الجامعي — من قاعدة البيانات (transit_trips)، ولو فيه أكتر من طريق لنفس المكان بيظهروا كلهم */}
+      {/* 4. رحلات جاهزة من السكن الجامعي — من قاعدة البيانات (transit_trips)، ولو فيه أكتر من طريق لنفس المكان بيظهروا كلهم */}
       <div className="bg-white dark:bg-[#0f1a28] p-5 sm:p-7 rounded-3xl border border-sand-200/80 dark:border-[#1d2d3e] shadow-md space-y-4">
         <div className="flex items-center gap-2 border-b border-sand-200/60 dark:border-[#1d2d3e] pb-3">
           <span className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 grid place-items-center">
@@ -1474,7 +1329,152 @@ export const TransportView: React.FC<TransportViewProps> = ({
         )}
       </div>
 
-      {/* 6. دليل محطات ومراكز النقل الحيوية في بورسعيد (بيانات مؤكدة فقط) */}
+      {/* 6. قسم الخريطة التفاعلية مع المسار ونقاط التوجيه */}
+      <div className="bg-white dark:bg-[#0f1a28] rounded-3xl border border-sand-200/80 dark:border-[#1d2d3e] shadow-md overflow-hidden">
+        <div className="p-4 sm:p-5 border-b border-sand-200/60 dark:border-[#1d2d3e] flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 grid place-items-center">
+              <MapIcon className="w-4 h-4" />
+            </span>
+            <div>
+              <h3 className="text-sm font-black text-ocean-900 dark:text-white">خريطة التحرك والمسار المعتمد</h3>
+              <p className="text-[11px] text-ocean-700/70 dark:text-white/60 font-medium">
+                {pickingTarget
+                  ? `انقر على أي موقع على الخريطة لتحديده كـ ${pickingTarget === 'from' ? 'نقطة انطلاق' : 'وجهة'}`
+                  : 'استعرض محطات النقل والمعديات ومسار الشوارع الفعلي'}
+              </p>
+            </div>
+          </div>
+
+          {/* محدد نمط الخريطة */}
+          <div className="flex items-center gap-1.5 bg-sand-50 dark:bg-[#142232] p-1 rounded-xl border border-sand-200 dark:border-[#22354a]">
+            {MAP_STYLES.map((st) => (
+              <button
+                key={st.key}
+                onClick={() => setSelectedMapStyle(st.key)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
+                  selectedMapStyle === st.key
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-ocean-700 dark:text-white/70 hover:bg-sand-200 dark:hover:bg-[#1c3046]'
+                }`}
+              >
+                <span>{st.icon}</span>
+                <span className="hidden sm:inline">{st.label.split(' ')[0]}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* حاوية MapLibre */}
+        <div className="relative w-full h-[360px] sm:h-[440px] bg-sand-100 dark:bg-[#071322]">
+          <div ref={mapContainerRef} className="w-full h-full" />
+
+          {/* شريط الإشعار عند تفعيل النقر على الخريطة */}
+          {pickingTarget && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-2xl bg-ocean-900/90 text-white text-xs font-black shadow-lg backdrop-blur-md flex items-center gap-2 border border-white/20 max-w-[calc(100%-1.5rem)]">
+              <Crosshair className="w-4 h-4 text-emerald-400 animate-pulse" />
+              <span className="truncate">
+                انقر على الخريطة لتحديد {pickingTarget === 'from' ? 'نقطة الانطلاق 🏁' : 'الوجهة 🎯'}
+              </span>
+              <button
+                onClick={() => setPickingTarget(null)}
+                className="mr-2 text-white/70 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* وسيلة إيضاح الخريطة */}
+          <div className="absolute bottom-3 right-3 z-10 p-2.5 rounded-2xl bg-white/90 dark:bg-[#0f1a28]/90 backdrop-blur-md border border-sand-200 dark:border-[#1d2d3e] text-[10px] font-bold text-ocean-900 dark:text-white shadow-sm flex flex-col gap-1.5">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+              <span>نقطة البداية</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+              <span>الوجهة</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+              <span>محطات النقل والمعديات</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-sky-500 border border-white" />
+              <span>محطة سرفيس (انقر عليها للتحديد)</span>
+            </span>
+          </div>
+        </div>
+
+        {/* نتائج المسار الفعلي أو التنبيه الواضح عند عدم توفر خدمة الطرق */}
+        <div className="p-4 sm:p-5 bg-sand-50/70 dark:bg-[#0c1622] border-t border-sand-200/60 dark:border-[#1d2d3e]">
+          {streetRouteResult && streetRouteResult.isReal ? (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 grid place-items-center shrink-0">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/40">
+                      مسار شوارع فعلي موثّق
+                    </span>
+                  </div>
+                  <p className="text-xs text-ocean-700/80 dark:text-white/70 font-semibold mt-1">
+                    المسافة الفعلية بالسيارة:{' '}
+                    <strong className="text-ocean-900 dark:text-white font-black">
+                      {(streetRouteResult.distanceMeters / 1000).toFixed(1)} كم
+                    </strong>
+                    {' — '}
+                    المدة التقديرية للقيادة:{' '}
+                    <strong className="text-ocean-900 dark:text-white font-black">
+                      {Math.max(1, Math.round(streetRouteResult.durationSeconds / 60))} دقيقة
+                    </strong>
+                  </p>
+                </div>
+              </div>
+
+              {googleMapsDirectionsUrl && (
+                <a
+                  href={googleMapsDirectionsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition self-start sm:self-auto shrink-0"
+                >
+                  <span>بدء الملاحة الحية</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </div>
+          ) : routingError ? (
+            <div className="flex items-start gap-3 text-xs text-ocean-800 dark:text-white/80 font-semibold leading-relaxed">
+              <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+              <div className="flex-1 space-y-1">
+                <p className="font-bold text-ocean-900 dark:text-white">{routingError}</p>
+                <p className="text-ocean-700/70 dark:text-white/60">
+                  وفق معايير الدقة، لا نعرض خطوطاً مستقيمة وهمية كبديل للطريق الحقيقي. يمكنك استخدام زر الملاحة أدناه لفتح المسار التفصيلي فوراً.
+                </p>
+              </div>
+              {googleMapsDirectionsUrl && (
+                <a
+                  href={googleMapsDirectionsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs transition shrink-0"
+                >
+                  فتح المسار في خرائط جوجل
+                </a>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-ocean-700/70 dark:text-white/60 font-semibold text-center py-1">
+              اختر نقطتي التحرك والوجهة لمعاينة المسار ومحطات النقل المشتركة 🗺️
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* 7. دليل محطات ومراكز النقل الحيوية في بورسعيد (بيانات مؤكدة فقط) */}
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-lg font-black text-ocean-900 dark:text-white flex items-center gap-2 min-w-0">
