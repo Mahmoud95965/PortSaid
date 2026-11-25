@@ -3,39 +3,45 @@
 import React from 'react';
 
 /**
- * بحر جانبي متحرك يملأ الفراغين الفارغين يمين وشمال محتوى الصفحة الرئيسية
- * على الشاشات العريضة (ديسكتوب).
+ * بحر جانبي يملأ الفراغين يمين وشمال محتوى الصفحة الرئيسية على الشاشات العريضة.
  * - طبقتان ثابتتان (يمين/يسار) بعرض الفراغ بالظبط: calc((100vw - 72rem) / 2)
  *   لأن محتوى الصفحة محدد بـ max-w-6xl (72rem) ومتمركز — فلا تغطي المحتوى أبداً.
  * - تظهر فقط من مقاس xl فأعلى (حيث يوجد فراغ أصلاً) وتختفي على الموبايل والتابلت.
- * - داخل كل جانب: تدرّج بحري + 3 شرائط موج تنساب أفقياً بسرعات مختلفة
- *   + فقاعات تتصاعد ببطء — كلها transform/opacity فقط (GPU) فلا تؤثر على الأداء.
+ * - كل جانب بحر كامل الارتفاع: تدرّج مائي + 4 طبقات موج متداخلة مثبّتة من الأسفل
+ *   (مثل شط البحر — الطبقات فوق بعض فتقرأ كمياه متصلة، لا كشرائط عائمة منفصلة)
+ *   تنساب أفقياً بسرعات مختلفة + فقاعات تتصاعد — كلها transform/opacity فقط (GPU).
  * - زخرفية فقط: pointer-events-none و aria-hidden، وتتوقف مع prefers-reduced-motion.
  */
 
+// مسار موجة: القمة متموّجة في الثلث العلوي من الـ viewBox والجسم ممتد للأسفل
+// (viewBox بارتفاع 400 حتى لا تتمطط الموجة رأسياً داخل الطبقات الطويلة)
 const WAVE_PATH =
-  'M0,60 C240,90 480,30 720,60 C960,90 1200,30 1440,60 C1680,90 1920,30 2160,60 C2400,90 2640,30 2880,60 L2880,120 L0,120 Z';
+  'M0,90 C240,140 480,40 720,90 C960,140 1200,40 1440,90 C1680,140 1920,40 2160,90 C2400,140 2640,40 2880,90 L2880,400 L0,400 Z';
 const WAVE_PATH_ALT =
-  'M0,50 C240,20 480,80 720,50 C960,20 1200,80 1440,50 C1680,20 1920,80 2160,50 C2400,20 2640,80 2880,50 L2880,120 L0,120 Z';
+  'M0,80 C240,30 480,130 720,80 C960,30 1200,130 1440,80 C1680,30 1920,130 2160,80 C2400,30 2640,130 2880,80 L2880,400 L0,400 Z';
 
 const BUBBLES = [
-  { left: '18%', size: 8, duration: 11, delay: 0 },
-  { left: '55%', size: 5, duration: 14, delay: 3 },
-  { left: '78%', size: 10, duration: 16, delay: 6 },
-  { left: '35%', size: 6, duration: 12, delay: 8 },
-  { left: '68%', size: 4, duration: 10, delay: 2 },
+  { left: '18%', size: 10, duration: 11, delay: 0 },
+  { left: '55%', size: 7, duration: 14, delay: 3 },
+  { left: '78%', size: 12, duration: 16, delay: 6 },
+  { left: '35%', size: 8, duration: 12, delay: 8 },
+  { left: '68%', size: 6, duration: 10, delay: 2 },
 ];
 
-const WaveBand: React.FC<{
-  top: string;
+const WaveLayer: React.FC<{
+  height: string;
   driftClass: string;
+  bob?: boolean;
   path: string;
   fillClass: string;
-}> = ({ top, driftClass, path, fillClass }) => (
-  <div className="absolute left-0 right-0 h-16 sm:h-20" style={{ top }}>
+}> = ({ height, driftClass, bob, path, fillClass }) => (
+  <div
+    className={`absolute bottom-0 left-0 right-0 ${bob ? 'sea-wave-bob' : ''}`}
+    style={{ height }}
+  >
     <svg
       className={`${driftClass} absolute bottom-0 left-0 h-full w-[200%] max-w-none`}
-      viewBox="0 0 2880 120"
+      viewBox="0 0 2880 400"
       preserveAspectRatio="none"
       fill="none"
     >
@@ -62,34 +68,42 @@ const SidePanel: React.FC<{ side: 'left' | 'right' }> = ({ side }) => (
           }
     }
   >
-    {/* تدرّج بحري خفيف يملأ الجانب */}
-    <div className="absolute inset-0 bg-gradient-to-b from-sky-300/25 via-cyan-200/15 to-blue-400/25 dark:from-[#0a2c4d]/60 dark:via-[#0d3a5c]/45 dark:to-[#0a2c4d]/60" />
+    {/* تدرّج مائي يملأ الجانب كله */}
+    <div className="absolute inset-0 bg-gradient-to-b from-sky-300/50 via-cyan-200/40 to-blue-400/50 dark:from-[#0a2c4d]/70 dark:via-[#0d3a5c]/55 dark:to-[#0a2c4d]/70" />
 
-    {/* شرائط موج منسابة على ارتفاعات مختلفة */}
-    <WaveBand
-      top="14%"
+    {/* طبقات موج متداخلة من الأسفل — الخلفية أعلى وأخف، الأمامية أقصر وأوضح */}
+    <WaveLayer
+      height="88%"
       driftClass="sea-wave-drift-slow"
       path={WAVE_PATH}
-      fillClass="fill-sky-400/50 dark:fill-[#155e85]/60"
+      fillClass="fill-sky-300/45 dark:fill-[#155e85]/55"
     />
-    <WaveBand
-      top="44%"
+    <WaveLayer
+      height="68%"
       driftClass="sea-wave-drift"
       path={WAVE_PATH_ALT}
-      fillClass="fill-sky-500/45 dark:fill-[#0e7490]/55"
+      fillClass="fill-sky-400/50 dark:fill-[#0e7490]/60"
     />
-    <WaveBand
-      top="72%"
+    <WaveLayer
+      height="48%"
       driftClass="sea-wave-drift-fast"
+      bob
       path={WAVE_PATH}
-      fillClass="fill-blue-500/50 dark:fill-[#0369a1]/60"
+      fillClass="fill-sky-500/55 dark:fill-[#0369a1]/65"
+    />
+    <WaveLayer
+      height="30%"
+      driftClass="sea-wave-drift-slow"
+      bob
+      path={WAVE_PATH_ALT}
+      fillClass="fill-blue-500/60 dark:fill-[#075985]/70"
     />
 
     {/* فقاعات تتصاعد */}
     {BUBBLES.map((b, i) => (
       <span
         key={i}
-        className="sea-bubble-rise absolute bottom-[-12px] rounded-full bg-white/50 dark:bg-cyan-200/40"
+        className="sea-bubble-rise absolute bottom-[-12px] rounded-full bg-white/80 dark:bg-cyan-200/40"
         style={{
           left: b.left,
           width: b.size,
