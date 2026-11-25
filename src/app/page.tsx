@@ -26,6 +26,8 @@ import { AccountView } from '@/components/AccountView';
 import { AssistantChat } from '@/components/AssistantChat';
 import { SiteGuideModal } from '@/components/SiteGuideModal';
 import { FeatureExplainerCards } from '@/components/FeatureExplainerCards';
+import { WavesBackground } from '@/components/WavesBackground';
+import { SeaSoundPlayer } from '@/components/SeaSoundPlayer';
 import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Place } from '@/types';
@@ -452,6 +454,9 @@ export default function HomePage() {
                 onNavigate={handleNavigate}
                 hasSeenGuide={hasSeenGuide}
               />
+
+              {/* شريط أمواج متحرك في نهاية الصفحة الرئيسية */}
+              <WavesBackground />
             </motion.div>
           )}
 
@@ -587,6 +592,9 @@ export default function HomePage() {
 
       {/* Assistant AI Chatbot FAB */}
       <AssistantChat onNavigate={handleNavigate} />
+
+      {/* صوت البحر — يشتغل فقط في الصفحة الرئيسية ولو مفعّل من الإعدادات */}
+      <SeaSoundPlayer active={currentView === 'home'} />
 
       {/* PWA App Installation Prompt Banner */}
       <PwaInstallPrompt />
