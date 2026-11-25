@@ -3,6 +3,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { isAdminEmail } from '@/lib/auth/admin';
+import {
+  CATEGORY_LABELS,
+  clearNotifications,
+  markAllNotificationsRead,
+  readNotifications,
+  type NewPlaceNotification,
+} from '@/lib/notifySound';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import {
   Moon,
@@ -46,6 +53,17 @@ export const Header: React.FC<HeaderProps> = ({
   // Dropdown states
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NewPlaceNotification[]>([]);
+
+  // إشعارات الأماكن الجديدة (من NewPlaceNotifier عبر localStorage + حدث).
+  useEffect(() => {
+    const load = () => setNotifications(readNotifications());
+    load();
+    window.addEventListener('ps:notifications', load);
+    return () => window.removeEventListener('ps:notifications', load);
+  }, []);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
   const [exploreMenuOpen, setExploreMenuOpen] = useState(false);
   const [servicesMenuOpen, setServicesMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -342,24 +360,31 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Actions: Points, Theme, Profile, Mobile Menu Button */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-          {/* Notifications Button (Completely Empty State as requested) */}
+          {/* Notifications Button — أماكن جديدة (من NewPlaceNotifier) */}
           <div className="relative" ref={notificationsRef}>
             <motion.button
               onClick={() => {
-                setNotificationsOpen(!notificationsOpen);
+                const next = !notificationsOpen;
+                setNotificationsOpen(next);
                 setUserMenuOpen(false);
+                if (next && unreadCount > 0) markAllNotificationsRead();
               }}
               type="button"
               aria-label="الإشعارات"
-              title="الإشعارات (0)"
+              title={`الإشعارات (${unreadCount})`}
               className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-white/15 border border-white/30 text-white grid place-items-center hover:bg-white/25 transition shadow-sm relative"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
               <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-white/90" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -left-1 min-w-5 h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-black grid place-items-center border-2 border-ocean-900">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </motion.button>
 
-            {/* Notifications Dropdown (Completely Empty State) */}
+            {/* Notifications Dropdown — قايمة الأماكن الجديدة */}
             <AnimatePresence>
               {notificationsOpen && (
                 <motion.div
@@ -374,22 +399,65 @@ export const Header: React.FC<HeaderProps> = ({
                       <Bell className="w-4 h-4 text-ocean-700 dark:text-teal2-400" />
                       <h4 className="font-extrabold text-sm text-ocean-900 dark:text-white">الإشعارات</h4>
                     </div>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-sand-200 dark:bg-slate-800 text-ocean-700 dark:text-slate-300">
-                      0 جديدة
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {notifications.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            clearNotifications();
+                            setNotifications([]);
+                          }}
+                          className="text-[10px] font-black text-ocean-700/70 dark:text-slate-400 hover:underline"
+                        >
+                          مسح الكل
+                        </button>
+                      )}
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-sand-200 dark:bg-slate-800 text-ocean-700 dark:text-slate-300">
+                        {unreadCount} جديدة
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="py-6 px-3 text-center space-y-2">
-                    <div className="w-12 h-12 mx-auto rounded-2xl bg-sand-100 dark:bg-slate-800/80 text-ocean-500 dark:text-slate-400 grid place-items-center">
-                      <BellOff className="w-6 h-6" />
+                  {notifications.length === 0 ? (
+                    <div className="py-6 px-3 text-center space-y-2">
+                      <div className="w-12 h-12 mx-auto rounded-2xl bg-sand-100 dark:bg-slate-800/80 text-ocean-500 dark:text-slate-400 grid place-items-center">
+                        <BellOff className="w-6 h-6" />
+                      </div>
+                      <p className="font-extrabold text-xs sm:text-sm text-ocean-900 dark:text-white">
+                        لا توجد إشعارات حالياً
+                      </p>
+                      <p className="text-[11px] text-ocean-700/60 dark:text-slate-400 max-w-xs mx-auto">
+                        لما يتضاف مكان جديد وأنت فاتح الموقع، هيوصلك هنا تنبيه بصوت.
+                      </p>
                     </div>
-                    <p className="font-extrabold text-xs sm:text-sm text-ocean-900 dark:text-white">
-                      لا توجد إشعارات حالياً
-                    </p>
-                    <p className="text-[11px] text-ocean-700/60 dark:text-slate-400 max-w-xs mx-auto">
-                      ستصلك هنا أحدث العروض والفعاليات والتحديثات فور صدورها.
-                    </p>
-                  </div>
+                  ) : (
+                    <ul className="max-h-80 overflow-y-auto space-y-2">
+                      {notifications.map((n) => (
+                        <li
+                          key={n.id}
+                          className="flex items-start gap-2.5 rounded-2xl bg-sand-50 dark:bg-slate-800/60 px-3 py-2.5"
+                        >
+                          <span className="w-8 h-8 shrink-0 rounded-xl bg-sand-400 text-ocean-950 grid place-items-center mt-0.5">
+                            <Bell className="w-4 h-4" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-xs font-black text-ocean-900 dark:text-white">
+                              مكان جديد في {CATEGORY_LABELS[n.category] || 'بورسعيد'}
+                            </span>
+                            <span className="block text-xs font-bold text-ocean-700/80 dark:text-slate-300 truncate">
+                              {n.name}
+                            </span>
+                            <span className="block text-[10px] text-ocean-700/50 dark:text-slate-500 mt-0.5">
+                              {new Date(n.createdAt).toLocaleDateString('ar-EG', {
+                                day: 'numeric',
+                                month: 'short',
+                              })}
+                            </span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>

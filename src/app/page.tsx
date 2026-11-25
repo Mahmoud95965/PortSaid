@@ -27,6 +27,7 @@ import { AssistantChat } from '@/components/AssistantChat';
 import { SiteGuideModal } from '@/components/SiteGuideModal';
 import { FeatureExplainerCards } from '@/components/FeatureExplainerCards';
 import { SeaSoundPlayer } from '@/components/SeaSoundPlayer';
+import { NewPlaceNotifier } from '@/components/NewPlaceNotifier';
 import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Place } from '@/types';
@@ -592,6 +593,9 @@ export default function HomePage() {
 
       {/* صوت البحر — يشتغل فقط في الصفحة الرئيسية ولو مفعّل من الإعدادات */}
       <SeaSoundPlayer active={currentView === 'home'} />
+
+      {/* إشعارات الأماكن الجديدة — تنبيه + صوت لما يتضاف مكان جديد في أي قسم */}
+      <NewPlaceNotifier />
 
       {/* PWA App Installation Prompt Banner */}
       <PwaInstallPrompt />
