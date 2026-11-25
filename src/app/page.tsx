@@ -202,11 +202,13 @@ export default function HomePage() {
       setCurrentView('bus');
       return;
     }
-    if (view === 'housing' || view === 'hotels' || view === 'stay') {
+    if (view === 'housing') {
       setSelectedCategory('housing');
       setCurrentView('housing');
       return;
     }
+    // 'hotels' و 'stay' يقعان في setCurrentView(view) في آخر الدالة فيعرضان HotelsView —
+    // كانا من قبل داخل فرع السكن فيُفتح السكن بدل الفنادق (والسكن بلا بيانات أصلاً).
     if (view === 'sport' || view === 'sports') {
       setSelectedCategory('sport');
       setCurrentView('sport');
