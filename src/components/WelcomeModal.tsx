@@ -84,7 +84,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart }) => {
     <div className="fixed inset-0 z-[60] overflow-hidden bg-[#040f24] text-white flex flex-col items-center justify-center">
       {/* Background Slides */}
       <div className="absolute inset-0" aria-hidden="true">
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           <motion.div
             key={SLIDES[slide].src}
             className="absolute inset-0"
@@ -156,24 +156,28 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart }) => {
         {theme === 'dark' ? <Sun className="w-5 h-5 text-sand-400" /> : <Moon className="w-5 h-5" />}
       </motion.button>
 
-      {/* Slide Indicators — العرض يُحرَّك عبر framer-motion فقط (بدون layout
-          أو transition-all من CSS حتى لا يتعارض الاثنان فتقفز النقاط) */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+      {/* مؤشر الشرائح — شريط أصفر واحد ينزلق بحركة ناعمة فوق 3 نقاط ثابتة،
+          بدل ما كل نقطة تكبر/تصغر ويتغير لونها فجأة فيقفز الشريط مكانه */}
+      <div
+        dir="ltr"
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-20"
+      >
         {SLIDES.map((_, i) => (
-          <motion.button
+          <button
             key={i}
+            type="button"
             onClick={() => setSlide(i)}
             aria-label={`الشريحة ${i + 1}`}
-            className={`h-1.5 rounded-full ${
-              i === slide ? 'bg-sand-400' : 'bg-white/40'
-            }`}
-            initial={false}
-            animate={{ width: i === slide ? 32 : 8 }}
-            transition={{ duration: 0.35, ease: 'easeOut' }}
-            whileHover={{ scale: 1.3 }}
-            whileTap={{ scale: 0.8 }}
+            className="h-1.5 w-2 rounded-full bg-white/40 transition-colors hover:bg-white/60"
           />
         ))}
+        <motion.span
+          aria-hidden="true"
+          className="absolute top-0 left-0 h-1.5 w-8 rounded-full bg-sand-400"
+          initial={false}
+          animate={{ x: slide * 16 - 12 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+        />
       </div>
 
       {/* Main Card */}
