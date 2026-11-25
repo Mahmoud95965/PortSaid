@@ -3,14 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Place, Review } from '@/types';
-import { CATS, AREA_STOP, HOME_STOP, planRoute } from '@/lib/constants';
+import { CATS } from '@/lib/constants';
 import { PLACES_METADATA } from '@/lib/plannerUtils';
 import { useAuth } from '@/context/AuthContext';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import {
   ArrowRight,
   MapPin,
-  Navigation,
   Star,
   CheckCircle,
   ExternalLink,
@@ -89,7 +88,6 @@ function getPlaceHeroPhoto(place: Place): string {
 export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack }) => {
   const { user } = useAuth();
 
-  const [fromStop, setFromStop] = useState(HOME_STOP);
   const [isFavorite, setIsFavorite] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -231,11 +229,6 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack }) => {
   const cat = CATS[place.cat] || { t: 'مكان', border: '#1559b7', bgSoft: '#1559b71a' };
   const meta = PLACES_METADATA[place.id];
   const photo = getPlaceHeroPhoto(place);
-
-  // مسار المواصلات
-  const normArea = place.a.replace(/^\s*حي\s+/, '').trim();
-  const targetStop = AREA_STOP[normArea] || 'حي العرب';
-  const routePlan = planRoute(fromStop, targetStop);
 
   const handleAddReview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -524,73 +517,6 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack }) => {
         </div>
       </div>
 
-
-      {/* 6. Transit & Route Guide (أروح إزاي بالمواصلات؟) */}
-      <div
-        id="route-section"
-        className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-xs text-right space-y-4"
-      >
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-600 grid place-items-center shrink-0">
-            <Navigation className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="font-black text-sm sm:text-base text-ocean-950 dark:text-white">
-              أروح إزاي بالمواصلات؟
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              دليل خطوط المينى باص من السكن والجامعات إلى {place.n}
-            </p>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1.5">
-            اختر نقطة الانطلاق:
-          </label>
-          <select
-            value={fromStop}
-            onChange={(e) => setFromStop(e.target.value)}
-            className="w-full rounded-2xl border border-line bg-surface px-3.5 py-2.5 text-xs sm:text-sm font-bold text-ink outline-none focus:border-blue-600 cursor-pointer"
-          >
-            <option value="المعدية / السكن الجامعي">المعدية / السكن الجامعي (بورفؤاد)</option>
-            <option value="قصر الثقافة">قصر الثقافة (المحافظة والشرق)</option>
-            <option value="حي العرب">حي العرب (التجاري والأسواق)</option>
-            <option value="كلية الطب والعلاج الطبيعي">كلية الطب والعلاج الطبيعي</option>
-          </select>
-        </div>
-
-        {routePlan && routePlan.length > 0 ? (
-          <ol className="space-y-3 relative pt-1">
-            {routePlan.map((step, idx) => (
-              <li key={idx} className="flex gap-3 text-xs sm:text-sm">
-                <span className="w-6 h-6 shrink-0 rounded-lg bg-ocean-900 text-white grid place-items-center font-black text-xs shadow-xs">
-                  {idx + 1}
-                </span>
-                <div className="space-y-0.5">
-                  <p className="font-black text-ocean-950 dark:text-white">
-                    اركب خط{' '}
-                    <span className="bg-blue-600 text-white px-2 py-0.5 rounded-lg text-xs font-black">
-                      {step.l}
-                    </span>
-                  </p>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-                    من <span className="font-bold">{step.f}</span> وانزل عند{' '}
-                    <span className="font-bold text-blue-600 dark:text-blue-400">{step.t}</span>
-                  </p>
-                </div>
-              </li>
-            ))}
-            <p className="text-xs text-slate-500 dark:text-slate-400 pt-2 font-medium border-t border-slate-100 dark:border-[#152332]">
-              💡 بعد النزول عند «{targetStop}»، يمكنك السير لدقائق قليلة أو أخذ تاكسي داخلي مباشرة للمكان.
-            </p>
-          </ol>
-        ) : (
-          <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-            المكان قريب منك جداً، يمكنك السير على الأقدام أو أخذ تاكسي مباشر.
-          </p>
-        )}
-      </div>
 
       {/* 7. Community Reviews & Rating Form */}
       <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e] shadow-xs text-right space-y-4">
