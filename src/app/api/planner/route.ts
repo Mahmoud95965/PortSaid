@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { unsealSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { checkRateLimit, getClientIp } from '@/lib/auth/rateLimit';
 import { INITIAL_PLACES } from '@/lib/constants';
 import { isPointInPortSaid, calculateDistanceKm } from '@/lib/geoUtils';
 import {
@@ -20,6 +23,34 @@ const PLACES_AI_CATALOG = INITIAL_PLACES.map((p) => {
 
 export async function POST(req: Request) {
   try {
+    // أمان: المخطط بيستدعي نموذج مدفوع بمفتاح الخادم، فالمسار للمستخدمين
+    // المسجلين بس (الموقع كله أصلاً بيتطلب تسجيل دخول)، وبحد طلبات يمنع
+    // استنزاف رصيد OpenRouter — كان مفتوحاً للجميع بدون أي تحقق.
+    const cookieStore = cookies();
+    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    const session = token ? unsealSessionToken(token) : null;
+    if (!session) {
+      return NextResponse.json(
+        { ok: false, message: 'سجّل الدخول أولاً لاستخدام مخطط الرحلات.' },
+        { status: 401 }
+      );
+    }
+    const ip = getClientIp(req);
+    const userLimit = checkRateLimit(`planner_user:${session.userId}`, 10, 60);
+    if (!userLimit.allowed) {
+      return NextResponse.json(
+        { ok: false, message: 'وصلت للحد المسموح به من خطط الرحلات — جرّب بعد دقيقة.' },
+        { status: 429 }
+      );
+    }
+    const ipLimit = checkRateLimit(`planner_ip:${ip}`, 30, 60);
+    if (!ipLimit.allowed) {
+      return NextResponse.json(
+        { ok: false, message: 'تم تجاوز الحد المسموح به من هذا الجهاز — جرّب بعد دقيقة.' },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const {
       prompt,
