@@ -92,27 +92,9 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack }) => {
   const [copiedShare, setCopiedShare] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // Reviews state
-  const [reviews, setReviews] = useState<Review[]>([
-    {
-      id: '1',
-      n: 'محمود السيد',
-      r: 5,
-      c: 'مكان رائع جداً وإطلالة ممتعة على قناة السويس، يستحق الزيارة والتصوير!',
-      d: '2026-10-15',
-      mine: false,
-      v: true,
-    },
-    {
-      id: '2',
-      n: 'سارة إبراهيم',
-      r: 4,
-      c: 'تجربة ممتازة وقريب من كل معالم حي الشرق، والخدمة سريعة.',
-      d: '2026-10-14',
-      mine: false,
-      v: false,
-    },
-  ]);
+  // Reviews state — starts empty; real reviews load from Supabase below.
+  // (No demo/fake reviews: only real user reviews are ever shown.)
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [userRating, setUserRating] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [userComment, setUserComment] = useState('');
@@ -539,7 +521,7 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack }) => {
           </div>
 
           <span className="text-xs text-slate-500 font-bold">
-            {reviews.length} تقييم مسجل
+            {reviews.length > 0 ? `${reviews.length} تقييم مسجل` : 'لا توجد تقييمات بعد — كن أول من يقيّم'}
           </span>
         </div>
 
