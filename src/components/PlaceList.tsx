@@ -114,7 +114,6 @@ export const PlaceList: React.FC<PlaceListProps> = ({
   if (categoryKey === 'bus' || categoryKey === 'transport' || categoryKey === 'transit') {
     return (
       <TransportView
-        places={places}
         onNavigate={onNavigate}
         onBack={onBack}
       />

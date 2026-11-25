@@ -27,7 +27,6 @@ import {
   Train,
   Car,
 } from 'lucide-react';
-import { Place } from '@/types';
 import {
   ALL_STOPS,
   HOME_STOP,
@@ -36,7 +35,6 @@ import {
   TRANSPORT_BAN,
   CURATED_TRIPS,
   FALLBACK_LINE_DETAILS,
-  INITIAL_PLACES,
 } from '@/lib/constants';
 import {
   fetchTransitData,
@@ -79,7 +77,6 @@ export const STOP_COORDINATES: Record<string, { lat: number; lon: number; distri
   'حي المناخ': { lat: 31.2550, lon: 32.2850, district: 'حي المناخ' },
   'التعاونيات': { lat: 31.2480, lon: 32.2810, district: 'حي الزهور' },
   'منطقة الـ 5000': { lat: 31.2430, lon: 32.2790, district: 'حي الزهور' },
-  'شارع الجمهورية': { lat: 31.2630, lon: 32.3050, district: 'حي الشرق' },
   'شارع أسوان': { lat: 31.2540, lon: 32.2870, district: 'حي العرب' },
   'فاطمة الزهراء': { lat: 31.2360, lon: 32.2780, district: 'حي الضواحي' },
   'نفيسة': { lat: 31.2330, lon: 32.2750, district: 'حي الضواحي' },
@@ -162,14 +159,12 @@ export interface PointLocation {
 interface TransportViewProps {
   onBack: () => void;
   onNavigate?: (view: string, arg?: string | null) => void;
-  places?: Place[];
   routeRequest?: { from: string; to: string; nonce: number } | null;
 }
 
 export const TransportView: React.FC<TransportViewProps> = ({
   onBack,
   onNavigate,
-  places = INITIAL_PLACES,
   routeRequest,
 }) => {
   // حالة البداية والوجهة
@@ -291,11 +286,12 @@ export const TransportView: React.FC<TransportViewProps> = ({
     { label: 'محطة قطار بورسعيد', target: 'محطة قطار بورسعيد (السكة الحديد)' },
   ];
 
-  // دمج كل النقاط المتاحة للبحث (محطات السرفيس + الأماكن المعتمدة في بورسعيد)
+  // نقاط الانطلاق والوصول: محطات السرفيس فقط — زي ما بعتها محمود في بياناته
+  // (لا مراكز نقل ولا أماكن من قوائم الموقع)
   const searchableOptions = useMemo(() => {
     const list: Array<{ label: string; lat: number; lon: number; district: string; type: string }> = [];
 
-    // محطات شبكة المواصلات
+    // محطات شبكة المواصلات فقط
     ALL_STOPS.forEach((stop) => {
       const c = STOP_COORDINATES[stop];
       if (c) {
@@ -309,32 +305,8 @@ export const TransportView: React.FC<TransportViewProps> = ({
       }
     });
 
-    // مراكز النقل الحيوية
-    PORT_SAID_TRANSIT_HUBS.forEach((hub) => {
-      list.push({
-        label: hub.name,
-        lat: hub.lat,
-        lon: hub.lon,
-        district: hub.area,
-        type: hub.category,
-      });
-    });
-
-    // أهم أماكن بورسعيد المعتمدة
-    places.slice(0, 50).forEach((p) => {
-      if (typeof p.lat === 'number' && typeof p.lon === 'number' && !list.some((item) => item.label === p.n)) {
-        list.push({
-          label: p.n,
-          lat: p.lat,
-          lon: p.lon,
-          district: p.a,
-          type: 'مكان معتمد',
-        });
-      }
-    });
-
     return list;
-  }, [places]);
+  }, []);
 
   // خطة خطوط السرفيس والميكروباص بين النقطتين (إن كانت ضمن شبكة السرفيس)
   const routePlan = useMemo(() => {
