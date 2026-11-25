@@ -39,6 +39,7 @@ import {
 interface MapViewProps {
   places?: Place[];
   initialPlaceId?: string | null;
+  initialCategory?: string | null;
   onSelectPlace?: (id: string) => void;
   onBack?: () => void;
 }
@@ -72,6 +73,7 @@ const TOP_SIGHTS = [
 export const MapView: React.FC<MapViewProps> = ({
   places = INITIAL_PLACES,
   initialPlaceId,
+  initialCategory,
   onSelectPlace,
   onBack,
 }) => {
@@ -392,6 +394,14 @@ export const MapView: React.FC<MapViewProps> = ({
       }
     }
   }, [initialPlaceId, mapLoaded, validPlaces]);
+
+  // 6b. تصنيف مبدئي من الشات بوت (مثلاً: "وريني المطاعم على الخريطة")
+  useEffect(() => {
+    if (initialCategory && CATEGORY_FILTERS.some((c) => c.key === initialCategory)) {
+      setSelectedCategory(initialCategory);
+      setSelectedPlace(null);
+    }
+  }, [initialCategory]);
 
   // 7. رسم خط الاتجاهات المرئي (Polyline) بين موقع المستخدم والمكان المختار
   useEffect(() => {

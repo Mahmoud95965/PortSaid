@@ -39,9 +39,16 @@ export interface ChatMessage {
   text: string;
   timestamp: string;
   suggestedPlaces?: SuggestedPlace[];
+  mapAction?: MapAction;
   isError?: boolean;
   isStreaming?: boolean;
 }
+
+export type MapAction =
+  | { kind: 'focusPlace'; placeId: string }
+  | { kind: 'showPlaces'; placeIds: string[] }
+  | { kind: 'showCategory'; cat: string }
+  | { kind: 'planRoute'; from: string; to: string };
 
 const TypewriterMessageText: React.FC<{
   text: string;
@@ -156,6 +163,26 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onNavigate }) => {
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // إجراءات الخريطة التي نفذها المساعد تلقائياً (مرة واحدة لكل رسالة)
+  const firedMapActionsRef = useRef<Set<string>>(new Set());
+
+  // تنفيذ إجراء الخريطة/المواصلات الذي حدده المساعد بعد اكتمال عرض الرد
+  const executeMapAction = useCallback(
+    (action: MapAction) => {
+      if (!onNavigate) return;
+      if (action.kind === 'focusPlace') {
+        onNavigate('map', action.placeId);
+      } else if (action.kind === 'showPlaces') {
+        onNavigate('map', action.placeIds[0]);
+      } else if (action.kind === 'showCategory') {
+        onNavigate('map', `cat:${action.cat}`);
+      } else if (action.kind === 'planRoute') {
+        onNavigate('transport', `${action.from}|${action.to}`);
+      }
+      setOpen(false);
+    },
+    [onNavigate]
+  );
 
   // التمرير التلقائي لأسفل عند وصول رسالة جديدة
   useEffect(() => {
@@ -381,6 +408,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onNavigate }) => {
 
         const botReply = data.reply || 'أنا معك يا غالي! اسألني عن أي مكان أو استفسار في بورسعيد.';
         const suggestedPlaces: SuggestedPlace[] = data.suggestedPlaces || [];
+        const mapAction: MapAction | null = data.mapAction || null;
 
         setMessages((prev) => [
           ...prev,
@@ -390,6 +418,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onNavigate }) => {
             text: botReply,
             timestamp: timeStr,
             suggestedPlaces,
+            mapAction: mapAction || undefined,
             isStreaming: true,
           },
         ]);
@@ -600,6 +629,10 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onNavigate }) => {
                             setMessages((prev) =>
                               prev.map((item) => (item.id === m.id ? { ...item, isStreaming: false } : item))
                             );
+                            if (m.mapAction && !firedMapActionsRef.current.has(m.id)) {
+                              firedMapActionsRef.current.add(m.id);
+                              executeMapAction(m.mapAction);
+                            }
                           }}
                           onTick={() => {
                             if (chatBodyRef.current) {

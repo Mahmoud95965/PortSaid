@@ -153,12 +153,14 @@ interface TransportViewProps {
   onBack: () => void;
   onNavigate?: (view: string, arg?: string | null) => void;
   places?: Place[];
+  routeRequest?: { from: string; to: string; nonce: number } | null;
 }
 
 export const TransportView: React.FC<TransportViewProps> = ({
   onBack,
   onNavigate,
   places = INITIAL_PLACES,
+  routeRequest,
 }) => {
   // حالة البداية والوجهة
   const [fromName, setFromName] = useState<string>(HOME_STOP);
@@ -175,6 +177,21 @@ export const TransportView: React.FC<TransportViewProps> = ({
       ? { name: 'كلية الطب والعلاج الطبيعي', lat: coords.lat, lon: coords.lon, district: coords.district }
       : { name: 'كلية الطب والعلاج الطبيعي', lat: 31.2465, lon: 32.2745, district: 'حي الزهور' };
   });
+
+  // طلب مسار من المساعد الذكي (من|إلى) — يطبق مرة واحدة لكل طلب جديد
+  useEffect(() => {
+    if (!routeRequest) return;
+    const fromCoords = STOP_COORDINATES[routeRequest.from];
+    const toCoords = STOP_COORDINATES[routeRequest.to];
+    setFromName(routeRequest.from);
+    setToName(routeRequest.to);
+    if (fromCoords) {
+      setStartPoint({ name: routeRequest.from, lat: fromCoords.lat, lon: fromCoords.lon, district: fromCoords.district });
+    }
+    if (toCoords) {
+      setEndPoint({ name: routeRequest.to, lat: toCoords.lat, lon: toCoords.lon, district: toCoords.district });
+    }
+  }, [routeRequest]);
 
   // حالة تحديد الموقع الحالي عبر GPS
   const [isLocating, setIsLocating] = useState<boolean>(false);
