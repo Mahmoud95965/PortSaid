@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { getSupabaseServer } from '@/lib/supabase/server';
 import { verifyAndUpgradePassword } from '@/lib/auth/password';
 import { sealSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from '@/lib/auth/session';
+import { logActivityServer } from '@/lib/activity';
 import { checkRateLimit, resetRateLimit, getClientIp } from '@/lib/auth/rateLimit';
 import { normalizePhone } from '@/lib/auth/validation';
 import { dbFindUserByIdentifier, dbUpdateUser } from '@/lib/db/localDb';
@@ -173,6 +174,9 @@ export async function POST(req: Request) {
       path: '/',
       maxAge: SESSION_MAX_AGE_SECONDS,
     });
+
+    // سجّل الدخول في activity_log حتى يظهر نشاط الحساب في صفحة المسؤول.
+    await logActivityServer(dbUser.id, dbUser.name, roleCode, 'تسجيل دخول', 'سجّل الدخول إلى حسابه');
 
     return NextResponse.json({
       ok: true,
