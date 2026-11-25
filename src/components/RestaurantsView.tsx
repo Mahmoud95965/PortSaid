@@ -13,12 +13,10 @@ import {
   Utensils,
   X,
   Map,
-  Clock,
   Heart,
   ChevronLeft,
   ChevronDown,
   Tag,
-  DollarSign,
   SlidersHorizontal,
   Compass,
 } from 'lucide-react';
@@ -378,7 +376,6 @@ export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
           <div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
               {filteredRestaurants.slice(0, visibleCount).map((place) => {
-                const meta = PLACES_METADATA[place.id];
                 const isFav = favorites.includes(place.id);
 
                 return (
@@ -425,29 +422,6 @@ export const RestaurantsView: React.FC<RestaurantsViewProps> = ({
                       )}
                     </div>
 
-                    {/* Metadata Highlights (Cost Range & Timing) */}
-                    {meta && (
-                      <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 pt-1 font-medium flex-wrap">
-                        {meta.costRange && (
-                          <span className="inline-flex items-center gap-1 text-teal2-700 dark:text-teal2-300 font-bold">
-                            <DollarSign className="w-3 h-3" />
-                            <span>{meta.costRange}</span>
-                          </span>
-                        )}
-                        {meta.bestTimeOfDay === 'midday' && (
-                          <span>• أفضل وقت: الغداء</span>
-                        )}
-                        {meta.bestTimeOfDay === 'afternoon' && (
-                          <span>• أفضل وقت: بعد الظهر</span>
-                        )}
-                        {meta.recommendedDurationMinutes && (
-                          <span className="inline-flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-slate-400" />
-                            <span>{meta.recommendedDurationMinutes} دقيقة</span>
-                          </span>
-                        )}
-                      </div>
-                    )}
 
                     {/* Card Actions */}
                     <div className="pt-3 border-t border-slate-100 dark:border-[#162232] flex items-center justify-between gap-1.5 mt-2">
