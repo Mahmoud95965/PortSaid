@@ -27,6 +27,7 @@ import { AssistantChat } from '@/components/AssistantChat';
 import { SiteGuideModal } from '@/components/SiteGuideModal';
 import { FeatureExplainerCards } from '@/components/FeatureExplainerCards';
 import { WavesBackground } from '@/components/WavesBackground';
+import { HomeSideSeas } from '@/components/HomeSideSeas';
 import { SeaSoundPlayer } from '@/components/SeaSoundPlayer';
 import { PwaInstallPrompt } from '@/components/PwaInstallPrompt';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
@@ -282,6 +283,9 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col justify-between relative overflow-x-hidden">
+      {/* بحر جانبي متحرك يملأ فراغي الشاشات العريضة — الرئيسية فقط */}
+      {currentView === 'home' && <HomeSideSeas />}
+
       {/* Toast Notification with Spring Motion */}
       <AnimatePresence>
         {toastMessage && (
