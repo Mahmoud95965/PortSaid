@@ -33,9 +33,19 @@ import {
   HOME_STOP,
   TRANSPORT_NET,
   TRANSPORT_NOTE,
-  planRoute,
+  TRANSPORT_BAN,
+  CURATED_TRIPS,
+  FALLBACK_LINE_DETAILS,
   INITIAL_PLACES,
 } from '@/lib/constants';
+import {
+  fetchTransitData,
+  buildTripText,
+  buildRouteText,
+  networkFromData,
+  planRouteFromNet,
+} from '@/lib/transit';
+import type { TransitData, TransitLineData, TransitStopData } from '@/lib/transit';
 import {
   PORT_SAID_CENTER,
   PORT_SAID_MAX_BOUNDS,
@@ -50,7 +60,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 export const STOP_COORDINATES: Record<string, { lat: number; lon: number; district: string }> = {
   'المعدية / السكن الجامعي': { lat: 31.2447, lon: 32.3202, district: 'بورفؤاد' },
   'قصر الثقافة': { lat: 31.2575, lon: 32.2930, district: 'حي المناخ' },
-  'معهد الحاسب الآلي': { lat: 31.2402, lon: 32.2851, district: 'حي الضواحي' },
+  // معهد الحاسب الآلي merged into كلية التكنولوجيا والحقوق (same place — Mahmoud, 25 Nov 2026).
   'كلية التكنولوجيا والحقوق': { lat: 31.2384, lon: 32.2825, district: 'حي الضواحي' },
   'بنك الإسكان': { lat: 31.2395, lon: 32.2840, district: 'حي الضواحي' },
   'السلام': { lat: 31.2562, lon: 32.2890, district: 'حي المناخ' },
@@ -193,6 +203,56 @@ export const TransportView: React.FC<TransportViewProps> = ({
     }
   }, [routeRequest]);
 
+  // بيانات شبكة المواصلات من قاعدة البيانات (GET /api/transit) — والثوابت
+  // fallback لحد ما يتنفذ ملف migrations/10_transit_network_2026-11-25.sql.
+  const [transitData, setTransitData] = useState<TransitData | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetchTransitData().then((d) => {
+      if (alive) setTransitData(d);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // الشبكة النشطة (خطوط + حظر اتجاهات + محطات): من قاعدة البيانات لو وصلت،
+  // وإلا من الثوابت. نفس الشكل في الحالتين عشان باقي الكود مايفرقش.
+  const activeNetwork = useMemo(() => {
+    if (transitData) return networkFromData(transitData);
+    const stopsByName: Record<string, TransitStopData> = {};
+    Object.entries(STOP_COORDINATES).forEach(([name, c]) => {
+      stopsByName[name] = {
+        id: name,
+        name,
+        short_name: name === HOME_STOP ? 'المعدية' : null,
+        district: c.district,
+        lat: c.lat,
+        lon: c.lon,
+        aliases: [],
+        notes: null,
+      };
+    });
+    const linesByName: Record<string, TransitLineData> = {};
+    Object.entries(TRANSPORT_NET).forEach(([name, stops]) => {
+      const details = FALLBACK_LINE_DETAILS[name] || {};
+      linesByName[name] = {
+        id: name,
+        name,
+        description: null,
+        notes: details.notes ?? null,
+        outbound_path: details.outbound_path ?? null,
+        return_path: details.return_path ?? null,
+        needs_review: false,
+        stops: stops.map((s, i) => ({ name: s, seq: i + 1, note: TRANSPORT_NOTE[`${name}|${s}`] ?? null })),
+      };
+    });
+    return { net: TRANSPORT_NET, bans: TRANSPORT_BAN, stopsByName, linesByName };
+  }, [transitData]);
+
+  // الرحلات الجاهزة: من قاعدة البيانات (transit_trips) أو من الثوابت.
+  const activeTrips = transitData ? transitData.trips : CURATED_TRIPS;
+
   // حالة تحديد الموقع الحالي عبر GPS
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -281,8 +341,28 @@ export const TransportView: React.FC<TransportViewProps> = ({
     // مطابقة اسم النقطة مع أقرب محطة في ALL_STOPS
     const fromClean = ALL_STOPS.find((s) => s === fromName) || fromName;
     const toClean = ALL_STOPS.find((s) => s === toName) || toName;
-    return planRoute(fromClean, toClean);
-  }, [fromName, toName]);
+    return planRouteFromNet(fromClean, toClean, activeNetwork.net, activeNetwork.bans);
+  }, [fromName, toName, activeNetwork]);
+
+  // التعليمات في سطر واحد بصيغة محمود: "اركب خط كذا من كذا وانزل عند كذا، بعدها اركب خط كذا وانزل عند كذا"
+  const routeInstruction = useMemo(() => {
+    if (!routePlan || routePlan.length === 0) return '';
+    return buildRouteText(routePlan, activeNetwork.stopsByName);
+  }, [routePlan, activeNetwork]);
+
+  // تفاصيل الخطوط المستخدمة في الخطة (ملاحظات + مسار الذهاب/العودة)
+  const usedLineDetails = useMemo(() => {
+    if (!routePlan) return [];
+    const seen: Record<string, boolean> = {};
+    return routePlan
+      .filter((x) => {
+        if (seen[x.l]) return false;
+        seen[x.l] = true;
+        return true;
+      })
+      .map((x) => activeNetwork.linesByName[x.l])
+      .filter((l) => l && (l.notes || l.outbound_path || l.return_path));
+  }, [routePlan, activeNetwork]);
 
   // مزامنة هدف الاختيار من الخريطة مع ref ليقرأه معالج نقرات الخريطة (بدونها يبقى null للأبد)
   useEffect(() => {
@@ -1237,8 +1317,52 @@ export const TransportView: React.FC<TransportViewProps> = ({
         </div>
       </div>
 
+      {/* رحلات جاهزة من السكن الجامعي — من قاعدة البيانات (transit_trips)، ولو فيه أكتر من طريق لنفس المكان بيظهروا كلهم */}
+      <div className="bg-white dark:bg-[#0f1a28] p-5 sm:p-7 rounded-3xl border border-sand-200/80 dark:border-[#1d2d3e] shadow-md space-y-4">
+        <div className="flex items-center gap-2 border-b border-sand-200/60 dark:border-[#1d2d3e] pb-3">
+          <span className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 grid place-items-center">
+            <Sparkles className="w-4 h-4" />
+          </span>
+          <div>
+            <h3 className="text-base font-black text-ocean-900 dark:text-white">رحلات جاهزة من السكن الجامعي</h3>
+            <p className="text-xs text-ocean-700/70 dark:text-white/60 font-medium">
+              اختار رحلة جاهزة — ولو فيه أكتر من طريق لنفس المكان هتلاقيهم كلهم هنا
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {activeTrips.map((trip) => (
+            <button
+              key={trip.id}
+              type="button"
+              onClick={() => {
+                handleSelectFrom(trip.from);
+                handleSelectTo(trip.to);
+                document.getElementById('service-plan')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className="text-start p-4 rounded-2xl border border-sand-200 dark:border-[#22354a] bg-sand-50 dark:bg-[#132233] hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
+            >
+              <span className="flex items-start justify-between gap-2">
+                <span className="text-sm font-black text-ocean-900 dark:text-white">{trip.title}</span>
+                {!trip.is_confirmed && (
+                  <span className="shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">
+                    لسه محتاجة تأكيد
+                  </span>
+                )}
+              </span>
+              <span className="block text-xs text-ocean-700/80 dark:text-white/70 mt-2 font-semibold leading-relaxed">
+                {buildTripText(trip.legs, activeNetwork.stopsByName)}
+              </span>
+              <span className="mt-3 inline-flex items-center gap-1 text-xs font-black text-blue-600 dark:text-blue-400">
+                استخدم هذه الرحلة <ArrowRight className="w-3.5 h-3.5" />
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* 5. تفاصيل خطة خطوط السرفيس والميكروباص المعتمدة */}
-      <div className="bg-white dark:bg-[#0f1a28] p-5 sm:p-7 rounded-3xl border border-sand-200/80 dark:border-[#1d2d3e] shadow-md space-y-5">
+      <div id="service-plan" className="bg-white dark:bg-[#0f1a28] p-5 sm:p-7 rounded-3xl border border-sand-200/80 dark:border-[#1d2d3e] shadow-md space-y-5">
         <div className="flex items-center justify-between border-b border-sand-200/60 dark:border-[#1d2d3e] pb-3">
           <div className="flex items-center gap-2">
             <span className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 grid place-items-center">
@@ -1270,6 +1394,11 @@ export const TransportView: React.FC<TransportViewProps> = ({
           </div>
         ) : (
           <div className="space-y-4">
+            {routeInstruction && (
+              <div className="p-3.5 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200/70 dark:border-blue-800/40">
+                <p className="text-sm font-black text-ocean-900 dark:text-white leading-relaxed">{routeInstruction}</p>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-black text-xs px-3.5 py-1">
                 <Navigation className="w-3.5 h-3.5" />
@@ -1336,6 +1465,32 @@ export const TransportView: React.FC<TransportViewProps> = ({
                 );
               })}
             </ol>
+
+            {usedLineDetails.length > 0 && (
+              <div className="space-y-2">
+                {usedLineDetails.map((l) => (
+                  <div
+                    key={l.id}
+                    className="p-3 rounded-2xl bg-sand-50 dark:bg-[#132233] border border-sand-200 dark:border-[#22354a] text-xs"
+                  >
+                    <p className="font-black text-ocean-900 dark:text-white">خط {l.name}</p>
+                    {l.notes && (
+                      <p className="text-ocean-700/80 dark:text-white/70 mt-1 font-semibold">{l.notes}</p>
+                    )}
+                    {l.outbound_path && (
+                      <p className="text-ocean-700/80 dark:text-white/70 mt-1 font-semibold">
+                        <span className="font-black text-ocean-900 dark:text-white">الذهاب:</span> {l.outbound_path}
+                      </p>
+                    )}
+                    {l.return_path && (
+                      <p className="text-ocean-700/80 dark:text-white/70 mt-1 font-semibold">
+                        <span className="font-black text-ocean-900 dark:text-white">العودة:</span> {l.return_path}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
