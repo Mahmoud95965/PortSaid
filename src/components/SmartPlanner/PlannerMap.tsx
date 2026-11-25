@@ -651,7 +651,7 @@ export const PlannerMap: React.FC<PlannerMapProps> = ({
           </button>
 
           {showStyleMenu && (
-            <div className="absolute left-0 mt-1.5 w-40 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#22354a] shadow-xl p-1.5 flex flex-col gap-1 z-30">
+            <div className="absolute right-0 mt-1.5 w-40 rounded-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#22354a] shadow-xl p-1.5 flex flex-col gap-1 z-30">
               {MAP_STYLES.map((st) => (
                 <button
                   key={st.key}

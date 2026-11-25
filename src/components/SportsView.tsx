@@ -24,6 +24,7 @@ import {
   Activity,
   Target,
   Users,
+  Star,
 } from 'lucide-react';
 
 const FAVORITES_KEY = 'ps_user_favorites';
@@ -502,6 +503,15 @@ export const SportsView: React.FC<SportsViewProps> = ({
                     <p className="text-xs text-ocean-700/80 dark:text-white/70 line-clamp-2 leading-relaxed">
                       {place.ds || 'منشأة رياضية متكاملة بأحدث التجهيزات والمدربين المعتمدين ببورسعيد.'}
                     </p>
+                    {(place.rating || 0) > 0 && (
+                      <div className="flex items-center gap-1 text-[11px] font-bold">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <span className="text-amber-600 dark:text-amber-400">{place.rating}</span>
+                        {(place.reviews_count || 0) > 0 && (
+                          <span className="text-slate-400 font-medium">({place.reviews_count?.toLocaleString('ar-EG')} تقييم على جوجل)</span>
+                        )}
+                      </div>
+                    )}
 
                     {/* شريط المزايا */}
                     <div className="pt-2 border-t border-sand-200/60 dark:border-[#1d2d3e] flex items-center justify-between text-[11px] text-ocean-700/70 dark:text-white/60">

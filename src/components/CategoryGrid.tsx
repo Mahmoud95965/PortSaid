@@ -62,7 +62,7 @@ export const CategoryGrid: React.FC<CategoryGridProps> = ({ onSelectCategory }) 
           >
             {/* Category Icon Badge */}
             <span
-              className="w-10 h-10 min-[380px]:w-11 min-[380px]:h-11 sm:w-13 sm:h-13 md:w-14 md:h-14 rounded-xl sm:rounded-2xl grid place-items-center shrink-0 relative z-10 transition-transform duration-200 group-hover:scale-105"
+              className="w-10 h-10 min-[380px]:w-11 min-[380px]:h-11 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl sm:rounded-2xl grid place-items-center shrink-0 relative z-10 transition-transform duration-200 group-hover:scale-105"
               style={{ backgroundColor: cat.bgSoft, color: cat.border }}
             >
               {ICONS[key] ?? <Compass className="w-6 h-6" />}

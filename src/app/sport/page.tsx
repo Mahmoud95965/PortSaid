@@ -52,6 +52,8 @@ function SportPageContent() {
               p: item.visit_points || 25,
               disc: item.discount_percent || 15,
               cost: item.coupon_cost_points || 50,
+              rating: item.rating != null ? Number(item.rating) : undefined,
+              reviews_count: item.ratings_count ?? undefined,
               maps_url: item.maps_url || undefined,
             }));
             setPlaces(mapped);

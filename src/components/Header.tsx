@@ -363,7 +363,7 @@ export const Header: React.FC<HeaderProps> = ({
             <AnimatePresence>
               {notificationsOpen && (
                 <motion.div
-                  className="absolute left-0 top-12 sm:top-14 z-50 w-72 sm:w-80 bg-white dark:bg-[#121c29] text-ocean-900 dark:text-white rounded-3xl shadow-2xl p-4 border border-sand-200 dark:border-[#223246] space-y-3"
+                  className="fixed left-3 right-3 top-[4.25rem] z-50 w-auto sm:absolute sm:left-0 sm:top-14 sm:w-80 bg-white dark:bg-[#121c29] text-ocean-900 dark:text-white rounded-3xl shadow-2xl p-4 border border-sand-200 dark:border-[#223246] space-y-3"
                   variants={dropdownVariants}
                   initial="hidden"
                   animate="visible"

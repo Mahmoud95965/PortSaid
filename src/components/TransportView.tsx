@@ -183,6 +183,7 @@ export const TransportView: React.FC<TransportViewProps> = ({
 
   // حالة اختيار نقطة من الخريطة
   const [pickingTarget, setPickingTarget] = useState<'from' | 'to' | null>(null);
+  const pickingTargetRef = useRef<'from' | 'to' | null>(null);
 
   // حالة مسار الشارع الفعلي عبر OSRM
   const [isRoutingLoading, setIsRoutingLoading] = useState<boolean>(false);
@@ -265,6 +266,11 @@ export const TransportView: React.FC<TransportViewProps> = ({
     const toClean = ALL_STOPS.find((s) => s === toName) || toName;
     return planRoute(fromClean, toClean);
   }, [fromName, toName]);
+
+  // مزامنة هدف الاختيار من الخريطة مع ref ليقرأه معالج نقرات الخريطة (بدونها يبقى null للأبد)
+  useEffect(() => {
+    pickingTargetRef.current = pickingTarget;
+  }, [pickingTarget]);
 
   // 1. طلب وتحديد الموقع الحالي للمستخدم عبر Geolocation API
   const handleGetCurrentLocation = () => {
@@ -465,21 +471,22 @@ export const TransportView: React.FC<TransportViewProps> = ({
 
       // التقاط النقرات على الخريطة لاختيار نقطة البداية أو النهاية
       map.on('click', (e: any) => {
-        if (!pickingTarget) return;
+        const target = pickingTargetRef.current;
+        if (!target) return;
 
         const { lng, lat } = e.lngLat;
         const inside = isPointInPortSaid(lat, lng);
         const district = identifyPortSaidDistrict(lat, lng);
 
         const pickedPoint: PointLocation = {
-          name: `${pickingTarget === 'from' ? 'نقطة الانطلاق' : 'الوجهة'} (${district})`,
+          name: `${target === 'from' ? 'نقطة الانطلاق' : 'الوجهة'} (${district})`,
           lat: Number(lat.toFixed(6)),
           lon: Number(lng.toFixed(6)),
           district: district,
           isCustom: true,
         };
 
-        if (pickingTarget === 'from') {
+        if (target === 'from') {
           setStartPoint(pickedPoint);
           setFromName(pickedPoint.name);
         } else {
@@ -676,6 +683,41 @@ export const TransportView: React.FC<TransportViewProps> = ({
           .addTo(map);
         markersRef.current.push(hubMarker);
       });
+
+      // 5. دبابيس كل محطات السرفيس (شبكة النقل) — نقاط صغيرة قابلة للنقر لتحديدها كوجهة/انطلاق
+      Object.entries(STOP_COORDINATES).forEach(([stopName, c]) => {
+        const stopEl = document.createElement('div');
+        stopEl.className = 'cursor-pointer select-none';
+        stopEl.title = stopName;
+        stopEl.innerHTML = `
+          <div style="
+            width: 13px;
+            height: 13px;
+            background: #0284c7;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 1px 5px rgba(2,132,199,0.55);
+          "></div>
+        `;
+        stopEl.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const target = pickingTargetRef.current;
+          const pt = { name: stopName, lat: c.lat, lon: c.lon, district: c.district };
+          if (target === 'from') {
+            setStartPoint(pt);
+            setFromName(stopName);
+          } else {
+            setEndPoint(pt);
+            setToName(stopName);
+          }
+          setPickingTarget(null);
+          map.flyTo({ center: [c.lon, c.lat], zoom: 15, duration: 600 });
+        });
+        const stopMarker = new maplibregl.Marker({ element: stopEl })
+          .setLngLat([c.lon, c.lat])
+          .addTo(map);
+        markersRef.current.push(stopMarker);
+      });
     }
 
     renderPins();
@@ -820,15 +862,15 @@ export const TransportView: React.FC<TransportViewProps> = ({
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            <div className="px-4 py-3 rounded-2xl bg-white dark:bg-[#132233] border border-sand-200 dark:border-[#22354a] text-center shadow-xs">
+            <div className="px-3 sm:px-4 py-3 rounded-2xl bg-white dark:bg-[#132233] border border-sand-200 dark:border-[#22354a] text-center shadow-xs">
               <span className="block text-xl font-black text-blue-600 dark:text-blue-400">6</span>
               <span className="text-[11px] font-bold text-ocean-700/70 dark:text-white/60">خطوط سرفيس</span>
             </div>
-            <div className="px-4 py-3 rounded-2xl bg-white dark:bg-[#132233] border border-sand-200 dark:border-[#22354a] text-center shadow-xs">
+            <div className="px-3 sm:px-4 py-3 rounded-2xl bg-white dark:bg-[#132233] border border-sand-200 dark:border-[#22354a] text-center shadow-xs">
               <span className="block text-xl font-black text-emerald-600 dark:text-emerald-400">4</span>
               <span className="text-[11px] font-bold text-ocean-700/70 dark:text-white/60">محطات رئيسية</span>
             </div>
-            <div className="px-4 py-3 rounded-2xl bg-white dark:bg-[#132233] border border-sand-200 dark:border-[#22354a] text-center shadow-xs">
+            <div className="px-3 sm:px-4 py-3 rounded-2xl bg-white dark:bg-[#132233] border border-sand-200 dark:border-[#22354a] text-center shadow-xs">
               <span className="block text-xl font-black text-amber-600 dark:text-amber-400">24h</span>
               <span className="text-[11px] font-bold text-ocean-700/70 dark:text-white/60">المعديات البحرية</span>
             </div>
@@ -839,8 +881,8 @@ export const TransportView: React.FC<TransportViewProps> = ({
       {/* 3. صندوق البحث عن رحلة وتحديد البداية والوجهة */}
       <div className="bg-white dark:bg-[#0f1a28] p-5 sm:p-7 rounded-3xl border border-sand-200/80 dark:border-[#1d2d3e] shadow-md space-y-5">
         <div className="flex items-center justify-between border-b border-sand-200/60 dark:border-[#1d2d3e] pb-3.5">
-          <h2 className="text-base sm:text-lg font-black text-ocean-900 dark:text-white flex items-center gap-2">
-            <Navigation className="w-5 h-5 text-blue-600" />
+          <h2 className="text-base sm:text-lg font-black text-ocean-900 dark:text-white flex items-center gap-2 min-w-0">
+            <Navigation className="w-5 h-5 text-blue-600 shrink-0" />
             <span>البحث عن رحلة ومسار الانتقال</span>
           </h2>
 
@@ -848,7 +890,7 @@ export const TransportView: React.FC<TransportViewProps> = ({
             onClick={handleGetCurrentLocation}
             disabled={isLocating}
             type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-bold transition disabled:opacity-50"
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-bold transition disabled:opacity-50"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -1075,9 +1117,9 @@ export const TransportView: React.FC<TransportViewProps> = ({
 
           {/* شريط الإشعار عند تفعيل النقر على الخريطة */}
           {pickingTarget && (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-2xl bg-ocean-900/90 text-white text-xs font-black shadow-lg backdrop-blur-md flex items-center gap-2 border border-white/20">
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-2xl bg-ocean-900/90 text-white text-xs font-black shadow-lg backdrop-blur-md flex items-center gap-2 border border-white/20 max-w-[calc(100%-1.5rem)]">
               <Crosshair className="w-4 h-4 text-emerald-400 animate-pulse" />
-              <span>
+              <span className="truncate">
                 انقر على الخريطة لتحديد {pickingTarget === 'from' ? 'نقطة الانطلاق 🏁' : 'الوجهة 🎯'}
               </span>
               <button
@@ -1102,6 +1144,10 @@ export const TransportView: React.FC<TransportViewProps> = ({
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
               <span>محطات النقل والمعديات</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-sky-500 border border-white" />
+              <span>محطة سرفيس (انقر عليها للتحديد)</span>
             </span>
           </div>
         </div>
@@ -1279,12 +1325,12 @@ export const TransportView: React.FC<TransportViewProps> = ({
 
       {/* 6. دليل محطات ومراكز النقل الحيوية في بورسعيد (بيانات مؤكدة فقط) */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-black text-ocean-900 dark:text-white flex items-center gap-2">
-            <Compass className="w-5 h-5 text-blue-600" />
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-lg font-black text-ocean-900 dark:text-white flex items-center gap-2 min-w-0">
+            <Compass className="w-5 h-5 text-blue-600 shrink-0" />
             <span>مراكز ومحطات النقل المعتمدة في بورسعيد</span>
           </h2>
-          <span className="text-xs font-bold text-ocean-700/60 dark:text-white/50">4 محطات رئيسية</span>
+          <span className="text-xs font-bold text-ocean-700/60 dark:text-white/50 shrink-0 whitespace-nowrap">4 محطات رئيسية</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1318,11 +1364,11 @@ export const TransportView: React.FC<TransportViewProps> = ({
                 <div className="space-y-1.5 pt-2 border-t border-sand-200/60 dark:border-[#1d2d3e] text-[11px]">
                   <div className="flex items-center justify-between text-ocean-700/80 dark:text-white/70">
                     <span className="font-bold">المواعيد:</span>
-                    <span className="font-semibold text-ocean-900 dark:text-white">{hub.schedule}</span>
+                    <span className="font-semibold text-ocean-900 dark:text-white flex-1 text-left">{hub.schedule}</span>
                   </div>
                   <div className="flex items-center justify-between text-ocean-700/80 dark:text-white/70">
                     <span className="font-bold">التكلفة:</span>
-                    <span className="font-semibold text-emerald-700 dark:text-emerald-400">{hub.cost}</span>
+                    <span className="font-semibold text-emerald-700 dark:text-emerald-400 flex-1 text-left">{hub.cost}</span>
                   </div>
                 </div>
               </div>

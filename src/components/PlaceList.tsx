@@ -4,7 +4,7 @@ import React from 'react';
 import { motion, Variants } from 'framer-motion';
 import { Place } from '@/types';
 import { CATS } from '@/lib/constants';
-import { ArrowRight, MapPin, Tag, ChevronDown } from 'lucide-react';
+import { ArrowRight, MapPin, Tag, ChevronDown, Star } from 'lucide-react';
 import { SightsView } from '@/components/SightsView';
 import { RestaurantsView } from '@/components/RestaurantsView';
 import { CafesView } from '@/components/CafesView';
@@ -271,6 +271,15 @@ export const PlaceList: React.FC<PlaceListProps> = ({
                   <p className="mt-2 text-xs text-ocean-700/70 dark:text-white/60 line-clamp-2 leading-relaxed">
                     {p.ds}
                   </p>
+                )}
+                {(p.rating || 0) > 0 && (
+                  <div className="mt-2 flex items-center gap-1 text-[11px] font-bold">
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <span className="text-amber-600 dark:text-amber-400">{p.rating}</span>
+                    {(p.reviews_count || 0) > 0 && (
+                      <span className="text-ocean-700/60 dark:text-white/50 font-medium">({p.reviews_count?.toLocaleString('ar-EG')} تقييم على جوجل)</span>
+                    )}
+                  </div>
                 )}
               </div>
 

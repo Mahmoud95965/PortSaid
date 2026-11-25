@@ -84,7 +84,7 @@ export const HeroBanner: React.FC = () => {
       <div className="absolute -bottom-10 -left-10 w-44 h-44 rounded-full bg-teal2-400/10 pointer-events-none" />
 
       {/* Content Container */}
-      <div className="relative z-10 p-4 min-[400px]:p-5 sm:p-7 md:p-8 pb-12 min-[400px]:pb-13 sm:pb-14 flex flex-col justify-between h-full">
+      <div className="relative z-10 p-4 min-[400px]:p-5 sm:p-7 md:p-8 pb-12 min-[400px]:pb-12 sm:pb-14 flex flex-col justify-between h-full">
         <div className="max-w-2xl">
           {/* Badge */}
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-white/15 border border-white/25 text-[10px] min-[400px]:text-xs font-bold mb-2.5 sm:mb-3">

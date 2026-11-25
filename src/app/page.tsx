@@ -112,6 +112,8 @@ export default function HomePage() {
               p: item.visit_points || 20,
               disc: item.discount_percent || 0,
               cost: item.coupon_cost_points || 0,
+              rating: item.rating != null ? Number(item.rating) : undefined,
+              reviews_count: item.ratings_count ?? undefined,
               maps_url: item.maps_url || undefined,
             }));
             setPlaces(mapped);
@@ -300,7 +302,7 @@ export default function HomePage() {
               <HeroBanner />
 
               {/* Modern Glass Quick Discovery Bar (Native Optimized Touch Response) */}
-              <div className="flex items-center justify-center gap-2 overflow-x-auto py-1 scrollbar-none">
+              <div className="flex items-center justify-start sm:justify-center gap-2 overflow-x-auto py-1 scrollbar-none">
                 <button
                   onClick={() => handleNavigate('ai')}
                   type="button"
