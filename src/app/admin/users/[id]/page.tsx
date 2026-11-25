@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation';
 import { Metadata } from 'next';
 import { getAdminSession } from '@/lib/auth/requireAdmin';
 import { getSupabaseServer } from '@/lib/supabase/server';
-import { dbGetAllMemoriesForAdmin } from '@/lib/db/localDb';
 
 export const runtime = 'nodejs';
 
@@ -16,10 +15,10 @@ export const metadata: Metadata = {
  * GET /admin/users/[id] — admin-only user detail page.
  *
  * Shows literally every field stored for the user EXCEPT the password:
- * - password_hash is read server-side ONLY to determine the registration
- *   method (a Google account is created password-less; an email account
- *   has a password hash). The hash itself is NEVER included in the data
- *   passed to the rendered page, never rendered, never logged.
+ * - The registration method comes from the auth_provider column, written
+ *   at signup (migration 13). It is NOT inferred from password_hash —
+ *   Google accounts also carry a random hash, so that guess was wrong.
+ *   password_hash is never selected, rendered, or logged by this page.
  * - Access: ONLY the single admin account (portsaidhub@gmail.com),
  *   enforced server-side before any data is fetched — the same gate as
  *   /admin (see src/lib/auth/requireAdmin). The page fetches with the
@@ -106,7 +105,7 @@ export default async function AdminUserPage({ params }: { params: { id: string }
   const { data: row } = await supabase
     .from('users')
     .select(
-      'id, name, email, phone, gender, role_id, user_type_id, governorate_id, institution_id, points_balance, status, email_verified_at, created_at, deleted_at, locked_until, password_hash, roles(code), user_types(code), governorates(name_ar), institutions(name_ar)'
+      'id, name, email, phone, gender, role_id, user_type_id, governorate_id, institution_id, points_balance, status, email_verified_at, created_at, deleted_at, locked_until, auth_provider, roles(code), user_types(code), governorates(name_ar), institutions(name_ar)'
     )
     .eq('id', id)
     .maybeSingle();
@@ -115,9 +114,9 @@ export default async function AdminUserPage({ params }: { params: { id: string }
     return <NotFoundCard message="المستخدم غير موجود." />;
   }
 
-  // Auth method is derived server-side from whether a password hash
-  // exists. The hash itself is dropped here and never leaves the server.
-  const hasPassword = !!row.password_hash;
+  // طريقة التسجيل مسجلة في قاعدة البيانات عند إنشاء الحساب (عمود
+  // auth_provider) — لا تُستدل من وجود كلمة مرور، لأن حسابات Google
+  // متسجلة هي كمان بهاش عشوائي. كلمة المرور لا تُقرأ هنا أصلاً.
   const user = {
     id: String(row.id),
     name: row.name || '',
@@ -134,11 +133,24 @@ export default async function AdminUserPage({ params }: { params: { id: string }
     createdAt: row.created_at || '',
     deletedAt: row.deleted_at || null,
     lockedUntil: row.locked_until || null,
-    authMethod: hasPassword ? ('email' as const) : ('google' as const),
+    authMethod: (row as any).auth_provider === 'google' ? ('google' as const) : ('email' as const),
   };
 
-  const [visitsRes, appsRes] = await Promise.all([
+  // النشاط الحقيقي للحساب: سجل الأحداث + الزيارات المسجلة (آخر 10 لكل منهما).
+  const [visitsRes, visitsListRes, activityRes, appsRes] = await Promise.all([
     supabase.from('visits').select('*', { count: 'exact', head: true }).eq('user_id', id),
+    supabase
+      .from('visits')
+      .select('id, place_id, points_awarded, created_at, places(name_ar)')
+      .eq('user_id', id)
+      .order('created_at', { ascending: false })
+      .limit(10),
+    supabase
+      .from('activity_log')
+      .select('id, tag, description, created_at')
+      .eq('actor_id', id)
+      .order('created_at', { ascending: false })
+      .limit(10),
     supabase
       .from('partner_applications')
       .select('business_name, area_ar, phone, proposed_discount_percent, proposed_commission_amount, status, created_at')
@@ -146,16 +158,9 @@ export default async function AdminUserPage({ params }: { params: { id: string }
       .order('created_at', { ascending: false }),
   ]);
 
-  // Memories live in the local store, not Supabase — count this user's
-  // memories from the same helper the admin tabs already use.
-  let memoriesCount = 0;
-  try {
-    memoriesCount = dbGetAllMemoriesForAdmin().filter((m) => String(m.user_id) === String(id)).length;
-  } catch (e) {
-    console.warn('Admin user page: local store memories unavailable:', e);
-  }
-
   const visitsCount = visitsRes.count ?? 0;
+  const visitsList = visitsListRes.data || [];
+  const activityList = activityRes.data || [];
   const apps = appsRes.data || [];
   const latestApp = apps[0] || null;
   const lockedUntilDate = user.lockedUntil ? new Date(user.lockedUntil) : null;
@@ -221,7 +226,7 @@ export default async function AdminUserPage({ params }: { params: { id: string }
         <Field label="طريقة التسجيل">
           {user.authMethod === 'google' ? 'Google' : 'البريد الإلكتروني وكلمة مرور'}
           <span className="block text-xs text-muted font-medium mt-1">
-            يُستدل عليها من وجود كلمة مرور مسجلة للحساب؛ حسابات Google تُنشأ بدون كلمة مرور.
+            تُسجَّل عند إنشاء الحساب (Google أو البريد الإلكتروني).
           </span>
         </Field>
         <Field label="تأكيد البريد الإلكتروني">
@@ -251,7 +256,38 @@ export default async function AdminUserPage({ params }: { params: { id: string }
 
       <Section title="النشاط">
         <Field label="عدد الزيارات المسجلة">{visitsCount.toLocaleString('ar-EG')}</Field>
-        <Field label="عدد الذكريات">{memoriesCount.toLocaleString('ar-EG')}</Field>
+        <Field label="أحدث الزيارات">
+          {visitsList.length === 0 ? (
+            'لا توجد زيارات مسجلة بعد'
+          ) : (
+            <ul className="mt-1 space-y-1.5">
+              {visitsList.map((v: any) => (
+                <li key={String(v.id)} className="text-sm font-bold">
+                  {v.places?.name_ar || 'مكان غير معروف'}
+                  <span className="block text-xs text-muted font-medium mt-0.5">
+                    {fmtDateTime(v.created_at)}
+                    {v.points_awarded != null ? ` — ${Number(v.points_awarded).toLocaleString('ar-EG')} نقطة` : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Field>
+        <Field label="سجل النشاط">
+          {activityList.length === 0 ? (
+            'لا يوجد نشاط مسجل بعد — يُسجَّل الدخول والتسجيل الجديد من الآن فصاعداً'
+          ) : (
+            <ul className="mt-1 space-y-1.5">
+              {activityList.map((a: any) => (
+                <li key={String(a.id)} className="text-sm font-bold">
+                  {a.tag}
+                  {a.description ? ` — ${a.description}` : ''}
+                  <span className="block text-xs text-muted font-medium mt-0.5">{fmtDateTime(a.created_at)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Field>
         <Field label="طلب شراكة">
           {latestApp ? (
             <>
@@ -271,7 +307,7 @@ export default async function AdminUserPage({ params }: { params: { id: string }
 
       <div className="rounded-2xl bg-surface-2 border border-line px-5 py-4 text-xs text-muted font-bold leading-relaxed">
         كلمة المرور لا تظهر في هذه الصفحة أبداً — هي مخزنة بصيغة مشفرة (hash) لا يمكن استرجاعها أو عرضها،
-        ويُستخدم وجودها فقط لمعرفة طريقة التسجيل. هذه الصفحة متاحة فقط لحساب المسؤول (portsaidhub@gmail.com).
+        وطريقة التسجيل تُقرأ من حقل مخصص في قاعدة البيانات. هذه الصفحة متاحة فقط لحساب المسؤول (portsaidhub@gmail.com).
       </div>
     </div>
   );

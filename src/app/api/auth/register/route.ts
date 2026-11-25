@@ -5,6 +5,7 @@ import { getSupabaseServer } from '@/lib/supabase/server';
 import { hashPasswordModern } from '@/lib/auth/password';
 import { verifyGoogleAccessToken } from '@/lib/auth/google';
 import { sealSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from '@/lib/auth/session';
+import { logActivityServer } from '@/lib/activity';
 import { checkRateLimit, getClientIp } from '@/lib/auth/rateLimit';
 import { validateStrongPassword } from '@/lib/auth/admin';
 import { normalizePhone } from '@/lib/auth/validation';
@@ -210,6 +211,9 @@ export async function POST(req: Request) {
         email: trimmedEmail,
         phone: normalizedPhone,
         password_hash: hashedPassword,
+        // طريقة التسجيل الحقيقية — صفحة المسؤول بتقرأها بدل التخمين من وجود الهاش
+        // (حسابات Google ليها هاش عشوائي برضه، فالتخمين كان بيطلعها "بريد").
+        auth_provider: isGoogleRegistration ? 'google' : 'email',
         gender: gender || 'male',
         role_id: role === 'merchant' ? 3 : 4,
         user_type_id: userTypeId,
@@ -338,6 +342,15 @@ export async function POST(req: Request) {
       path: '/',
       maxAge: SESSION_MAX_AGE_SECONDS,
     });
+
+    // سجّل إنشاء الحساب في activity_log حتى يظهر في صفحة المسؤول.
+    await logActivityServer(
+      newUser.id,
+      newUser.name,
+      userRole,
+      'تسجيل جديد',
+      isGoogleRegistration ? 'أنشأ حساباً جديداً عبر Google' : 'أنشأ حساباً جديداً بالبريد الإلكتروني'
+    );
 
     return NextResponse.json({
       ok: true,

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseServer } from '@/lib/supabase/server';
 import { sealSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from '@/lib/auth/session';
+import { logActivityServer } from '@/lib/activity';
 import { checkRateLimit, getClientIp } from '@/lib/auth/rateLimit';
 import { verifyGoogleAccessToken } from '@/lib/auth/google';
 
@@ -102,6 +103,9 @@ export async function POST(req: Request) {
       path: '/',
       maxAge: SESSION_MAX_AGE_SECONDS,
     });
+
+    // سجّل الدخول في activity_log حتى يظهر نشاط الحساب في صفحة المسؤول.
+    await logActivityServer(dbUser.id, dbUser.name, roleCode, 'تسجيل دخول', 'سجّل الدخول عبر Google');
 
     return NextResponse.json({
       ok: true,
