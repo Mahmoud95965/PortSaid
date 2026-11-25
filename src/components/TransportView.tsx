@@ -1285,51 +1285,7 @@ export const TransportView: React.FC<TransportViewProps> = ({
         )}
       </div>
 
-      {/* 5. رحلات جاهزة من السكن الجامعي — من قاعدة البيانات (transit_trips)، ولو فيه أكتر من طريق لنفس المكان بيظهروا كلهم */}
-      <div className="bg-white dark:bg-[#0f1a28] p-5 sm:p-7 rounded-3xl border border-sand-200/80 dark:border-[#1d2d3e] shadow-md space-y-4">
-        <div className="flex items-center gap-2 border-b border-sand-200/60 dark:border-[#1d2d3e] pb-3">
-          <span className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 grid place-items-center">
-            <Sparkles className="w-4 h-4" />
-          </span>
-          <div>
-            <h3 className="text-base font-black text-ocean-900 dark:text-white">رحلات جاهزة من السكن الجامعي</h3>
-            <p className="text-xs text-ocean-700/70 dark:text-white/60 font-medium">
-              اختار رحلة جاهزة — ولو فيه أكتر من طريق لنفس المكان هتلاقيهم كلهم هنا
-            </p>
-          </div>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {activeTrips.map((trip) => (
-            <button
-              key={trip.id}
-              type="button"
-              onClick={() => {
-                handleSelectFrom(trip.from);
-                handleSelectTo(trip.to);
-                document.getElementById('service-plan')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }}
-              className="text-start p-4 rounded-2xl border border-sand-200 dark:border-[#22354a] bg-sand-50 dark:bg-[#132233] hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
-            >
-              <span className="flex items-start justify-between gap-2">
-                <span className="text-sm font-black text-ocean-900 dark:text-white">{trip.title}</span>
-                {!trip.is_confirmed && (
-                  <span className="shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">
-                    لسه محتاجة تأكيد
-                  </span>
-                )}
-              </span>
-              <span className="block text-xs text-ocean-700/80 dark:text-white/70 mt-2 font-semibold leading-relaxed">
-                {buildTripText(trip.legs, activeNetwork.stopsByName)}
-              </span>
-              <span className="mt-3 inline-flex items-center gap-1 text-xs font-black text-blue-600 dark:text-blue-400">
-                استخدم هذه الرحلة <ArrowRight className="w-3.5 h-3.5" />
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 6. قسم الخريطة التفاعلية مع المسار ونقاط التوجيه */}
+      {/* 5. قسم الخريطة التفاعلية مع المسار ونقاط التوجيه */}
       <div className="bg-white dark:bg-[#0f1a28] rounded-3xl border border-sand-200/80 dark:border-[#1d2d3e] shadow-md overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-sand-200/60 dark:border-[#1d2d3e] flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
@@ -1471,6 +1427,50 @@ export const TransportView: React.FC<TransportViewProps> = ({
               اختر نقطتي التحرك والوجهة لمعاينة المسار ومحطات النقل المشتركة 🗺️
             </p>
           )}
+        </div>
+      </div>
+
+      {/* 6. رحلات جاهزة من السكن الجامعي — من قاعدة البيانات (transit_trips)، ولو فيه أكتر من طريق لنفس المكان بيظهروا كلهم */}
+      <div className="bg-white dark:bg-[#0f1a28] p-5 sm:p-7 rounded-3xl border border-sand-200/80 dark:border-[#1d2d3e] shadow-md space-y-4">
+        <div className="flex items-center gap-2 border-b border-sand-200/60 dark:border-[#1d2d3e] pb-3">
+          <span className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 grid place-items-center">
+            <Sparkles className="w-4 h-4" />
+          </span>
+          <div>
+            <h3 className="text-base font-black text-ocean-900 dark:text-white">رحلات جاهزة من السكن الجامعي</h3>
+            <p className="text-xs text-ocean-700/70 dark:text-white/60 font-medium">
+              اختار رحلة جاهزة — ولو فيه أكتر من طريق لنفس المكان هتلاقيهم كلهم هنا
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {activeTrips.map((trip) => (
+            <button
+              key={trip.id}
+              type="button"
+              onClick={() => {
+                handleSelectFrom(trip.from);
+                handleSelectTo(trip.to);
+                document.getElementById('service-plan')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className="text-start p-4 rounded-2xl border border-sand-200 dark:border-[#22354a] bg-sand-50 dark:bg-[#132233] hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
+            >
+              <span className="flex items-start justify-between gap-2">
+                <span className="text-sm font-black text-ocean-900 dark:text-white">{trip.title}</span>
+                {!trip.is_confirmed && (
+                  <span className="shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">
+                    لسه محتاجة تأكيد
+                  </span>
+                )}
+              </span>
+              <span className="block text-xs text-ocean-700/80 dark:text-white/70 mt-2 font-semibold leading-relaxed">
+                {buildTripText(trip.legs, activeNetwork.stopsByName)}
+              </span>
+              <span className="mt-3 inline-flex items-center gap-1 text-xs font-black text-blue-600 dark:text-blue-400">
+                استخدم هذه الرحلة <ArrowRight className="w-3.5 h-3.5" />
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 
