@@ -524,6 +524,13 @@ export const TransportView: React.FC<TransportViewProps> = ({
       if (!mapContainerRef.current) return;
       const maplibregl = await import('maplibre-gl');
 
+      // عامل MapLibre من نفس النطاق — بدونه تفشل الخريطة في حزمة Next.js
+      // (نفس الإصلاح الموجود في MapView وPlannerMap؛ بدونه لا تظهر البلاطات ولا العلامات)
+      if (typeof window !== 'undefined') {
+        const workerUrl = `${window.location.origin}/maplibre-gl-worker.mjs`;
+        maplibregl.setWorkerUrl(workerUrl);
+      }
+
       const initialCenter: [number, number] = startPoint
         ? [startPoint.lon, startPoint.lat]
         : PORT_SAID_CENTER;
