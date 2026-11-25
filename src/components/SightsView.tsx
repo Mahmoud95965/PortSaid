@@ -8,6 +8,7 @@ import {
   Search,
   MapPin,
   Sparkles,
+  Star,
   ArrowRight,
   Compass,
   X,
@@ -327,7 +328,7 @@ export const SightsView: React.FC<SightsViewProps> = ({
       {/* Sights Places Grid */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <h2 className="text-base sm:text-lg font-black text-ocean-950 dark:text-white">
               {searchQuery ? `نتائج البحث عن: "${searchQuery}"` : 'قائمة المعالم السياحية'}
             </h2>
@@ -343,7 +344,7 @@ export const SightsView: React.FC<SightsViewProps> = ({
               else window.location.href = '/map';
             }}
             type="button"
-            className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+            className="shrink-0 whitespace-nowrap text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
           >
             <span>عرض الكل على الخريطة</span>
             <Map className="w-3.5 h-3.5" />
@@ -398,6 +399,15 @@ export const SightsView: React.FC<SightsViewProps> = ({
                       )}
                     </div>
 
+                    {(place.rating || 0) > 0 && (
+                      <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 pt-1 font-medium">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <span className="text-amber-600 dark:text-amber-400 font-bold">{place.rating}</span>
+                        {(place.reviews_count || 0) > 0 && (
+                          <span>({place.reviews_count?.toLocaleString('ar-EG')} تقييم على جوجل)</span>
+                        )}
+                      </div>
+                    )}
 
                     {/* Card Actions */}
                     <div className="pt-3 border-t border-slate-100 dark:border-[#162232] flex items-center justify-between gap-1.5 mt-2">

@@ -596,11 +596,11 @@ export const MapView: React.FC<MapViewProps> = ({
           </div>
 
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-lg sm:text-xl font-black text-ocean-900 dark:text-white leading-tight">
                 خريطة بورسعيد التفاعلية
               </h1>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-300/40">
+              <span className="hidden min-[400px]:inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-300/40">
                 OpenFreeMap
               </span>
             </div>
@@ -630,7 +630,7 @@ export const MapView: React.FC<MapViewProps> = ({
                   initial={{ opacity: 0, scale: 0.9, y: 5 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.9, y: 5 }}
-                  className="absolute left-0 mt-2 z-50 w-48 rounded-2xl bg-white dark:bg-[#0c1622] border border-sand-300 dark:border-[#22354a] shadow-xl p-1.5 flex flex-col gap-1"
+                  className="absolute right-0 mt-2 z-50 w-48 rounded-2xl bg-white dark:bg-[#0c1622] border border-sand-300 dark:border-[#22354a] shadow-xl p-1.5 flex flex-col gap-1"
                 >
                   {MAP_STYLES.map((st) => (
                     <button
@@ -791,7 +791,7 @@ export const MapView: React.FC<MapViewProps> = ({
         </div>
 
         {/* Counter of Places */}
-        <div className="flex items-center justify-between text-[11px] text-ocean-700/70 dark:text-white/60 font-semibold px-1 pt-1">
+        <div className="flex items-center justify-between flex-wrap gap-1 text-[11px] text-ocean-700/70 dark:text-white/60 font-semibold px-1 pt-1">
           <span>
             يتم عرض <strong>{filteredPlaces.length}</strong> مكان بإحداثيات GPS دقيقة وأسماء مميزة على الخريطة
           </span>

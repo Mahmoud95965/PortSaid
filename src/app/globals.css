@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent page-level horizontal scroll from any wide child (keeps the sticky header working) */
+html, body {
+  overflow-x: clip;
+}
+
 :root {
   --font-cairo: 'Cairo', Tahoma, sans-serif;
   color-scheme: light;

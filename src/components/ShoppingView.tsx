@@ -22,6 +22,7 @@ import {
   Laptop,
   Shirt,
   ShoppingCart,
+  Star,
 } from 'lucide-react';
 
 export interface ShoppingViewProps {
@@ -487,6 +488,15 @@ export const ShoppingView: React.FC<ShoppingViewProps> = ({
                     <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium leading-relaxed line-clamp-2">
                       {shop.ds || 'مركز تسوق متكامل يوفر كافة الاحتياجات والمنتجات بأسعار مناسبة في بورسعيد.'}
                     </p>
+                    {(shop.rating || 0) > 0 && (
+                      <div className="flex items-center gap-1 text-[11px] font-bold">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <span className="text-amber-600 dark:text-amber-400">{shop.rating}</span>
+                        {(shop.reviews_count || 0) > 0 && (
+                          <span className="text-slate-400 font-medium">({shop.reviews_count?.toLocaleString('ar-EG')} تقييم على جوجل)</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 

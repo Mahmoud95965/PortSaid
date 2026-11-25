@@ -369,6 +369,15 @@ export const HotelsView: React.FC<HotelsViewProps> = ({
                     <p className="text-xs text-slate-600 dark:text-slate-400 font-medium line-clamp-2 leading-relaxed">
                     {hotel.ds || `إقامة فندقية مريحة وموقع متميز في ${hotel.a} بالقرب من أهم معالم بورسعيد.`}
                   </p>
+                    {(hotel.rating || 0) > 0 && (
+                      <div className="flex items-center gap-1 text-[11px] font-bold">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <span className="text-amber-600 dark:text-amber-400">{hotel.rating}</span>
+                        {(hotel.reviews_count || 0) > 0 && (
+                          <span className="text-slate-400 font-medium">({hotel.reviews_count?.toLocaleString('ar-EG')} تقييم على جوجل)</span>
+                        )}
+                      </div>
+                    )}
 
                   </div>
 

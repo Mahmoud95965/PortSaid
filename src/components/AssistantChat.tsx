@@ -454,7 +454,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onNavigate }) => {
           title="مساعد بورسعيد الذكي"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="relative w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-white dark:bg-[#0c1622] p-2 shadow-xl border border-slate-200 dark:border-slate-800 grid place-items-center cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-teal2-500"
+          className="relative w-12 h-12 sm:w-12 sm:h-12 rounded-2xl bg-white dark:bg-[#0c1622] p-2 shadow-xl border border-slate-200 dark:border-slate-800 grid place-items-center cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-teal2-500"
         >
           <img
             src="/assets/logo/icon-192.png"
@@ -475,7 +475,7 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ onNavigate }) => {
             exit={{ opacity: 0, scale: 0.92, y: 20 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
             dir="rtl"
-            className="fixed inset-x-2.5 sm:inset-x-auto sm:left-6 bottom-16 sm:bottom-22 z-50 w-auto sm:w-[410px] h-[min(580px,calc(100dvh-5rem))] flex flex-col rounded-3xl overflow-hidden shadow-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e]"
+            className="fixed inset-x-2.5 sm:inset-x-auto sm:left-6 bottom-16 sm:bottom-20 z-50 w-auto sm:w-[410px] h-[min(580px,calc(100dvh-5rem))] flex flex-col rounded-3xl overflow-hidden shadow-2xl bg-white dark:bg-[#0c1622] border border-slate-200 dark:border-[#1d2d3e]"
           >
             {/* Header */}
             <div className="p-3.5 px-4 bg-slate-50 dark:bg-[#101e2e] border-b border-slate-200 dark:border-[#1d2d3e] flex items-center justify-between gap-2 shrink-0">

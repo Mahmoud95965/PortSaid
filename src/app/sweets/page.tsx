@@ -52,6 +52,8 @@ function SweetsPageContent() {
               p: item.visit_points || 20,
               disc: item.discount_percent || 0,
               cost: item.coupon_cost_points || 0,
+              rating: item.rating != null ? Number(item.rating) : undefined,
+              reviews_count: item.ratings_count ?? undefined,
             }));
             setPlaces(mapped);
           }

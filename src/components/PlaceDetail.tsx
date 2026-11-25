@@ -297,7 +297,7 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack }) => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-ocean-950 text-white px-4 py-2 rounded-2xl shadow-xl text-xs sm:text-sm font-bold border border-white/10"
+            className="fixed top-5 left-1/2 -translate-x-1/2 z-50 max-w-[92vw] text-center bg-ocean-950 text-white px-4 py-2 rounded-2xl shadow-xl text-xs sm:text-sm font-bold border border-white/10"
           >
             {toastMsg}
           </motion.div>
@@ -375,12 +375,17 @@ export const PlaceDetail: React.FC<PlaceDetailProps> = ({ place, onBack }) => {
               <span>بورسعيد · {place.a}</span>
             </span>
 
-            {avgRating && (
+            {place.rating ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/40 border border-white/10 text-white text-[11px] font-bold backdrop-blur-xs">
+                <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                <span>{place.rating}{place.reviews_count ? ` (${place.reviews_count.toLocaleString('ar-EG')} تقييم على جوجل)` : ''}</span>
+              </span>
+            ) : avgRating ? (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/40 border border-white/10 text-white text-[11px] font-bold backdrop-blur-xs">
                 <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
                 <span>{avgRating} ({reviews.length} تقييم)</span>
               </span>
-            )}
+            ) : null}
           </div>
 
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white leading-tight drop-shadow-md">
