@@ -4,7 +4,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Place } from '@/types';
 import { INITIAL_PLACES } from '@/lib/constants';
-import { PLACES_METADATA } from '@/lib/plannerUtils';
 import {
   Search,
   MapPin,
@@ -13,7 +12,6 @@ import {
   Compass,
   X,
   Map,
-  Clock,
   Heart,
   ChevronLeft,
   ChevronDown,
@@ -357,7 +355,6 @@ export const SightsView: React.FC<SightsViewProps> = ({
           <div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
               {filteredPlaces.slice(0, visibleCount).map((place) => {
-                const meta = PLACES_METADATA[place.id];
                 const isFav = favorites.includes(place.id);
 
                 return (
@@ -401,23 +398,6 @@ export const SightsView: React.FC<SightsViewProps> = ({
                       )}
                     </div>
 
-                    {/* Metadata Pill (Duration & Best Time if present) */}
-                    {meta && (
-                      <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 pt-1 font-medium flex-wrap">
-                        {meta.recommendedDurationMinutes && (
-                          <span className="inline-flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-teal2-600" />
-                            <span>{meta.recommendedDurationMinutes} دقيقة</span>
-                          </span>
-                        )}
-                        {meta.bestTimeOfDay === 'morning' && (
-                          <span>• أفضل وقت: صباحاً</span>
-                        )}
-                        {meta.bestTimeOfDay === 'evening' && (
-                          <span>• أفضل وقت: وقت الغروب</span>
-                        )}
-                      </div>
-                    )}
 
                     {/* Card Actions */}
                     <div className="pt-3 border-t border-slate-100 dark:border-[#162232] flex items-center justify-between gap-1.5 mt-2">
