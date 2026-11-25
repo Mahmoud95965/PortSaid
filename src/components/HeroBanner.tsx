@@ -113,8 +113,9 @@ export const HeroBanner: React.FC = () => {
 
         {/* Slide Indicators and Controls */}
         <div className="absolute bottom-3 sm:bottom-4 left-4 right-4 flex items-center justify-between z-20">
-          {/* Dots */}
-          <div className="flex items-center gap-1.5">
+          {/* Dots — شريط أصفر واحد ينزلق بنعومة فوق 3 نقاط ثابتة،
+              بدل ما النقطة النشطة تكبر فجأة في مكانها */}
+          <div dir="ltr" className="relative flex items-center gap-1.5">
             {HERO_IMAGES.map((_, i) => (
               <button
                 key={i}
@@ -123,11 +124,16 @@ export const HeroBanner: React.FC = () => {
                   setIdx(i);
                 }}
                 aria-label={`شريحة ${i + 1}`}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  i === idx ? 'w-6 bg-sand-400' : 'w-1.5 bg-white/40 hover:bg-white/70'
-                }`}
+                className="h-1.5 w-1.5 rounded-full bg-white/40 transition-colors hover:bg-white/70"
               />
             ))}
+            <motion.span
+              aria-hidden="true"
+              className="absolute top-0 left-0 h-1.5 w-6 rounded-full bg-sand-400"
+              initial={false}
+              animate={{ x: idx * 12 - 9 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+            />
           </div>
 
           {/* Arrows */}
