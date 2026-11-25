@@ -223,6 +223,20 @@ export const ClothesView: React.FC<ClothesViewProps> = ({
         )}
       </AnimatePresence>
 
+      {/* Back Button */}
+      {onBack && (
+        <div>
+          <button
+            onClick={onBack}
+            type="button"
+            className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-ocean-900 dark:hover:text-white transition group py-1"
+          >
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            <span>رجوع للرئيسية</span>
+          </button>
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1e1b4b] via-[#2e1065] to-[#3b0764] text-white p-6 sm:p-8 md:p-10 shadow-xl border border-indigo-500/20">
         <div className="absolute top-0 left-0 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -246,16 +260,6 @@ export const ClothesView: React.FC<ClothesViewProps> = ({
               <span className="block text-2xl font-black text-sand-300">{clothesPlaces.length}</span>
               <span className="text-[11px] text-white/70 font-bold">محل موثق</span>
             </div>
-            {onBack && (
-              <button
-                onClick={onBack}
-                type="button"
-                className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/20 text-white font-bold text-xs sm:text-sm transition"
-              >
-                <span>العودة للرئيسية</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            )}
           </div>
         </div>
       </div>

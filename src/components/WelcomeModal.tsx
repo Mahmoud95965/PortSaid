@@ -156,18 +156,22 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart }) => {
         {theme === 'dark' ? <Sun className="w-5 h-5 text-sand-400" /> : <Moon className="w-5 h-5" />}
       </motion.button>
 
-      {/* Slide Indicators */}
+      {/* Slide Indicators — العرض يُحرَّك عبر framer-motion فقط (بدون layout
+          أو transition-all من CSS حتى لا يتعارض الاثنان فتقفز النقاط) */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-20">
         {SLIDES.map((_, i) => (
           <motion.button
             key={i}
             onClick={() => setSlide(i)}
-            className={`h-1.5 rounded-full transition-all duration-300 ${
-              i === slide ? 'w-8 bg-sand-400' : 'w-2 bg-white/40'
+            aria-label={`الشريحة ${i + 1}`}
+            className={`h-1.5 rounded-full ${
+              i === slide ? 'bg-sand-400' : 'bg-white/40'
             }`}
+            initial={false}
+            animate={{ width: i === slide ? 32 : 8 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
             whileHover={{ scale: 1.3 }}
             whileTap={{ scale: 0.8 }}
-            layout
           />
         ))}
       </div>

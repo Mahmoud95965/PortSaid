@@ -248,6 +248,20 @@ export const SweetsView: React.FC<SweetsViewProps> = ({
         )}
       </AnimatePresence>
 
+      {/* Back Button */}
+      {onBack && (
+        <div>
+          <button
+            onClick={onBack}
+            type="button"
+            className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-ocean-900 dark:hover:text-white transition group py-1"
+          >
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            <span>رجوع للرئيسية</span>
+          </button>
+        </div>
+      )}
+
       {/* 1. Header & Hero Section */}
       <header className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 via-blue-800 to-slate-900 text-white p-6 sm:p-8 lg:p-10 shadow-xl shadow-blue-900/20 border border-blue-500/20">
         {/* Ambient Warm & Cool Lights */}
