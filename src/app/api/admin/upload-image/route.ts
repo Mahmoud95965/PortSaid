@@ -29,7 +29,7 @@ const MAX_BYTES = 5 * 1024 * 1024; // 5MB
 export async function POST(req: Request) {
   try {
     // البوابة أولاً: بدون جلسة مسؤول لا يُقرأ أي ملف.
-    const adminSession = getAdminSession();
+    const adminSession = await getAdminSession();
     if (!adminSession) {
       return NextResponse.json({ ok: false, message: 'هذه العملية تتطلب صلاحيات المسؤول.' }, { status: 403 });
     }

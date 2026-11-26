@@ -7,7 +7,7 @@
  * src/lib/auth/admin.ts instead.
  */
 import { cookies } from 'next/headers';
-import { unsealSessionToken, SESSION_COOKIE_NAME, type SessionPayload } from '@/lib/auth/session';
+import { unsealSessionTokenAsync, SESSION_COOKIE_NAME, type SessionPayload } from '@/lib/auth/session';
 import { isAdminSession } from '@/lib/auth/admin';
 
 /**
@@ -15,10 +15,10 @@ import { isAdminSession } from '@/lib/auth/admin';
  * admin account (portsaidhub@gmail.com). Returns null for visitors,
  * logged-out users, expired/tampered sessions, and any non-admin account.
  */
-export function getAdminSession(): SessionPayload | null {
+export async function getAdminSession(): Promise<SessionPayload | null> {
   const token = cookies().get(SESSION_COOKIE_NAME)?.value;
   if (!token) return null;
-  const session = unsealSessionToken(token);
+  const session = await unsealSessionTokenAsync(token);
   if (!session || !isAdminSession(session)) return null;
   return session;
 }

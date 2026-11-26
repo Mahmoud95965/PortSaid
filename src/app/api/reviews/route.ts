@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { unsealSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { unsealSessionTokenAsync, SESSION_COOKIE_NAME } from '@/lib/auth/session';
 import { checkRateLimit, getClientIp } from '@/lib/auth/rateLimit';
 import { getSupabaseServer } from '@/lib/supabase/server';
 
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   try {
     const cookieStore = cookies();
     const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-    const session = token ? unsealSessionToken(token) : null;
+    const session = token ? await unsealSessionTokenAsync(token) : null;
     if (!session) {
       return NextResponse.json(
         { ok: false, message: 'سجّل الدخول أولاً لنشر تقييم.' },

@@ -87,7 +87,7 @@ function NotFoundCard({ message }: { message: string }) {
 
 export default async function AdminUserPage({ params }: { params: { id: string } }) {
   // Server-side gate FIRST: no session check means no data, no render.
-  const adminSession = getAdminSession();
+  const adminSession = await getAdminSession();
   if (!adminSession) {
     redirect('/');
   }

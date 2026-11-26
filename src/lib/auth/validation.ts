@@ -32,7 +32,8 @@ export function isValidAvatarUrl(url: string): boolean {
   }
 
   // Safe data URIs for images only: data:image/png;base64,... etc.
-  if (/^data:image\/(png|jpeg|jpg|webp|gif|svg\+xml);base64,[A-Za-z0-9+/=]+$/i.test(trimmed)) {
+  // (SVG data URIs are NOT allowed — an SVG can carry script.)
+  if (/^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$/i.test(trimmed)) {
     return true;
   }
 

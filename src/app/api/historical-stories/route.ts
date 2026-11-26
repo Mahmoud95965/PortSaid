@@ -44,7 +44,7 @@ export async function GET(req: Request) {
     const includeUnpublished = searchParams.get('all') === 'true';
 
     // Unpublished stories are visible only to the single admin account.
-    const isStaff = !!getAdminSession();
+    const isStaff = !!await getAdminSession();
 
     const supabase = getSupabaseServer();
     if (!supabase) {
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
   try {
     // Creating/editing stories is an admin-only action, restricted to the
     // single admin account (portsaidhub@gmail.com).
-    const adminSession = getAdminSession();
+    const adminSession = await getAdminSession();
     if (!adminSession) {
       return NextResponse.json({ ok: false, message: 'هذه العملية تتطلب صلاحيات المسؤول.' }, { status: 403 });
     }
@@ -155,7 +155,7 @@ export async function DELETE(req: Request) {
   try {
     // Deleting stories is an admin-only action, restricted to the single
     // admin account (portsaidhub@gmail.com).
-    const adminSession = getAdminSession();
+    const adminSession = await getAdminSession();
     if (!adminSession) {
       return NextResponse.json({ ok: false, message: 'هذه العملية تتطلب صلاحيات المسؤول.' }, { status: 403 });
     }

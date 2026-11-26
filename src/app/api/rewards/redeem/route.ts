@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseServer } from '@/lib/supabase/server';
-import { unsealSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { unsealSessionTokenAsync, SESSION_COOKIE_NAME } from '@/lib/auth/session';
 import { dbRedeemCoupon } from '@/lib/db/localDb';
 
 export const runtime = 'nodejs';
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: 'يجب تسجيل الدخول أولاً لاستبدال الكوبون.' }, { status: 401 });
     }
 
-    const session = unsealSessionToken(token);
+    const session = await unsealSessionTokenAsync(token);
     if (!session || !session.userId) {
       return NextResponse.json({ ok: false, message: 'جلسة الدخول غير صالحة.' }, { status: 401 });
     }

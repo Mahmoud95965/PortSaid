@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { SESSION_COOKIE_NAME, unsealSessionToken, revokeSession } from '@/lib/auth/session';
+import { SESSION_COOKIE_NAME, unsealSessionTokenAsync, revokeSession } from '@/lib/auth/session';
 
 export const runtime = 'nodejs';
 
@@ -10,7 +10,7 @@ export async function POST() {
     const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
     if (token) {
-      const session = unsealSessionToken(token);
+      const session = await unsealSessionTokenAsync(token);
       if (session?.sessionId) {
         // Invalidate the session in server revocation store
         revokeSession(session.sessionId);

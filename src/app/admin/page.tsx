@@ -15,8 +15,8 @@ export const metadata: Metadata = {
  * admin component or data is rendered. The client-side guard inside
  * AdminDashboard is cosmetic defense-in-depth only.
  */
-export default function AdminPage() {
-  const adminSession = getAdminSession();
+export default async function AdminPage() {
+  const adminSession = await getAdminSession();
   if (!adminSession) {
     redirect('/');
   }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { unsealSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { unsealSessionTokenAsync, SESSION_COOKIE_NAME } from '@/lib/auth/session';
 import { isAdminSession } from '@/lib/auth/admin';
 import { dbGetMemories, dbCreateMemory, dbDeleteMemory, dbGetAllMemoriesForAdmin } from '@/lib/db/localDb';
 
@@ -13,7 +13,7 @@ export async function GET(req: Request) {
 
     const cookieStore = cookies();
     const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-    const session = token ? unsealSessionToken(token) : null;
+    const session = token ? await unsealSessionTokenAsync(token) : null;
 
     // Admin listing: ONLY the single admin account (portsaidhub@gmail.com).
     if (forAdmin && isAdminSession(session)) {
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: 'يجب تسجيل الدخول أولاً لمشاركة ذكرياتك.' }, { status: 401 });
     }
 
-    const session = unsealSessionToken(token);
+    const session = await unsealSessionTokenAsync(token);
     if (!session || !session.userId) {
       return NextResponse.json({ ok: false, message: 'جلسة الدخول غير صالحة.' }, { status: 401 });
     }
@@ -90,7 +90,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ ok: false, message: 'غير مصرح.' }, { status: 401 });
     }
 
-    const session = unsealSessionToken(token);
+    const session = await unsealSessionTokenAsync(token);
     if (!session || !session.userId) {
       return NextResponse.json({ ok: false, message: 'جلسة الدخول غير صالحة.' }, { status: 401 });
     }
