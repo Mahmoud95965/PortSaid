@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { AREA_STOP, HOME_STOP } from '@/lib/constants';
 import { isPointInPortSaid, calculateDistanceKm, identifyPortSaidDistrict } from '@/lib/geoUtils';
 import { unsealSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { checkRateLimit, getClientIp } from '@/lib/auth/rateLimit';
 import { getSupabaseServer } from '@/lib/supabase/server';
 import { dbFindUserById } from '@/lib/db/localDb';
 
@@ -684,6 +685,32 @@ export async function POST(req: Request) {
 
     // جلب سياق وبيانات المستخدم الحالي — بياناته هو فقط، ولا بيانات أي مستخدم آخر.
     const userData = await getUserContext(localFavorites);
+
+    // أمان: المساعد بيستدعي نموذج مدفوع بمفتاح الخادم، فالمسار للمستخدمين
+    // المسجلين بس (الموقع أصلاً بيتطلب تسجيل دخول)، وبحد طلبات يمنع
+    // استنزاف رصيد OpenRouter — كان مفتوحاً للجميع بدون أي تحقق أو حد.
+    if (!userData.user) {
+      return NextResponse.json(
+        { ok: false, message: 'سجّل الدخول أولاً لاستخدام المساعد.' },
+        { status: 401 }
+      );
+    }
+    const ip = getClientIp(req);
+    const userLimit = checkRateLimit(`assistant_user:${userData.user.id}`, 10, 60);
+    if (!userLimit.allowed) {
+      return NextResponse.json(
+        { ok: false, message: 'وصلت للحد المسموح به من رسائل المساعد — جرّب بعد دقيقة.' },
+        { status: 429 }
+      );
+    }
+    const ipLimit = checkRateLimit(`assistant_ip:${ip}`, 30, 60);
+    if (!ipLimit.allowed) {
+      return NextResponse.json(
+        { ok: false, message: 'تم تجاوز الحد المسموح به من هذا الجهاز — جرّب بعد دقيقة.' },
+        { status: 429 }
+      );
+    }
+
     const userPromptContext = buildUserPromptContext(userData, livePlaces);
 
     const placesText = livePlaces

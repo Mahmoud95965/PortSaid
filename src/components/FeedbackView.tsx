@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Lightbulb, AlertTriangle, Send, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase/client';
 
 interface FeedbackViewProps {
@@ -11,7 +10,6 @@ interface FeedbackViewProps {
 }
 
 export const FeedbackView: React.FC<FeedbackViewProps> = ({ onBack }) => {
-  const { user } = useAuth();
   const [kind, setKind] = useState<'suggestion' | 'complaint'>('suggestion');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,14 +27,17 @@ export const FeedbackView: React.FC<FeedbackViewProps> = ({ onBack }) => {
 
     if (isSupabaseConfigured() && supabase) {
       try {
-        const { error } = await supabase.from('feedback').insert({
-          user_id: user?.id || null,
-          kind,
-          message: message.trim(),
-          status: 'new',
+        // الملاحظة بتتبعت من الخادم (POST /api/feedback) بجلسة المستخدم —
+        // الكتابة المباشرة من المتصفح بالمفتاح العام اتقفلت (كانت بتسمح
+        // لأي حد يغرق الجدول وبأي user_id وأي status).
+        const res = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ kind, message: message.trim() }),
         });
-        if (error) {
-          setStatusMsg({ text: error.message, ok: false });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data?.ok) {
+          setStatusMsg({ text: data?.message || 'تعذّر الإرسال، حاول مجدداً.', ok: false });
         } else {
           setMessage('');
           setStatusMsg({

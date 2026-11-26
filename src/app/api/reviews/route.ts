@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { unsealSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { checkRateLimit, getClientIp } from '@/lib/auth/rateLimit';
 import { getSupabaseServer } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
@@ -18,6 +19,23 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { ok: false, message: 'سجّل الدخول أولاً لنشر تقييم.' },
         { status: 401 }
+      );
+    }
+
+    // حد طلبات ضد إغراق التقييمات (التقييم نفسه idempotent لكل مكان).
+    const ip = getClientIp(req);
+    const userLimit = checkRateLimit(`reviews_user:${session.userId}`, 10, 60);
+    if (!userLimit.allowed) {
+      return NextResponse.json(
+        { ok: false, message: 'وصلت للحد المسموح به من التقييمات — جرّب بعد دقيقة.' },
+        { status: 429 }
+      );
+    }
+    const ipLimit = checkRateLimit(`reviews_ip:${ip}`, 30, 60);
+    if (!ipLimit.allowed) {
+      return NextResponse.json(
+        { ok: false, message: 'تم تجاوز الحد المسموح به من هذا الجهاز — جرّب بعد دقيقة.' },
+        { status: 429 }
       );
     }
 
