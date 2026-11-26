@@ -21,7 +21,7 @@ export const runtime = 'nodejs';
  */
 export async function GET() {
   try {
-    const adminSession = getAdminSession();
+    const adminSession = await getAdminSession();
     if (!adminSession) {
       return NextResponse.json(
         { ok: false, message: 'غير مصرح بالدخول. هذه المنطقة مخصصة للمسؤول فقط.' },

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getSupabaseServer } from '@/lib/supabase/server';
-import { unsealSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { unsealSessionTokenAsync, SESSION_COOKIE_NAME } from '@/lib/auth/session';
 import { dbGetUserLedger } from '@/lib/db/localDb';
 
 export const runtime = 'nodejs';
@@ -16,7 +16,7 @@ export async function GET() {
       return NextResponse.json({ ok: false, message: 'يجب تسجيل الدخول أولاً.' }, { status: 401 });
     }
 
-    const session = unsealSessionToken(token);
+    const session = await unsealSessionTokenAsync(token);
     if (!session || !session.userId) {
       return NextResponse.json({ ok: false, message: 'جلسة الدخول غير صالحة.' }, { status: 401 });
     }

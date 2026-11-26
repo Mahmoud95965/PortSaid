@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { unsealSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { unsealSessionTokenAsync, SESSION_COOKIE_NAME } from '@/lib/auth/session';
 import { checkRateLimit, getClientIp } from '@/lib/auth/rateLimit';
 import { INITIAL_PLACES } from '@/lib/constants';
 import { isPointInPortSaid, calculateDistanceKm } from '@/lib/geoUtils';
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     // استنزاف رصيد OpenRouter — كان مفتوحاً للجميع بدون أي تحقق.
     const cookieStore = cookies();
     const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-    const session = token ? unsealSessionToken(token) : null;
+    const session = token ? await unsealSessionTokenAsync(token) : null;
     if (!session) {
       return NextResponse.json(
         { ok: false, message: 'سجّل الدخول أولاً لاستخدام مخطط الرحلات.' },

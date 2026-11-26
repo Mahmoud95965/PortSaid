@@ -7,6 +7,7 @@
  */
 
 import crypto from 'node:crypto';
+import { getSupabaseServer } from '@/lib/supabase/server';
 
 export interface SessionPayload {
   sessionId: string;
@@ -52,9 +53,31 @@ export function revokeSession(sessionId: string): void {
   }
 }
 
-export function revokeAllUserSessions(userId: string): void {
-  if (userId) {
-    userRevocationTimestamps.set(userId, Math.floor(Date.now() / 1000));
+/**
+ * يبطل كل جلسات المستخدم — على كل الخوادم، مش على نسخة واحدة بس.
+ * النسخة القديمة كانت بتسجّل الإبطال في ذاكرة العملية بس (Set/Map)، وده
+ * مالوش أي أثر على Vercel (دوال serverless منفصلة، كل طلب ممكن يروح لنسخة
+ * تانية، والذاكرة بتتمسح مع كل إعادة تشغيل) — فتغيير كلمة السر كان بيسيب
+ * أي جلسة مسروقة شغالة لحد 7 أيام. دلوقتي رقم إصدار الجلسة بيتخزن في
+ * قاعدة البيانات (users.session_version، migration 17) وبيزيد مع كل
+ * إبطال، والتحقق منه بيتم في unsealSessionTokenAsync. الطابع الزمني
+ * في الذاكرة لسه موجود كمسار سريع للنسخة الحالية.
+ */
+export async function revokeAllUserSessions(userId: string): Promise<void> {
+  if (!userId) return;
+  userRevocationTimestamps.set(userId, Math.floor(Date.now() / 1000));
+  try {
+    const supabase = getSupabaseServer();
+    if (!supabase) return;
+    const { data } = await supabase
+      .from('users')
+      .select('session_version')
+      .eq('id', userId)
+      .maybeSingle();
+    const next = (typeof data?.session_version === 'number' ? data.session_version : 1) + 1;
+    await supabase.from('users').update({ session_version: next }).eq('id', userId);
+  } catch {
+    // best effort — طابع الإبطال في الذاكرة لسه بيحمي النسخة الحالية.
   }
 }
 
@@ -151,4 +174,38 @@ export function unsealSessionToken(token: string): SessionPayload | null {
   } catch (err) {
     return null;
   }
+}
+
+/**
+ * فك جلسة + تحقق من رقم إصدارها في قاعدة البيانات. لازم يُستخدم بدل
+ * unsealSessionToken في كل مسارات الخادم — النسخة المتزامنة بتتحقق من
+ * التوقيع والانتهاء والإبطال في الذاكرة بس، وده مش كافي على Vercel.
+ * - من غير خادم Supabase (تطوير محلي): بيرجع نتيجة التحقق المتزامن.
+ * - خطأ في الاستعلام (مثلاً العمود لسه ما اتعملش): بيسمح — التحقق
+ *   الموقّع لسه ساري، والترحيل بيتشغل قبل النشر.
+ * - المستخدم مش موجود في قاعدة البيانات: بيرفض الجلسة.
+ */
+export async function unsealSessionTokenAsync(token: string): Promise<SessionPayload | null> {
+  const payload = unsealSessionToken(token);
+  if (!payload) return null;
+
+  let supabase: ReturnType<typeof getSupabaseServer>;
+  try {
+    supabase = getSupabaseServer();
+  } catch {
+    return payload;
+  }
+  if (!supabase) return payload;
+
+  const { data, error } = await supabase
+    .from('users')
+    .select('session_version')
+    .eq('id', payload.userId)
+    .maybeSingle();
+  if (error) return payload;
+  if (!data) return null;
+
+  const current = typeof data.session_version === 'number' ? data.session_version : 1;
+  if ((payload.sessionVersion ?? 1) !== current) return null;
+  return payload;
 }

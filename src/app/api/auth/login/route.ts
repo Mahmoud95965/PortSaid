@@ -90,6 +90,7 @@ export async function POST(req: Request) {
         email: dbUser.email,
         phone: dbUser.phone,
         role: dbUser.role,
+        sessionVersion: (dbUser as { session_version?: number }).session_version ?? 1,
       });
 
       cookies().set(SESSION_COOKIE_NAME, sessionToken, {
@@ -165,6 +166,7 @@ export async function POST(req: Request) {
       email: dbUser.email,
       phone: dbUser.phone,
       role: roleCode,
+      sessionVersion: (dbUser as { session_version?: number }).session_version ?? 1,
     });
 
     cookies().set(SESSION_COOKIE_NAME, sessionToken, {

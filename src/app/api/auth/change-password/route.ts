@@ -5,7 +5,7 @@ import { hashPasswordModern, verifyAndUpgradePassword } from '@/lib/auth/passwor
 import { validateStrongPassword } from '@/lib/auth/admin';
 import { checkRateLimit } from '@/lib/auth/rateLimit';
 import {
-  unsealSessionToken,
+  unsealSessionTokenAsync,
   sealSessionToken,
   revokeAllUserSessions,
   SESSION_COOKIE_NAME,
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: 'يجب تسجيل الدخول أولاً.' }, { status: 401 });
     }
 
-    const session = unsealSessionToken(token);
+    const session = await unsealSessionTokenAsync(token);
     if (!session || !session.userId) {
       return NextResponse.json({ ok: false, message: 'جلسة الدخول غير صالحة أو منتهية.' }, { status: 401 });
     }
@@ -81,7 +81,7 @@ export async function POST(req: Request) {
         updated_at: new Date().toISOString(),
       });
 
-      revokeAllUserSessions(session.userId);
+      await revokeAllUserSessions(session.userId);
 
       const freshToken = sealSessionToken({
         userId: session.userId,
@@ -134,7 +134,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: updateErr.message }, { status: 500 });
     }
 
-    revokeAllUserSessions(session.userId);
+    await revokeAllUserSessions(session.userId);
 
     const freshToken = sealSessionToken({
       userId: session.userId,

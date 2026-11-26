@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { AREA_STOP, HOME_STOP } from '@/lib/constants';
 import { isPointInPortSaid, calculateDistanceKm, identifyPortSaidDistrict } from '@/lib/geoUtils';
-import { unsealSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { unsealSessionTokenAsync, SESSION_COOKIE_NAME } from '@/lib/auth/session';
 import { checkRateLimit, getClientIp } from '@/lib/auth/rateLimit';
 import { getSupabaseServer } from '@/lib/supabase/server';
 import { dbFindUserById } from '@/lib/db/localDb';
@@ -195,7 +195,7 @@ async function getUserContext(localFavorites: string[] = []): Promise<UserContex
     if (!token) {
       return { user: null, favoritePlaceIds: localFavorites, visitedPlaceIds: [] };
     }
-    const session = unsealSessionToken(token);
+    const session = await unsealSessionTokenAsync(token);
     if (!session || !session.userId) {
       return { user: null, favoritePlaceIds: localFavorites, visitedPlaceIds: [] };
     }
