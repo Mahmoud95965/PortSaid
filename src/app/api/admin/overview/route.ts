@@ -38,6 +38,7 @@ export async function GET() {
         visits: 0,
         stories: 0,
         storiesPublished: 0,
+        feedbackNew: 0,
       },
       users: [],
       places: [],
@@ -62,6 +63,12 @@ export async function GET() {
       .eq('is_published', true)
       .then((r) => r.count ?? 0, () => 0);
 
+    const feedbackNewCountPromise = supabase
+      .from('feedback')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'new')
+      .then((r) => r.count ?? 0, () => 0);
+
     const [
       usersCountRes,
       placesActiveCountRes,
@@ -69,6 +76,7 @@ export async function GET() {
       visitsCountRes,
       storiesCount,
       storiesPublishedCount,
+      feedbackNewCount,
       usersRes,
       placesRes,
       staffRes,
@@ -84,6 +92,7 @@ export async function GET() {
       supabase.from('visits').select('*', { count: 'exact', head: true }),
       storiesCountPromise,
       storiesPublishedCountPromise,
+      feedbackNewCountPromise,
       supabase
         .from('users')
         .select('id, name, email, phone, status, role_id, created_at, roles(code)')
@@ -117,6 +126,7 @@ export async function GET() {
         visits: visitsCountRes.count ?? 0,
         stories: storiesCount,
         storiesPublished: storiesPublishedCount,
+        feedbackNew: feedbackNewCount,
       },
       users: (usersRes.data || []).map((u: any) => ({
         id: u.id,
