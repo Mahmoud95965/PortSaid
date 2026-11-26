@@ -51,7 +51,71 @@ export const AdminDashboard: React.FC = () => {
     visits: 0,
     stories: 0,
     storiesPublished: 0,
+    feedbackNew: 0,
   });
+
+  // المقترحات والشكاوى — بتتقرأ من الخادم بس (مسار إداري محمي
+  // /api/admin/feedback). جدول feedback بيتكتب من الخادم بس أصلاً
+  // (POST /api/feedback)، والمتصفح ما بيقراهوش مباشرة أبداً.
+  const [feedbackList, setFeedbackList] = useState<any[]>([]);
+  const [feedbackCounts, setFeedbackCounts] = useState({ total: 0, new: 0 });
+  const [feedbackKindFilter, setFeedbackKindFilter] = useState('all');
+  const [feedbackStatusFilter, setFeedbackStatusFilter] = useState('all');
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
+  const [updatingFeedbackId, setUpdatingFeedbackId] = useState<string | null>(null);
+
+  const fetchFeedback = async () => {
+    try {
+      setLoadingFeedback(true);
+      const params = new URLSearchParams();
+      if (feedbackKindFilter !== 'all') params.set('kind', feedbackKindFilter);
+      if (feedbackStatusFilter !== 'all') params.set('status', feedbackStatusFilter);
+      const res = await fetch(`/api/admin/feedback?${params.toString()}`);
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        if (Array.isArray(data.feedback)) setFeedbackList(data.feedback);
+        if (data.counts) {
+          setFeedbackCounts(data.counts);
+          setCounts((c) => ({ ...c, feedbackNew: data.counts.new ?? 0 }));
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching feedback:', e);
+    } finally {
+      setLoadingFeedback(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user || !isAdminEmail(user.email)) return;
+    fetchFeedback();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, feedbackKindFilter, feedbackStatusFilter]);
+
+  const handleFeedbackStatusChange = async (id: string, status: string) => {
+    try {
+      setUpdatingFeedbackId(id);
+      const res = await fetch('/api/admin/feedback', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setFeedbackList((list) =>
+          list.map((f) => (f.id === id ? { ...f, status } : f))
+        );
+        fetchFeedback();
+      } else {
+        alert(data.message || 'تعذر تحديث الحالة.');
+      }
+    } catch (e) {
+      console.error('Error updating feedback status:', e);
+      alert('تعذر تحديث الحالة.');
+    } finally {
+      setUpdatingFeedbackId(null);
+    }
+  };
 
   // جلب كل بيانات لوحة التحكم من الخادم (مسار إداري محمي).
   // لا يقرأ المتصفح جداول Supabase مباشرة أبداً، ولا توجد أرقام
@@ -405,6 +469,23 @@ export const AdminDashboard: React.FC = () => {
             <span>الدليل التاريخي (استكشف)</span>
           </button>
 
+          <button
+            onClick={() => setActiveTab('feedback')}
+            className={`px-4 py-2.5 rounded-2xl font-bold text-sm whitespace-nowrap transition flex items-center gap-2 border relative ${
+              activeTab === 'feedback'
+                ? 'bg-gradient-to-r from-ocean-800 to-teal2-700 text-white border-transparent shadow-md'
+                : 'bg-white dark:bg-[#0c1622] text-ocean-900 dark:text-white border-sand-200 dark:border-[#1d2d3e] hover:border-teal2-500'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            <span>المقترحات والشكاوى</span>
+            {feedbackCounts.new > 0 && (
+              <span className="min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-black flex items-center justify-center">
+                {feedbackCounts.new.toLocaleString('ar-EG')}
+              </span>
+            )}
+          </button>
+
           {isOwner && (
             <button
               onClick={() => setActiveTab('logs')}
@@ -446,6 +527,15 @@ export const AdminDashboard: React.FC = () => {
                 <p className="text-2xl sm:text-3xl font-black mt-2 text-teal2-600 dark:text-teal2-400">{counts.storiesPublished.toLocaleString('ar-EG')}</p>
                 <p className="text-[11px] text-ocean-700/60 dark:text-white/50 font-bold mt-1">من إجمالي {counts.stories.toLocaleString('ar-EG')} قصة</p>
               </div>
+
+              <button
+                onClick={() => setActiveTab('feedback')}
+                className="rounded-3xl bg-white dark:bg-[#0c1622] p-5 shadow border border-sand-200/60 dark:border-[#1d2d3e] text-right hover:border-teal2-500 transition"
+              >
+                <p className="text-xs text-ocean-700/70 dark:text-white/60 font-bold">مقترحات وشكاوى جديدة</p>
+                <p className="text-2xl sm:text-3xl font-black mt-2 text-red-500">{counts.feedbackNew.toLocaleString('ar-EG')}</p>
+                <p className="text-[11px] text-ocean-700/60 dark:text-white/50 font-bold mt-1">اضغط لعرض المقترحات والشكاوى</p>
+              </button>
 
             </div>
           </div>
@@ -954,6 +1044,118 @@ export const AdminDashboard: React.FC = () => {
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab Content: Suggestions & Complaints — real rows from /api/admin/feedback */}
+        {activeTab === 'feedback' && (
+          <div className="space-y-4 pop-in">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h3 className="text-xl font-black">المقترحات والشكاوى</h3>
+                <p className="text-xs text-ocean-700/70 dark:text-white/60">
+                  {feedbackCounts.total > 0
+                    ? `إجمالي ${feedbackCounts.total.toLocaleString('ar-EG')} رسالة، منها ${feedbackCounts.new.toLocaleString('ar-EG')} جديدة.`
+                    : 'رسائل المستخدمين (اقتراحات وشكاوى) — أحدث 100 رسالة.'}
+                </p>
+              </div>
+              <button
+                onClick={fetchFeedback}
+                disabled={loadingFeedback}
+                className="px-4 py-2 rounded-2xl bg-white dark:bg-[#0c1622] border border-sand-200 dark:border-[#1d2d3e] text-sm font-bold hover:border-teal2-500 transition disabled:opacity-50"
+              >
+                {loadingFeedback ? 'جارٍ التحديث…' : 'تحديث'}
+              </button>
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+              <select
+                value={feedbackKindFilter}
+                onChange={(e) => setFeedbackKindFilter(e.target.value)}
+                className="px-3 py-2 rounded-2xl bg-white dark:bg-[#0c1622] border border-sand-200 dark:border-[#1d2d3e] text-sm font-bold"
+              >
+                <option value="all">كل الأنواع</option>
+                <option value="suggestion">اقتراحات فقط</option>
+                <option value="complaint">شكاوى فقط</option>
+              </select>
+              <select
+                value={feedbackStatusFilter}
+                onChange={(e) => setFeedbackStatusFilter(e.target.value)}
+                className="px-3 py-2 rounded-2xl bg-white dark:bg-[#0c1622] border border-sand-200 dark:border-[#1d2d3e] text-sm font-bold"
+              >
+                <option value="all">كل الحالات</option>
+                <option value="new">جديدة</option>
+                <option value="in_progress">قيد المعالجة</option>
+                <option value="resolved">تمت المعالجة</option>
+              </select>
+            </div>
+
+            <div className="rounded-3xl bg-white dark:bg-[#0c1622] shadow overflow-hidden border border-sand-200/60 dark:border-[#1d2d3e]">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-right">
+                  <thead className="bg-sand-100 dark:bg-[#212d37] text-xs font-black text-ocean-900 dark:text-white">
+                    <tr>
+                      <th className="p-4">التاريخ</th>
+                      <th className="p-4">المرسل</th>
+                      <th className="p-4">النوع</th>
+                      <th className="p-4">الرسالة</th>
+                      <th className="p-4">الحالة</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-sand-200/60 dark:divide-[#2a2a2a] text-ocean-900 dark:text-white">
+                    {loadingFeedback && feedbackList.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-6 text-center text-sm text-slate-500 dark:text-slate-400 font-medium">
+                          جارٍ تحميل المقترحات والشكاوى…
+                        </td>
+                      </tr>
+                    ) : feedbackList.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-6 text-center text-sm text-slate-500 dark:text-slate-400 font-medium">
+                          لا توجد مقترحات أو شكاوى بعد.
+                        </td>
+                      </tr>
+                    ) : (
+                      feedbackList.map((f) => (
+                        <tr key={f.id} className="hover:bg-sand-50 dark:hover:bg-[#1d1d1d] transition align-top">
+                          <td className="p-4 font-medium text-xs whitespace-nowrap" dir="ltr">
+                            {f.created_at ? f.created_at.slice(0, 19).replace('T', ' ') : '—'}
+                          </td>
+                          <td className="p-4">
+                            <p className="font-bold">{f.user_name || '—'}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400" dir="ltr">{f.user_email || ''}</p>
+                          </td>
+                          <td className="p-4">
+                            <span
+                              className={`text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${
+                                f.kind === 'complaint'
+                                  ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                                  : 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300'
+                              }`}
+                            >
+                              {f.kind === 'complaint' ? 'شكوى' : 'اقتراح'}
+                            </span>
+                          </td>
+                          <td className="p-4 text-sm font-medium max-w-md whitespace-pre-wrap break-words">{f.message || '—'}</td>
+                          <td className="p-4">
+                            <select
+                              value={f.status || 'new'}
+                              onChange={(e) => handleFeedbackStatusChange(f.id, e.target.value)}
+                              disabled={updatingFeedbackId === f.id}
+                              className="px-2.5 py-1.5 rounded-xl bg-sand-100 dark:bg-[#212d37] text-xs font-bold disabled:opacity-50"
+                            >
+                              <option value="new">جديدة</option>
+                              <option value="in_progress">قيد المعالجة</option>
+                              <option value="resolved">تمت المعالجة</option>
+                            </select>
                           </td>
                         </tr>
                       ))
